@@ -68,8 +68,8 @@ public class LunarUtils {
      * language is zh-cn.
      */
     public static boolean showLunar(Context context) {
-        Locale locale = context.getResources().getConfiguration().getLocales().get(0);
-        return "zh".equals(locale.getLanguage()) && "CN".equals(locale.getCountry());
+        return LocalizationSettings.lunar(context) || LocalizationSettings.festivals(context)
+                || LocalizationSettings.terms(context);
     }
 
     /**
@@ -95,7 +95,26 @@ public class LunarUtils {
         if (context == null || format < FORMAT_LUNAR_LONG) return null;
 
         LunarInfo info = getOrCalculate(year, month, day);
-        return buildInfo(info, format, showLunarBeforeFestival, result);
+        if (info == null) return null;
+        LunarInfo visible = new LunarInfo();
+        if (LocalizationSettings.lunar(context)) {
+            visible._label_long = info._label_long;
+            visible._label_short = info._label_short;
+            visible._animal = info._animal;
+        }
+        ArrayList<String> labels = new ArrayList<>();
+        if (LocalizationSettings.festivals(context)) {
+            labels.addAll(info.festivals);
+        }
+        if (LocalizationSettings.terms(context) && info.term != null
+                && !(LocalizationSettings.festivals(context) && "清明".equals(info.term))) {
+            labels.add(info.term);
+        }
+        if (labels.size() > 0) visible._festival1 = labels.get(0);
+        if (labels.size() > 1) visible._festival2 = labels.get(1);
+        if (labels.size() > 2) visible._festival3 = labels.get(2);
+        if (labels.size() > 3) visible._festival4 = labels.get(3);
+        return buildInfo(visible, format, showLunarBeforeFestival, result);
     }
 
     private static LunarInfo getOrCalculate(int year, int month, int day) {
@@ -122,11 +141,8 @@ public class LunarUtils {
         info._label_long = monthLabel + DAYS[lunarDay - 1];
         info._label_short = lunarDay == 1 ? monthLabel : DAYS[lunarDay - 1];
         info._animal = ANIMALS[Math.floorMod(lunar.get(Calendar.YEAR) - 1, 12)];
-        ArrayList<String> festivals = ChineseFestivals.get(year, month, day, lunar);
-        if (festivals.size() > 0) info._festival1 = festivals.get(0);
-        if (festivals.size() > 1) info._festival2 = festivals.get(1);
-        if (festivals.size() > 2) info._festival3 = festivals.get(2);
-        if (festivals.size() > 3) info._festival4 = festivals.get(3);
+        info.festivals = ChineseFestivals.get(year, month, day, lunar);
+        info.term = SolarTerms.get(year, month, day);
         sLunarInfos.put(key, info);
         return info;
     }
@@ -221,6 +237,8 @@ public class LunarUtils {
     }
 
     private static class LunarInfo {
+        ArrayList<String> festivals;
+        String term;
         public String _label_long;
         public String _label_short;
         public String _animal;

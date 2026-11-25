@@ -52,6 +52,7 @@
         </intent>
     </queries>
 
+    <uses-permission android:name="android.permission.INTERNET" />
     <application android:name="com.android.calendar.CalendarApplication"
         android:hardwareAccelerated="true"
         android:icon="@mipmap/ic_launcher"

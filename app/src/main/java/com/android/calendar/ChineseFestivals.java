@@ -40,7 +40,6 @@ final class ChineseFestivals {
         if (month == 0 && day == 1) result.add("元旦");
         if (month == 4 && day == 1) result.add("劳动节");
         if (month == 9 && day == 1) result.add("国庆节");
-        if (term != null && !"清明".equals(term)) result.add(term);
         return result;
     }
 }

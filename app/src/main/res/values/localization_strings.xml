@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="localization_title">Chinese calendar</string>
+    <string name="localization_lunar">Show lunar dates</string>
+    <string name="localization_festivals">Show traditional festivals</string>
+    <string name="localization_terms">Show solar terms</string>
+    <string name="localization_holidays">Show official holidays and workdays</string>
+    <string name="localization_update">Update holiday data</string>
+    <string name="localization_import">Import holiday JSON</string>
+    <string name="localization_updated">Updated %1$d year(s)</string>
+    <string name="localization_failed">Update or import failed</string>
+</resources>

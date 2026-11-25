@@ -50,12 +50,24 @@ public final class HolidayManager {
         return data == null ? 0 : data.version;
     }
 
+    public synchronized int importDataForYear(InputStream input, int year, int version)
+            throws IOException, JSONException {
+        byte[] bytes = read(input);
+        YearData data = parse(bytes);
+        if (data.year != year || data.version != version) throw new JSONException("Unexpected data version");
+        if (version <= getVersion(year)) return 0;
+        importData(new ByteArrayInputStream(bytes));
+        return 1;
+    }
+
     /** Validates before writing; an older version cannot replace a newer one. */
     public synchronized void importData(InputStream input) throws IOException, JSONException {
         byte[] bytes = read(input);
         YearData data = parse(bytes);
         if (data.version < getVersion(data.year)) throw new IOException("Older holiday data");
         AtomicFile file = file(data.year);
+        File parent = new File(context.getFilesDir(), "holidays");
+        if (!parent.isDirectory() && !parent.mkdirs()) throw new IOException("Cannot create holiday directory");
         FileOutputStream output = file.startWrite();
         try {
             output.write(bytes);
