@@ -122,6 +122,11 @@ public class LunarUtils {
         info._label_long = monthLabel + DAYS[lunarDay - 1];
         info._label_short = lunarDay == 1 ? monthLabel : DAYS[lunarDay - 1];
         info._animal = ANIMALS[Math.floorMod(lunar.get(Calendar.YEAR) - 1, 12)];
+        ArrayList<String> festivals = ChineseFestivals.get(year, month, day, lunar);
+        if (festivals.size() > 0) info._festival1 = festivals.get(0);
+        if (festivals.size() > 1) info._festival2 = festivals.get(1);
+        if (festivals.size() > 2) info._festival3 = festivals.get(2);
+        if (festivals.size() > 3) info._festival4 = festivals.get(3);
         sLunarInfos.put(key, info);
         return info;
     }
@@ -136,7 +141,8 @@ public class LunarUtils {
 
         StringBuilder result = new StringBuilder();
 
-        if (showLunarBeforeFestival || TextUtils.isEmpty(info._festival1)) {
+        if (showLunarBeforeFestival || TextUtils.isEmpty(info._festival1)
+                || (format & (FORMAT_ONE_FESTIVAL | FORMAT_MULTI_FESTIVAL)) == 0) {
             // The format should not support long and short at one time.
             if ((format & FORMAT_LUNAR_LONG) == FORMAT_LUNAR_LONG) {
                 appendInfo(result, info._label_long, list);
