@@ -15,6 +15,11 @@
  */
 package com.android.calendar.widget;
 
+import com.android.calendar.LocalizedDay;
+import java.time.LocalDate;
+import java.time.Instant;
+import java.time.ZoneId;
+
 import android.appwidget.AppWidgetManager;
 import android.content.Context;
 import android.content.Intent;
@@ -159,6 +164,11 @@ public class MonthAppWidgetService extends RemoteViewsService {
 
             // Set day number
             views.setTextViewText(R.id.month_cell_day, String.valueOf(cell.dayNumber));
+            LocalDate localDate = Instant.ofEpochMilli(cell.timeMillis).atZone(ZoneId.systemDefault()).toLocalDate();
+            String localLabel = LocalizedDay.combined(mContext, localDate);
+            views.setTextViewText(R.id.month_cell_localized, localLabel);
+            views.setViewVisibility(R.id.month_cell_localized, localLabel.isEmpty() ? View.GONE : View.VISIBLE);
+            views.setTextColor(R.id.month_cell_localized, DynamicThemeKt.getColor(mContext, "month_day_number"));
 
             // Set text color based on current month / today status
             if (cell.isToday) {
@@ -326,7 +336,7 @@ public class MonthAppWidgetService extends RemoteViewsService {
             // Calculate how many event chips fit in the cell
             float density = mContext.getResources().getDisplayMetrics().density;
             int[] limits = BaseGridWidgetProvider.calculateMaxVisibleEvents(
-                    mCellHeightPx, density, DAY_NUMBER_HEIGHT_DP,
+                    mCellHeightPx, density, DAY_NUMBER_HEIGHT_DP + (LocalizedDay.enabled(mContext) ? 12 : 0),
                     EVENT_CHIP_HEIGHT_DP, OVERFLOW_HEIGHT_DP, MAX_VISIBLE_EVENTS);
             mMaxEventsWithoutOverflow = limits[0];
             mMaxEventsWithOverflow = limits[1];

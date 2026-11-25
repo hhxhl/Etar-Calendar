@@ -36,6 +36,15 @@
             android:layout_height="18dip"
             android:gravity="center"
             android:textSize="11sp" />
+        <TextView
+            android:id="@+id/month_cell_localized"
+            android:layout_width="match_parent"
+            android:layout_height="12dp"
+            android:gravity="center"
+            android:textSize="8sp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:visibility="gone" />
 
         <!-- Event chip row 1 -->
         <LinearLayout

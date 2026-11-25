@@ -759,7 +759,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
 
         HOURS_MARGIN = HOURS_LEFT_MARGIN + HOURS_RIGHT_MARGIN;
         DAY_HEADER_HEIGHT = mNumDays == 1 ? ONE_DAY_HEADER_HEIGHT : MULTI_DAY_HEADER_HEIGHT;
-        if (LunarUtils.showLunar(mContext) && mNumDays != 1) {
+        if (LocalizedDay.enabled(mContext) && mNumDays != 1) {
             DAY_HEADER_HEIGHT = (int) (DAY_HEADER_HEIGHT + DAY_HEADER_FONT_SIZE + 2);
         }
 
@@ -2561,7 +2561,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         String dateNumStr = String.valueOf(dateNum);
         if (mNumDays > 1) {
             float y = -1;
-            if (LunarUtils.showLunar(mContext)) {
+            if (LocalizedDay.enabled(mContext)) {
                 y = DAY_HEADER_HEIGHT - DAY_HEADER_BOTTOM_MARGIN - DATE_HEADER_FONT_SIZE - 2;
             } else {
                 y = DAY_HEADER_HEIGHT - DAY_HEADER_BOTTOM_MARGIN;
@@ -2581,24 +2581,10 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
             p.setTypeface(Typeface.DEFAULT);
             canvas.drawText(dayStr, x, y, p);
 
-            // To show the lunar info.
-            if (LunarUtils.showLunar(mContext)) {
-                // adjust the year and month
-                int month = mBaseDate.getMonth();
-                int year = mBaseDate.getYear();
-                if (dateNum > mMonthLength || dateNum < mFirstVisibleDate) {
-                    month = month + 1;
-                    if (month > 11) {
-                        month = 0;
-                        year = year + 1;
-                    }
-                }
-
-                String lunarInfo = LunarUtils.get(mContext, year, month, dateNum,
-                        LunarUtils.FORMAT_LUNAR_SHORT | LunarUtils.FORMAT_ONE_FESTIVAL,
-                        false, null);
-                if (!TextUtils.isEmpty(lunarInfo)) {
-                    canvas.drawText(lunarInfo, x, y + DAY_HEADER_FONT_SIZE + 2, p);
+            if (LocalizedDay.enabled(mContext)) {
+                String label = LocalizedDay.combined(mContext, LocalizedDay.fromJulian(cell));
+                if (!label.isEmpty()) {
+                    canvas.drawText(label, x, DAY_HEADER_HEIGHT - DAY_HEADER_BOTTOM_MARGIN, p);
                 }
             }
         } else {
@@ -2617,6 +2603,12 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
             p.setTextSize(DATE_HEADER_FONT_SIZE);
             p.setTypeface(todayIndex == day ? mBold : Typeface.DEFAULT);
             canvas.drawText(dateNumStr, x, y, p);
+            if (LocalizedDay.enabled(mContext)) {
+                x += p.measureText(dateNumStr) + DAY_HEADER_ONE_DAY_RIGHT_MARGIN;
+                p.setTextSize(DAY_HEADER_FONT_SIZE);
+                p.setTypeface(Typeface.DEFAULT);
+                canvas.drawText(LocalizedDay.combined(mContext, LocalizedDay.fromJulian(cell)), x, y, p);
+            }
         }
     }
 

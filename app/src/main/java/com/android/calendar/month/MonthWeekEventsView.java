@@ -46,7 +46,8 @@ import android.view.accessibility.AccessibilityManager;
 import androidx.core.content.ContextCompat;
 
 import com.android.calendar.Event;
-import com.android.calendar.LunarUtils;
+import com.android.calendar.LocalizedDay;
+import java.time.LocalDate;
 import com.android.calendar.Utils;
 import com.android.calendar.settings.ViewDetailsPreferences;
 import com.android.calendar.calendarcommon2.Time;
@@ -616,10 +617,6 @@ public class MonthWeekEventsView extends SimpleWeekView {
         boolean isBold = false;
         mMonthNumPaint.setColor(isFocusMonth ? mMonthNumColor : mMonthNumOtherColor);
 
-        // Get the julian monday used to show the lunar info.
-        int julianMonday = Utils.getJulianMondayFromWeeksSinceEpoch(mWeek);
-        Time time = new Time(mTimeZone);
-        time.setJulianDay(julianMonday);
 
         for (; i < numCount; i++) {
             if (mHasToday && todayIndex == i) {
@@ -640,60 +637,23 @@ public class MonthWeekEventsView extends SimpleWeekView {
                 mMonthNumPaint.setFakeBoldText(isBold = false);
             }
 
-            if (LunarUtils.showLunar(getContext())) {
-                // adjust the year and month
-                int year = time.getYear();
-                int month = time.getMonth();
-                int julianMondayDay = time.getDay();
-                int monthDay = Integer.parseInt(mDayNumbers[i]);
-                if (monthDay != julianMondayDay) {
-                    int offsetDay = monthDay - julianMondayDay;
-                    if (offsetDay > 6) {
-                        month = month - 1;
-                        if (month < 0) {
-                            month = 11;
-                            year = year - 1;
-                        }
-                    } else if (offsetDay < -6) {
-                        month = month + 1;
-                        if (month > 11) {
-                            month = 0;
-                            year = year + 1;
-                        }
-                    }
+            if (LocalizedDay.enabled(getContext())) {
+                LocalDate date = LocalizedDay.fromJulian(mFirstJulianDay + i - (mShowWeekNum ? 1 : 0));
+                String label = LocalizedDay.label(getContext(), date);
+                String marker = LocalizedDay.marker(getContext(), date);
+                float oldSize = mMonthNumPaint.getTextSize();
+                int oldColor = mMonthNumPaint.getColor();
+                mMonthNumPaint.setTextSize(mTextSizeLunar);
+                int left = computeDayLeftPosition(i - offset - 1) + mSidePaddingMonthNumber;
+                if (!marker.isEmpty()) {
+                    mMonthNumPaint.setColor("休".equals(marker) ? 0xffd84343 : 0xff39865a);
+                    canvas.drawText(marker, left + mMonthNumPaint.measureText(marker), y, mMonthNumPaint);
                 }
-
-                ArrayList<String> infos = new ArrayList<String>();
-                LunarUtils.get(getContext(), year, month, monthDay,
-                        LunarUtils.FORMAT_LUNAR_SHORT | LunarUtils.FORMAT_MULTI_FESTIVAL, false,
-                        infos);
-                if (infos.size() > 0) {
-                    float originalTextSize = mMonthNumPaint.getTextSize();
-                    mMonthNumPaint.setTextSize(mTextSizeLunar);
-                    Resources res = getResources();
-                    int mOrientation = res.getConfiguration().orientation;
-
-                    int num = 0;
-                    for (int index = 0; index < infos.size(); index++) {
-                        String info = infos.get(index);
-                        if (TextUtils.isEmpty(info)) continue;
-
-                        int infoX = 0;
-                        int infoY = 0;
-                        if (mOrientation == Configuration.ORIENTATION_LANDSCAPE) {
-                            infoX = x - mMonthNumHeight - mTopPaddingMonthNumber;
-                            infoY = y + (mMonthNumHeight + mLunarPaddingLunar) * num;
-                        } else {
-                            infoX = x;
-                            infoY = y + (mMonthNumHeight + mLunarPaddingLunar) * (num + 1);
-                        }
-                        canvas.drawText(info, infoX, infoY, mMonthNumPaint);
-                        num = num + 1;
-                    }
-
-                    // restore the text size.
-                    mMonthNumPaint.setTextSize(originalTextSize);
+                mMonthNumPaint.setColor(oldColor);
+                if (!label.isEmpty()) {
+                    canvas.drawText(label, x, y + mTextSizeLunar + mLunarPaddingLunar, mMonthNumPaint);
                 }
+                mMonthNumPaint.setTextSize(oldSize);
             }
         }
     }
@@ -1269,6 +1229,7 @@ public class MonthWeekEventsView extends SimpleWeekView {
             mYOffset = 0;
             mX = 1;
             mY = mEventYOffsetPortrait + mMonthNumHeight + mTopPaddingMonthNumber;
+            if (LocalizedDay.enabled(mContext)) mY += mTextSizeLunar + mLunarPaddingLunar;
             mRightEdge = - 1;
         }
 
