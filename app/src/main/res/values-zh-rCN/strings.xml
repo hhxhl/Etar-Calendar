@@ -383,4 +383,5 @@
     <string name="reminder_alarm">闹钟</string>
     <string name="reminder_before">在下列时间前用 %1$s 提醒</string>
     <string name="reminder_after">在下列时间后用 %1$s 提醒</string>
+    <string name="standalone_app_label">日历</string>
 </resources>
