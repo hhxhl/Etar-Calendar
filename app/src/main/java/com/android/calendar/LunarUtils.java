@@ -31,17 +31,17 @@ package com.android.calendar;
 
 import android.content.AsyncTaskLoader;
 import android.content.Context;
-import android.database.Cursor;
-import android.net.Uri;
+import android.icu.util.ChineseCalendar;
+import android.icu.util.Calendar;
+import android.icu.util.GregorianCalendar;
+import android.icu.util.TimeZone;
+import android.util.LruCache;
 import android.text.TextUtils;
-import android.util.Log;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Locale;
 
 public class LunarUtils {
-    private static final String TAG = "LunarUtils";
 
     // The flags used for get the lunar info.
     public static final int FORMAT_LUNAR_LONG = 0x00001;
@@ -53,31 +53,34 @@ public class LunarUtils {
     private static final String INFO_SEPARATE = " ";
     private static final String MORE_FESTIVAL_SUFFIX = "*";
 
-    private static HashMap<String, LunarInfo> sLunarInfos = new HashMap<String, LunarInfo>();
+    private static final LruCache<String, LunarInfo> sLunarInfos = new LruCache<>(512);
+    private static final String[] MONTHS = {"正", "二", "三", "四", "五", "六",
+            "七", "八", "九", "十", "冬", "腊"};
+    private static final String[] DAYS = {"初一", "初二", "初三", "初四", "初五",
+            "初六", "初七", "初八", "初九", "初十", "十一", "十二", "十三", "十四",
+            "十五", "十六", "十七", "十八", "十九", "二十", "廿一", "廿二", "廿三",
+            "廿四", "廿五", "廿六", "廿七", "廿八", "廿九", "三十"};
+    private static final String[] ANIMALS = {"鼠", "牛", "虎", "兔", "龙", "蛇",
+            "马", "羊", "猴", "鸡", "狗", "猪"};
 
     /**
      * If need show the lunar info now. As default, it will need shown if the current
      * language is zh-cn.
      */
     public static boolean showLunar(Context context) {
-        Locale locale = Locale.getDefault();
-        String language = locale.getLanguage().toLowerCase();
-        String country = locale.getCountry().toLowerCase();
-        return ("zh".equals(language) && "cn".equals(country));
+        Locale locale = context.getResources().getConfiguration().getLocales().get(0);
+        return "zh".equals(locale.getLanguage()) && "CN".equals(locale.getCountry());
     }
 
     /**
      * Used to clear the saved info.
      */
     public static void clearInfo() {
-        Log.i(TAG, "Clear all the saved info.");
-        sLunarInfos.clear();
+        sLunarInfos.evictAll();
     }
 
     /**
-     * Used to get the lunar, festival and animal info of the date. Before you call this
-     * function to get the info, you need make sure already load the info by calling
-     * {@link LunarInfoLoader#load} to pre-load them.
+     * Used to get lunar information for a Gregorian date (zero-based month).
      * @param format Format which info need append to the result.
      *     The format {@link #FORMAT_LUNAR_LONG} and {@link #FORMAT_LUNAR_SHORT},
      *     {@link #FORMAT_ONE_FESTIVAL} and {@link #FORMAT_MULTI_FESTIVAL} could not
@@ -91,18 +94,36 @@ public class LunarUtils {
             boolean showLunarBeforeFestival, ArrayList<String> result) {
         if (context == null || format < FORMAT_LUNAR_LONG) return null;
 
-        String res = null;
+        LunarInfo info = getOrCalculate(year, month, day);
+        return buildInfo(info, format, showLunarBeforeFestival, result);
+    }
 
-        // Try to find the matched lunar info from the hash map.
+    private static LunarInfo getOrCalculate(int year, int month, int day) {
         String key = getKey(year, month, day);
-        LunarInfo info = sLunarInfos.get(key);
-        if (info != null) {
-            res = buildInfo(info, format, showLunarBeforeFestival, result);
-        } else {
-            Log.d(TAG, "Couldn't get the lunar info for " + key);
-        }
+        LunarInfo cached = sLunarInfos.get(key);
+        if (cached != null) return cached;
 
-        return res;
+        TimeZone zone = TimeZone.getTimeZone("Asia/Shanghai");
+        GregorianCalendar solar = new GregorianCalendar(zone);
+        solar.clear();
+        solar.setLenient(false);
+        solar.set(year, month, day, 12, 0, 0);
+        ChineseCalendar lunar = new ChineseCalendar(zone, Locale.CHINA);
+        try {
+            lunar.setTimeInMillis(solar.getTimeInMillis());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+        int lunarMonth = lunar.get(Calendar.MONTH);
+        int lunarDay = lunar.get(Calendar.DAY_OF_MONTH);
+        String monthLabel = (lunar.get(ChineseCalendar.IS_LEAP_MONTH) == 1 ? "闰" : "")
+                + MONTHS[lunarMonth] + "月";
+        LunarInfo info = new LunarInfo();
+        info._label_long = monthLabel + DAYS[lunarDay - 1];
+        info._label_short = lunarDay == 1 ? monthLabel : DAYS[lunarDay - 1];
+        info._animal = ANIMALS[Math.floorMod(lunar.get(Calendar.YEAR) - 1, 12)];
+        sLunarInfos.put(key, info);
+        return info;
     }
 
     private static String getKey(int year, int month, int day) {
@@ -155,142 +176,42 @@ public class LunarUtils {
     }
 
     public static class LunarInfoLoader extends AsyncTaskLoader<Void> {
-        private static final Uri CONTENT_URI_GET_ONE_DAY =
-                Uri.parse("content://com.qualcomm.qti.lunarinfo/one_day");
-        private static final Uri CONTENT_URI_GET_ONE_MONTH =
-                Uri.parse("content://com.qualcomm.qti.lunarinfo/one_month");
-        private static final Uri CONTENT_URI_GET_FROM_TO =
-                Uri.parse("content://com.qualcomm.qti.lunarinfo/from_to");
-
-        // The query parameters used to get lunar info.
-        private static final String PARAM_YEAR = "year";
-        private static final String PARAM_MONTH = "month";
-        private static final String PARAM_DAY = "day";
-        private static final String PARAM_FROM_YEAR = "from_year";
-        private static final String PARAM_FROM_MONTH = "from_month";
-        private static final String PARAM_FROM_DAY = "from_day";
-        private static final String PARAM_TO_YEAR = "to_year";
-        private static final String PARAM_TO_MONTH = "to_month";
-        private static final String PARAM_TO_DAY = "to_day";
-
-        // The columns for result.
-        private static final String COL_ID = "_id";
-        private static final String COL_YEAR = "year";
-        private static final String COL_MONTH = "month";
-        private static final String COL_DAY = "day";
-        private static final String COL_LUNAR_LABEL_LONG = "lunar_label_long";
-        private static final String COL_LUNAR_LABEL_SHORT = "lunar_label_short";
-        private static final String COL_ANIMAL = "animal";
-        private static final String COL_FESTIVAL_1 = "festival_1";
-        private static final String COL_FESTIVAL_2 = "festival_2";
-        private static final String COL_FESTIVAL_3 = "festival_3";
-        private static final String COL_FESTIVAL_4 = "festival_4";
-
-        private static int sIndexId = -1;
-        private static int sIndexYear = -1;
-        private static int sIndexMonth = -1;
-        private static int sIndexDay = -1;
-        private static int sIndexLunarLabelLong = -1;
-        private static int sIndexLunarLabelShort = -1;
-        private static int sIndexAnimal = -1;
-        private static int sIndexFestival1 = -1;
-        private static int sIndexFestival2 = -1;
-        private static int sIndexFestival3 = -1;
-        private static int sIndexFestival4 = -1;
-
-        private Uri mUri;
+        private volatile int[] range;
 
         public LunarInfoLoader(Context context) {
             super(context);
         }
 
         public void load(int year, int month, int day) {
-            reset();
-            // Build the query uri.
-            mUri = CONTENT_URI_GET_ONE_DAY.buildUpon()
-                    .appendQueryParameter(PARAM_YEAR, String.valueOf(year))
-                    .appendQueryParameter(PARAM_MONTH, String.valueOf(month))
-                    .appendQueryParameter(PARAM_DAY, String.valueOf(day))
-                    .build();
-            startLoading();
-            forceLoad();
+            load(year, month, day, year, month, day);
         }
 
         public void load(int year, int month) {
-            reset();
-            // Build the query uri.
-            mUri = CONTENT_URI_GET_ONE_MONTH.buildUpon()
-                    .appendQueryParameter(PARAM_YEAR, String.valueOf(year))
-                    .appendQueryParameter(PARAM_MONTH, String.valueOf(month))
-                    .build();
-            startLoading();
-            forceLoad();
+            GregorianCalendar calendar = new GregorianCalendar(year, month, 1);
+            load(year, month, 1, year, month, calendar.getActualMaximum(Calendar.DAY_OF_MONTH));
         }
 
-        public void load(int from_year, int from_month, int from_day,
-                int to_year, int to_month, int to_day) {
+        public void load(int fromYear, int fromMonth, int fromDay,
+                int toYear, int toMonth, int toDay) {
             reset();
-            // Build the query uri.
-            mUri = CONTENT_URI_GET_FROM_TO.buildUpon()
-                    .appendQueryParameter(PARAM_FROM_YEAR, String.valueOf(from_year))
-                    .appendQueryParameter(PARAM_FROM_MONTH, String.valueOf(from_month))
-                    .appendQueryParameter(PARAM_FROM_DAY, String.valueOf(from_day))
-                    .appendQueryParameter(PARAM_TO_YEAR, String.valueOf(to_year))
-                    .appendQueryParameter(PARAM_TO_MONTH, String.valueOf(to_month))
-                    .appendQueryParameter(PARAM_TO_DAY, String.valueOf(to_day))
-                    .build();
+            range = new int[] {fromYear, fromMonth, fromDay, toYear, toMonth, toDay};
             startLoading();
             forceLoad();
         }
 
         @Override
         public Void loadInBackground() {
-            Cursor cursor = getContext().getContentResolver().query(mUri, null, null, null, null);
-            try {
-                if (cursor == null || cursor.getCount() < 1) return null;
-
-                if (sIndexId < 0) getIndexValue(cursor);
-                while (cursor.moveToNext()) {
-                    int year = cursor.getInt(sIndexYear);
-                    int month = cursor.getInt(sIndexMonth);
-                    int day = cursor.getInt(sIndexDay);
-
-                    LunarInfo info = new LunarInfo();
-                    info._label_long = cursor.getString(sIndexLunarLabelLong);
-                    info._label_short = cursor.getString(sIndexLunarLabelShort);
-                    info._animal = cursor.getString(sIndexAnimal);
-                    info._festival1 = cursor.getString(sIndexFestival1);
-                    info._festival2 = cursor.getString(sIndexFestival2);
-                    info._festival3 = cursor.getString(sIndexFestival3);
-                    info._festival4 = cursor.getString(sIndexFestival4);
-
-                    sLunarInfos.put(getKey(year, month, day), info);
-                }
-            } finally {
-                if (cursor != null) {
-                    cursor.close();
-                }
+            int[] dates = range;
+            if (dates == null) return null;
+            GregorianCalendar current = new GregorianCalendar(dates[0], dates[1], dates[2]);
+            GregorianCalendar end = new GregorianCalendar(dates[3], dates[4], dates[5]);
+            while (!current.after(end) && !isLoadInBackgroundCanceled()) {
+                getOrCalculate(current.get(Calendar.YEAR), current.get(Calendar.MONTH),
+                        current.get(Calendar.DAY_OF_MONTH));
+                current.add(Calendar.DAY_OF_MONTH, 1);
             }
-
             return null;
         }
-
-        private void getIndexValue(Cursor cursor) {
-            if (cursor == null) return;
-
-            sIndexId = cursor.getColumnIndexOrThrow(COL_ID);
-            sIndexYear = cursor.getColumnIndexOrThrow(COL_YEAR);
-            sIndexMonth = cursor.getColumnIndexOrThrow(COL_MONTH);
-            sIndexDay = cursor.getColumnIndexOrThrow(COL_DAY);
-            sIndexLunarLabelLong = cursor.getColumnIndexOrThrow(COL_LUNAR_LABEL_LONG);
-            sIndexLunarLabelShort = cursor.getColumnIndexOrThrow(COL_LUNAR_LABEL_SHORT);
-            sIndexAnimal = cursor.getColumnIndexOrThrow(COL_ANIMAL);
-            sIndexFestival1 = cursor.getColumnIndexOrThrow(COL_FESTIVAL_1);
-            sIndexFestival2 = cursor.getColumnIndexOrThrow(COL_FESTIVAL_2);
-            sIndexFestival3 = cursor.getColumnIndexOrThrow(COL_FESTIVAL_3);
-            sIndexFestival4 = cursor.getColumnIndexOrThrow(COL_FESTIVAL_4);
-        }
-
     }
 
     private static class LunarInfo {
