@@ -168,20 +168,30 @@ class CalendarWidgetConfigureActivity : AppCompatActivity() {
 
     private fun saveAndFinish() {
         val selectedIds = calendarItems.filter { it.isChecked }.map { it.id.toString() }.toSet()
+        val previousIds = WidgetUtils.getWidgetCalendarIds(this, appWidgetId)
         WidgetUtils.saveWidgetCalendarIds(this, appWidgetId, selectedIds)
         WidgetUtils.saveBackgroundOpacity(this, appWidgetId,
             findViewById<SeekBar>(R.id.widget_opacity_slider).progress)
 
-        // Push the selected widget's full RemoteViews immediately. Its provider
-        // refreshes the collection after applying the new background.
+        // Update the selected widget before returning to the launcher.
         val appWidgetManager = AppWidgetManager.getInstance(this)
-        val provider = when (appWidgetManager.getAppWidgetInfo(appWidgetId)?.provider?.className) {
+        val providerName = appWidgetManager.getAppWidgetInfo(appWidgetId)?.provider?.className
+        val provider = when (providerName) {
             CalendarAppWidgetProvider::class.java.name -> CalendarAppWidgetProvider()
             MonthAppWidgetProvider::class.java.name -> MonthAppWidgetProvider()
             WeekAppWidgetProvider::class.java.name -> WeekAppWidgetProvider()
             else -> null
         }
-        if (provider != null) {
+        val layoutId = when (providerName) {
+            CalendarAppWidgetProvider::class.java.name -> R.layout.appwidget
+            MonthAppWidgetProvider::class.java.name -> R.layout.month_appwidget
+            WeekAppWidgetProvider::class.java.name -> R.layout.week_appwidget
+            else -> 0
+        }
+        if (provider != null && previousIds == selectedIds && layoutId != 0) {
+            // Only opacity changed: leave the collection adapter and current layout intact.
+            WidgetUtils.updateBackgroundOpacity(this, appWidgetId, layoutId)
+        } else if (provider != null) {
             provider.onUpdate(this, appWidgetManager, intArrayOf(appWidgetId))
         } else {
             Utils.sendUpdateWidgetIntent(this)

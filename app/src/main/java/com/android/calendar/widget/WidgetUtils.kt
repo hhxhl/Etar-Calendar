@@ -80,8 +80,21 @@ object WidgetUtils {
     fun applyBackgroundOpacity(context: Context, views: android.widget.RemoteViews,
                                viewId: Int, appWidgetId: Int, resourceId: Int) {
         views.setImageViewResource(viewId, resourceId)
-        val alpha = (getBackgroundOpacity(context, appWidgetId) * 255 + 50) / 100
-        views.setInt(viewId, "setImageAlpha", alpha)
+        applyOpacity(views, viewId, getBackgroundOpacity(context, appWidgetId))
+    }
+
+    private fun applyOpacity(views: android.widget.RemoteViews, viewId: Int, opacity: Int) {
+        // Reset drawable alpha left by earlier widget versions. View alpha survives
+        // asynchronous drawable replacement and does not affect sibling content.
+        views.setInt(viewId, "setImageAlpha", 255)
+        views.setFloat(viewId, "setAlpha", opacity.coerceIn(0, 100) / 100f)
+    }
+
+    fun updateBackgroundOpacity(context: Context, appWidgetId: Int, layoutId: Int) {
+        val views = android.widget.RemoteViews(context.packageName, layoutId)
+        applyOpacity(views, ws.xsoh.etar.R.id.widget_background_image,
+            getBackgroundOpacity(context, appWidgetId))
+        AppWidgetManager.getInstance(context).partiallyUpdateAppWidget(appWidgetId, views)
     }
 
     @JvmStatic

@@ -267,6 +267,7 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
                     lunar.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
             views.setTextColor(getTitleViewId(), headerTextColor);
             views.setInt(R.id.grid_widget_settings, "setColorFilter", headerTextColor);
+            views.setInt(getBackgroundViewId(), "setBackgroundResource", 0);
             WidgetUtils.applyBackgroundOpacity(context, views, R.id.widget_background_image,
                     appWidgetId, backgroundColor);
 

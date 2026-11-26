@@ -263,6 +263,8 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
                     ? R.drawable.widget_agenda_bg_black
                     : backgroundColor == R.color.bg_dark
                     ? R.drawable.widget_agenda_bg_dark : R.drawable.widget_agenda_bg_light;
+            // Remove any background retained from an earlier layout version.
+            views.setInt(R.id.widget_background, "setBackgroundResource", 0);
             WidgetUtils.applyBackgroundOpacity(context, views, R.id.widget_background_image,
                     appWidgetId, roundedBackground);
             if (android.os.Build.VERSION.SDK_INT >= 31) {
