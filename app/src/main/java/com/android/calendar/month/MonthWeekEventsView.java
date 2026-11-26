@@ -518,47 +518,20 @@ public class MonthWeekEventsView extends SimpleWeekView {
 
     @Override
     protected void drawBackground(Canvas canvas) {
-        int i = 0;
-        int offset = 0;
         r.top = mDaySeparatorInnerWidth;
         r.bottom = mHeight;
-        if (mShowWeekNum) {
-            i++;
-            offset++;
-        }
-        if (mFocusDay[i]) {
-            while (++i < mOddMonth.length && mFocusDay[i])
-                ;
-            r.right = computeDayLeftPosition(i - offset);
-            r.left = 0;
-            p.setColor(mMonthBGFocusMonthColor);
-            canvas.drawRect(r, p);
-            // compute left edge for i, set up r, draw
-        } else if (mFocusDay[(i = mFocusDay.length - 1)]) {
-            while (--i >= offset && mFocusDay[i])
-                ;
-            i++;
-            // compute left edge for i, set up r, draw
-            r.right = mWidth;
-            r.left = computeDayLeftPosition(i - offset);
-            p.setColor(mMonthBGFocusMonthColor);
-            canvas.drawRect(r, p);
-        } else if (!mOddMonth[i]) {
-            while (++i < mOddMonth.length && !mOddMonth[i])
-                ;
-            r.right = computeDayLeftPosition(i - offset);
-            r.left = 0;
-            p.setColor(mMonthBGOtherColor);
-            canvas.drawRect(r, p);
-            // compute left edge for i, set up r, draw
-        } else if (!mOddMonth[(i = mOddMonth.length - 1)]) {
-            while (--i >= offset && !mOddMonth[i])
-                ;
-            i++;
-            // compute left edge for i, set up r, draw
-            r.right = mWidth;
-            r.left = computeDayLeftPosition(i - offset);
-            p.setColor(mMonthBGOtherColor);
+        int offset = mShowWeekNum ? 1 : 0;
+        for (int day = 0; day < mNumDays; day++) {
+            int index = day + offset;
+            // mOddMonth uses zero-based months, so true denotes an even calendar month.
+            int color = mOddMonth[index] ? mMonthBGOtherColor : mMonthBGColor;
+            if (mFocusDay[index]) {
+                color = androidx.core.graphics.ColorUtils.blendARGB(
+                        mMonthBGFocusMonthColor, mMonthNumTodayColor, 0.10f);
+            }
+            r.left = computeDayLeftPosition(day);
+            r.right = computeDayLeftPosition(day + 1);
+            p.setColor(color);
             canvas.drawRect(r, p);
         }
         if (mHasToday) {
