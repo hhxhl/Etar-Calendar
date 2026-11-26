@@ -47,6 +47,7 @@ import androidx.core.content.ContextCompat;
 
 import com.android.calendar.Event;
 import com.android.calendar.LocalizedDay;
+import com.android.calendar.LunarUtils;
 import java.time.LocalDate;
 import com.android.calendar.Utils;
 import com.android.calendar.settings.ViewDetailsPreferences;
@@ -512,8 +513,10 @@ public class MonthWeekEventsView extends SimpleWeekView {
             lines[i++] = y1;
         }
         p.setColor(mDaySeparatorInnerColor);
+        p.setAlpha(Math.round(Color.alpha(mDaySeparatorInnerColor) * 0.65f));
         p.setStrokeWidth(mDaySeparatorInnerWidth);
         canvas.drawLines(lines, 0, lines.length, p);
+        p.setAlpha(255);
     }
 
     @Override
@@ -632,6 +635,15 @@ public class MonthWeekEventsView extends SimpleWeekView {
                 mMonthNumPaint.setTextSize(mTextSizeLunar);
                 mMonthNumPaint.setTextAlign(Align.CENTER);
                 if (!label.isEmpty()) {
+                    String lunar = LunarUtils.get(getContext(), date.getYear(),
+                            date.getMonthValue() - 1, date.getDayOfMonth(),
+                            LunarUtils.FORMAT_LUNAR_SHORT, false, null);
+                    if (label.equals(lunar)) {
+                        mMonthNumPaint.setColor(androidx.core.graphics.ColorUtils.blendARGB(
+                                oldColor, mMonthNumOtherColor, 0.65f));
+                    } else {
+                        mMonthNumPaint.setColor(mMonthNumTodayColor);
+                    }
                     CharSequence fitted = TextUtils.ellipsize(label, new TextPaint(mMonthNumPaint),
                             Math.max(0, right - left - 2 * mSidePaddingMonthNumber),
                             TextUtils.TruncateAt.END);
@@ -639,6 +651,7 @@ public class MonthWeekEventsView extends SimpleWeekView {
                             mMonthNumPaint);
                 }
                 mMonthNumPaint.setTextSize(oldSize);
+                mMonthNumPaint.setColor(oldColor);
             }
             mMonthNumPaint.setTextAlign(Align.RIGHT);
         }
