@@ -1,17 +1,17 @@
 package com.android.calendar;
 
-import android.icu.util.Calendar;
-import android.icu.util.ChineseCalendar;
+import java.time.LocalDate;
 import java.util.ArrayList;
 
 final class ChineseFestivals {
     private ChineseFestivals() {}
 
-    static ArrayList<String> get(int year, int month, int day, ChineseCalendar lunar) {
+    static ArrayList<String> get(LocalDate date, LunarDate lunar) {
         ArrayList<String> result = new ArrayList<>();
-        int lm = lunar.get(Calendar.MONTH) + 1;
-        int ld = lunar.get(Calendar.DAY_OF_MONTH);
-        if (lunar.get(ChineseCalendar.IS_LEAP_MONTH) == 0) {
+        int year = date.getYear(), month = date.getMonthValue() - 1, day = date.getDayOfMonth();
+        int lm = lunar.month;
+        int ld = lunar.day;
+        if (!lunar.leap) {
             switch (lm * 100 + ld) {
                 case 101: result.add("春节"); break;
                 case 115: result.add("元宵节"); break;
@@ -28,10 +28,8 @@ final class ChineseFestivals {
             }
         }
         if (lm == 12) {
-            ChineseCalendar next = (ChineseCalendar) lunar.clone();
-            next.add(Calendar.DAY_OF_MONTH, 1);
-            if (next.get(Calendar.MONTH) == 0 && next.get(Calendar.DAY_OF_MONTH) == 1
-                    && next.get(ChineseCalendar.IS_LEAP_MONTH) == 0) {
+            LunarDate next = LunarDate.of(date.plusDays(1));
+            if (next.month == 1 && next.day == 1 && !next.leap) {
                 result.add("除夕");
             }
         }

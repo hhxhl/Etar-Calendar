@@ -31,10 +31,8 @@ package com.android.calendar;
 
 import android.content.AsyncTaskLoader;
 import android.content.Context;
-import android.icu.util.ChineseCalendar;
 import android.icu.util.Calendar;
 import android.icu.util.GregorianCalendar;
-import android.icu.util.TimeZone;
 import android.util.LruCache;
 import android.text.TextUtils;
 
@@ -125,30 +123,26 @@ public class LunarUtils {
         LunarInfo cached = sLunarInfos.get(key);
         if (cached != null) return cached;
 
-        TimeZone zone = TimeZone.getTimeZone("Asia/Shanghai");
-        GregorianCalendar solar = new GregorianCalendar(zone);
-        solar.clear();
-        solar.setLenient(false);
-        solar.set(year, month, day, 12, 0, 0);
-        ChineseCalendar lunar = new ChineseCalendar(zone, Locale.CHINA);
+        LocalDate date;
+        LunarDate lunar;
         try {
-            lunar.setTimeInMillis(solar.getTimeInMillis());
-        } catch (IllegalArgumentException e) {
+            date = LocalDate.of(year, month + 1, day);
+            lunar = LunarDate.of(date);
+        } catch (RuntimeException e) {
             return null;
         }
-        int lunarMonth = lunar.get(Calendar.MONTH);
-        int lunarDay = lunar.get(Calendar.DAY_OF_MONTH);
-        String monthLabel = (lunar.get(ChineseCalendar.IS_LEAP_MONTH) == 1 ? "闰" : "")
-                + MONTHS[lunarMonth] + "月";
+        int lunarMonth = lunar.month - 1;
+        int lunarDay = lunar.day;
+        String monthLabel = (lunar.leap ? "闰" : "") + MONTHS[lunarMonth] + "月";
         LunarInfo info = new LunarInfo();
         info.monthLabel = monthLabel;
         info._label_long = monthLabel + DAYS[lunarDay - 1];
         info._label_short = lunarDay == 1 ? monthLabel : DAYS[lunarDay - 1];
-        int cycleYear = lunar.get(Calendar.YEAR) - 1;
+        int cycleYear = lunar.cycleIndex();
         info.yearLabel = "" + STEMS.charAt(Math.floorMod(cycleYear, 10))
                 + BRANCHES.charAt(Math.floorMod(cycleYear, 12)) + "年";
         info._animal = ANIMALS[Math.floorMod(cycleYear, 12)];
-        info.festivals = ChineseFestivals.get(year, month, day, lunar);
+        info.festivals = ChineseFestivals.get(date, lunar);
         info.term = SolarTerms.get(year, month, day);
         sLunarInfos.put(key, info);
         return info;

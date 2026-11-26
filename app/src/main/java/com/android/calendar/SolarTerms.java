@@ -17,13 +17,21 @@ final class SolarTerms {
     private SolarTerms() {}
 
     static String get(int year, int month, int day) {
+        LocalDate date = LocalDate.of(year, month + 1, day);
+        if (LunisolarData.covers(date)) {
+            for (int i = month * 2; i < month * 2 + 2; i++) {
+                if (LunisolarData.termDay(year, i) == day) return NAMES[i];
+            }
+            return null;
+        }
+        // Preserve the original approximate calculation for 1900; outside
+        // the table no authoritative solar-term date is available.
         if (year < 1900 || year > 2100) return null;
         LocalDate[] dates = CACHE.get(year);
         if (dates == null) {
             dates = calculate(year);
             CACHE.put(year, dates);
         }
-        LocalDate date = LocalDate.of(year, month + 1, day);
         for (int i = 0; i < dates.length; i++) {
             if (date.equals(dates[i])) return NAMES[i];
         }

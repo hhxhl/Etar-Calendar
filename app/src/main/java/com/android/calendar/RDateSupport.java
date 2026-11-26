@@ -1,9 +1,6 @@
 package com.android.calendar;
 
 import android.content.Context;
-import android.icu.util.Calendar;
-import android.icu.util.ChineseCalendar;
-import android.icu.util.TimeZone;
 import android.text.TextUtils;
 import com.android.calendar.calendarcommon2.RecurrenceSet;
 import java.time.Instant;
@@ -63,45 +60,49 @@ public final class RDateSupport {
         if (result.size() < 2 || result.size() > 1000) throw new IllegalArgumentException();
         return encode(result);
     }
-    private static ChineseCalendar chinese(LocalDate date) {
-        ChineseCalendar cal = new ChineseCalendar(TimeZone.getTimeZone("Asia/Shanghai"), Locale.CHINA);
-        cal.setTimeInMillis(date.atTime(12, 0).toInstant(ZoneOffset.ofHours(8)).toEpochMilli());
-        return cal;
-    }
-    /** month 1..12; day 1..30. A missing leap month falls back to the normal month. */
+    /** Uses the same authoritative date conversion as the calendar views. */
     public static String ruleFor(LocalDate date) {
-        ChineseCalendar cal = chinese(date);
-        return (cal.get(Calendar.MONTH) + 1) + "," + cal.get(Calendar.DAY_OF_MONTH) + "," + cal.get(ChineseCalendar.IS_LEAP_MONTH);
+        LunarDate lunar = LunarDate.of(date);
+        return lunar.month + "," + lunar.day + "," + (lunar.leap ? 1 : 0);
     }
+
+    /** month 1..12; day 1..30. A missing leap month falls back to the normal month. */
     public static String lunarDates(LocalDate from, String rule) {
         String[] parts = rule.split(",");
         if (parts.length != 3) throw new IllegalArgumentException();
-        int month = Integer.parseInt(parts[0]) - 1, day = Integer.parseInt(parts[1]), leap = Integer.parseInt(parts[2]);
-        if (month < 0 || month > 11 || day < 1 || day > 30 || leap < 0 || leap > 1) throw new IllegalArgumentException();
+        int month = Integer.parseInt(parts[0]), day = Integer.parseInt(parts[1]), leap = Integer.parseInt(parts[2]);
+        if (month < 1 || month > 12 || day < 1 || day > 30 || leap < 0 || leap > 1)
+            throw new IllegalArgumentException();
         TreeSet<Long> result = new TreeSet<>();
-        // Iterate actual lunar months, not Gregorian years. This avoids ICU lenient
-        // normalization of missing leap months and days in short months.
-        ChineseCalendar cal = chinese(from.minusMonths(2));
-        cal.set(Calendar.DAY_OF_MONTH, 1);
+        // Start sufficiently early to see both ordinary and leap months of
+        // the first lunar year, even when the requested date is in a leap month.
+        LocalDate first = from.minusYears(1);
+        for (int i = 0; LunarDate.of(first).day != 1; i++) {
+            if (i >= 31) throw new IllegalArgumentException("Cannot locate lunar month");
+            first = first.plusDays(1);
+        }
         int currentYear = Integer.MIN_VALUE;
         LocalDate normal = null, preferred = null;
-        for (int i = 0; i < 410 && result.size() < 30; i++) {
-            int year = cal.get(Calendar.EXTENDED_YEAR);
-            if (year != currentYear) {
+        for (int i = 0; i < 430 && result.size() < 30; i++) {
+            LunarDate lunar = LunarDate.of(first);
+            if (lunar.year != currentYear) {
                 LocalDate chosen = preferred != null ? preferred : normal;
                 if (chosen != null && !chosen.isBefore(from)) result.add(midnight(chosen));
                 normal = preferred = null;
-                currentYear = year;
+                currentYear = lunar.year;
                 if (result.size() >= 30) break;
             }
-            if (cal.get(Calendar.MONTH) == month) {
-                int days = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
-                LocalDate first = Instant.ofEpochMilli(cal.getTimeInMillis()).atOffset(ZoneOffset.ofHours(8)).toLocalDate();
-                LocalDate candidate = first.plusDays(Math.min(day, days) - 1L);
-                if (cal.get(ChineseCalendar.IS_LEAP_MONTH) == 0) normal = candidate;
+            LocalDate next = first.plusDays(29);
+            if (LunarDate.of(next).day != 1) next = next.plusDays(1);
+            if (LunarDate.of(next).day != 1)
+                throw new IllegalArgumentException("Inconsistent lunar month boundary");
+            int length = (int) java.time.temporal.ChronoUnit.DAYS.between(first, next);
+            if (lunar.month == month) {
+                LocalDate candidate = first.plusDays(Math.min(day, length) - 1L);
+                if (!lunar.leap) normal = candidate;
                 else if (leap == 1) preferred = candidate;
             }
-            cal.add(Calendar.MONTH, 1);
+            first = next;
         }
         if (result.size() != 30) throw new IllegalArgumentException("Cannot generate lunar dates");
         return encode(result);
