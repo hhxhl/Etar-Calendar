@@ -238,14 +238,25 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
                     lunar.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
             int backgroundColor = DynamicThemeKt.getWidgetBackgroundStyle(context);
             int headerTextColor = WidgetHeaderUtils.accentColor(context);
-            views.setTextColor(R.id.day_of_week, headerTextColor);
-            views.setTextColor(R.id.date, headerTextColor);
-            views.setTextColor(R.id.widget_lunar_day, headerTextColor);
-            views.setInt(R.id.iv_settings, "setColorFilter", headerTextColor);
-            int dividerColor = WidgetHeaderUtils.dividerColor(context);
-            views.setInt(R.id.widget_header_divider, "setBackgroundColor", dividerColor);
-            views.setInt(R.id.widget_date_lunar_divider, "setBackgroundColor", dividerColor);
-            views.setInt(R.id.widget_lunar_weekday_divider, "setBackgroundColor", dividerColor);
+            if (android.os.Build.VERSION.SDK_INT >= 31) {
+                for (int id : new int[]{R.id.day_of_week, R.id.date, R.id.widget_lunar_day}) {
+                    views.setColorStateList(id, "setTextColor", R.color.widget_live_accent);
+                }
+                views.setColorStateList(R.id.iv_settings, "setImageTintList", R.color.widget_live_accent);
+                for (int id : new int[]{R.id.widget_header_divider, R.id.widget_date_lunar_divider,
+                        R.id.widget_lunar_weekday_divider}) {
+                    views.setInt(id, "setBackgroundResource", R.color.widget_live_divider);
+                }
+            } else {
+                views.setTextColor(R.id.day_of_week, headerTextColor);
+                views.setTextColor(R.id.date, headerTextColor);
+                views.setTextColor(R.id.widget_lunar_day, headerTextColor);
+                views.setInt(R.id.iv_settings, "setColorFilter", headerTextColor);
+                int dividerColor = WidgetHeaderUtils.dividerColor(context);
+                views.setInt(R.id.widget_header_divider, "setBackgroundColor", dividerColor);
+                views.setInt(R.id.widget_date_lunar_divider, "setBackgroundColor", dividerColor);
+                views.setInt(R.id.widget_lunar_weekday_divider, "setBackgroundColor", dividerColor);
+            }
             views.setViewVisibility(R.id.widget_lunar_weekday_divider,
                     lunar.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
             int roundedBackground = backgroundColor == R.color.bg_black
