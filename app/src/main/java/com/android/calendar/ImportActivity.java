@@ -5,9 +5,7 @@ import android.app.AlertDialog;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
-import android.content.ContentValues;
 import android.provider.CalendarContract.Calendars;
-import android.provider.CalendarContract.Events;
 import com.android.calendar.icalendar.IcalImporter;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,16 +13,11 @@ import android.content.ContentResolver;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.provider.CalendarContract;
 import android.widget.Toast;
 
-import com.android.calendar.event.EditEventActivity;
-import com.android.calendar.event.ExtendedProperty;
-import com.android.calendar.icalendar.Attendee;
 import com.android.calendar.icalendar.IcalendarUtils;
 import com.android.calendar.icalendar.VCalendar;
 import com.android.calendar.icalendar.VEvent;
-
 
 import ws.xsoh.etar.R;
 
@@ -86,47 +79,12 @@ public class ImportActivity extends Activity {
                         new AlertDialog.Builder(this).setMessage(getString(R.string.ics_import_unsupported, skipped))
                                 .setPositiveButton(android.R.string.ok, (d,w) -> finish())
                                 .setOnCancelListener(d -> finish()).show();
-                    } else if (parsed.size() == 1 && !parsed.get(0).values.containsKey(Events.RDATE)
-                            && !parsed.get(0).values.containsKey(Events.EXDATE)) {
-                        VEvent event = calendar.getAllEvents().getFirst();
-                        if (event.hasAlarm || event.getProperty("ATTACH") != null) {
-                            new AlertDialog.Builder(this).setMessage(R.string.ics_import_single_limited)
-                                    .setPositiveButton(android.R.string.ok, (d,w) -> openSingle(event, parsed.get(0)))
-                                    .setNegativeButton(android.R.string.cancel, (d,w) -> finish())
-                                    .setOnCancelListener(d -> finish()).show();
-                        } else openSingle(event, parsed.get(0));
                     } else chooseCalendar(parsed, warnings);
                 });
             } catch (Exception e) {
                 runOnUiThread(this::showErrorToast);
             }
         }, "ics-parse").start();
-    }
-
-    private void openSingle(VEvent event, IcalImporter.Parsed parsed) {
-        ContentValues v = parsed.values;
-        Intent intent = new Intent(this, EditEventActivity.class);
-        intent.setAction(Intent.ACTION_INSERT);
-        intent.setType("vnd.android.cursor.item/event");
-        intent.putExtra(Events.TITLE, v.getAsString(Events.TITLE));
-        intent.putExtra(Events.DESCRIPTION, v.getAsString(Events.DESCRIPTION));
-        intent.putExtra(Events.EVENT_LOCATION, v.getAsString(Events.EVENT_LOCATION));
-        intent.putExtra(Events.RRULE, v.getAsString(Events.RRULE));
-        intent.putExtra(ExtendedProperty.URL, IcalendarUtils.uncleanseString(event.getProperty(VEvent.URL)));
-        intent.putExtra(Events.ORGANIZER, IcalendarUtils.uncleanseString(event.getProperty(VEvent.ORGANIZER)));
-        if (!event.mAttendees.isEmpty()) {
-            StringBuilder emails = new StringBuilder();
-            for (Attendee attendee : event.mAttendees) {
-                if (emails.length() > 0) emails.append(',');
-                emails.append(attendee.mEmail);
-            }
-            intent.putExtra(Intent.EXTRA_EMAIL, emails.toString());
-        }
-        intent.putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, v.getAsLong(Events.DTSTART).longValue());
-        intent.putExtra(CalendarContract.EXTRA_EVENT_END_TIME, parsed.end);
-        intent.putExtra(CalendarContract.EXTRA_EVENT_ALL_DAY, v.getAsInteger(Events.ALL_DAY) == 1);
-        intent.putExtra(EditEventActivity.EXTRA_READ_ONLY, true);
-        try { startActivity(intent); } finally { finish(); }
     }
 
     private void chooseCalendar(List<IcalImporter.Parsed> events, int warnings) {
@@ -186,7 +144,5 @@ public class ImportActivity extends Activity {
         return ContentResolver.SCHEME_CONTENT.equals(scheme)
                 || ContentResolver.SCHEME_FILE.equals(scheme);
     }
-
-
 
 }
