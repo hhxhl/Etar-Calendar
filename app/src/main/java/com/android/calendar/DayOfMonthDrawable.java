@@ -78,6 +78,11 @@ public class DayOfMonthDrawable extends Drawable {
         return PixelFormat.UNKNOWN;
     }
 
+    public void setTextColor(int color) {
+        mPaint.setColor(color);
+        invalidateSelf();
+    }
+
     public void setDayOfMonth(int day) {
         mDayOfMonth = NumberFormat.getInstance().format(day);
         invalidateSelf();
