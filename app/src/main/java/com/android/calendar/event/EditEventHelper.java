@@ -337,8 +337,13 @@ public class EditEventHelper {
                     + "event.");
             return false;
         }
-        if (originalModel != null && model.isUnchanged(originalModel)) {
-            return false;
+        if (originalModel != null && model.isUnchangedExceptCountdown(originalModel)) {
+            if (model.mCountdown == originalModel.mCountdown) return false;
+            // A display-only edit must not rewrite the provider event or trigger calendar sync.
+            if (modifyWhich == MODIFY_ALL) {
+                com.android.calendar.EventCountdown.setEnabled(mContext, model.mId, model.mCountdown);
+                return true;
+            }
         }
 
         ArrayList<ContentProviderOperation> ops = new ArrayList<ContentProviderOperation>();

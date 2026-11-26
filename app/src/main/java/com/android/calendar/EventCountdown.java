@@ -36,6 +36,16 @@ public final class EventCountdown {
         editor.apply();
     }
 
+    public static void setEnabled(Context context, long eventId, boolean enabled) {
+        set(context, eventId, enabled);
+        refresh(context);
+    }
+
+    private static void refresh(Context context) {
+        Utils.sendUpdateWidgetIntent(context);
+        context.getContentResolver().notifyChange(CalendarContract.Instances.CONTENT_URI, null, 0);
+    }
+
     private static ZoneId calendarZone(Context context) {
         try {
             return ZoneId.of(Utils.getTimeZone(context, null));
@@ -101,8 +111,7 @@ public final class EventCountdown {
             if (id < 0) return;
             set(context, id, enabled);
             if (moved && oldId != id) set(context, oldId, false);
-            Utils.sendUpdateWidgetIntent(context);
-            context.getContentResolver().notifyChange(CalendarContract.Instances.CONTENT_URI, null, 0);
+            refresh(context);
         }
     }
 }

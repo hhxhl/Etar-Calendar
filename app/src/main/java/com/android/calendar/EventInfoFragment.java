@@ -1682,7 +1682,6 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
         String displayedDatetime = Utils.getDisplayedDatetime(mStartMillis, mEndMillis,
                 System.currentTimeMillis(), localTimezone, mAllDay, context);
         String countdown = EventCountdown.label(context, mEventId, mStartMillis, mAllDay);
-        if (!countdown.isEmpty()) displayedDatetime += "\n" + countdown;
 
         String displayedTimezone = null;
         if (!mAllDay) {
@@ -1691,7 +1690,8 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
         }
         // Display the datetime.  Make the timezone (if any) transparent.
         if (displayedTimezone == null) {
-            setTextCommon(view, R.id.when_datetime, displayedDatetime);
+            setTextCommon(view, R.id.when_datetime, countdown.isEmpty() ? displayedDatetime
+                    : displayedDatetime + "\n" + countdown);
         } else {
             int timezoneIndex = displayedDatetime.length();
             displayedDatetime += "  " + displayedTimezone;
@@ -1701,6 +1701,7 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
                             context.getResources().getColor(R.color.event_info_headline_transparent_color), mCurrentColor));
             sb.setSpan(transparentColorSpan, timezoneIndex, displayedDatetime.length(),
                     Spannable.SPAN_INCLUSIVE_INCLUSIVE);
+            if (!countdown.isEmpty()) sb.append("\n").append(countdown);
             setTextCommon(view, R.id.when_datetime, sb);
         }
     }

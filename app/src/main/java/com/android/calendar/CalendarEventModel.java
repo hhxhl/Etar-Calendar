@@ -494,6 +494,11 @@ public class CalendarEventModel implements Serializable {
      * @return true if the model is unchanged, false otherwise
      */
     public boolean isUnchanged(CalendarEventModel originalModel) {
+        return originalModel != null && mCountdown == originalModel.mCountdown
+                && isUnchangedExceptCountdown(originalModel);
+    }
+
+    public boolean isUnchangedExceptCountdown(CalendarEventModel originalModel) {
         if (this == originalModel) {
             return true;
         }
@@ -501,7 +506,6 @@ public class CalendarEventModel implements Serializable {
             return false;
         }
 
-        if (mCountdown != originalModel.mCountdown) return false;
         if (!checkOriginalModelFields(originalModel)) {
             return false;
         }
