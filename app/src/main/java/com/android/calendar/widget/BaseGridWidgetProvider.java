@@ -121,7 +121,7 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
         if (widgetHeightDp <= 0) {
             return 0;
         }
-        int availableDp = widgetHeightDp - HEADER_HEIGHT_DP - DOW_ROW_HEIGHT_DP;
+        int availableDp = widgetHeightDp - HEADER_HEIGHT_DP - DOW_ROW_HEIGHT_DP - 1;
         if (availableDp <= 0) {
             return 0;
         }
@@ -239,8 +239,10 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
         int firstDayOfWeek = Utils.getFirstDayOfWeekAsCalendar(context);
         String[] dowLabels = Utils.getDayOfWeekLabels(firstDayOfWeek);
 
-        int headerColor = DynamicThemeKt.getColor(context, "widget_header");
-        int headerTextColor = DynamicThemeKt.getColor(context, "widget_on_header");
+        int headerTextColor = DynamicThemeKt.getColor(context, "widget_text");
+        java.time.LocalDate today = java.time.Instant.ofEpochMilli(now)
+                .atZone(java.time.ZoneId.of(Utils.getTimeZone(context, null))).toLocalDate();
+        String lunar = com.android.calendar.LunarUtils.header(context, today, today, today, today, true);
         int backgroundColor = DynamicThemeKt.getWidgetBackgroundStyle(context);
         int dowTextColor = DynamicThemeKt.getColor(context, "month_day_names_color");
 
@@ -257,7 +259,12 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
 
             RemoteViews views = new RemoteViews(context.getPackageName(), getWidgetLayoutId());
 
-            views.setInt(getHeaderViewId(), "setBackgroundColor", headerColor);
+            views.setInt(R.id.grid_header_divider, "setBackgroundColor",
+                    WidgetHeaderUtils.dividerColor(context));
+            views.setTextViewText(R.id.grid_widget_lunar_title, lunar);
+            views.setTextColor(R.id.grid_widget_lunar_title, WidgetHeaderUtils.secondaryColor(context));
+            views.setViewVisibility(R.id.grid_widget_lunar_title,
+                    lunar.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
             views.setTextColor(getTitleViewId(), headerTextColor);
             views.setInt(R.id.grid_widget_settings, "setColorFilter", headerTextColor);
             views.setInt(getBackgroundViewId(), "setBackgroundResource", backgroundColor);

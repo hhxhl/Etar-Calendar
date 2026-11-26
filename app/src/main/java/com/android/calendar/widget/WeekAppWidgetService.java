@@ -135,7 +135,7 @@ public class WeekAppWidgetService extends RemoteViewsService {
 
             // Set cell background color
             views.setInt(R.id.week_cell_root, "setBackgroundColor",
-                    DynamicThemeKt.getColor(mContext, "month_focus_month_bgcolor"));
+                    android.graphics.Color.TRANSPARENT);
 
             // Grid line borders — right border on all except last column
             int gridLineColor = DynamicThemeKt.getColor(mContext, "month_grid_lines");

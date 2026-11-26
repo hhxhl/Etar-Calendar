@@ -173,6 +173,30 @@ public class LunarUtils {
         return info.yearLabel + (monthOnly ? info.monthLabel : info._label_long);
     }
 
+    /** Lunar day only, including 初一 rather than the month name. */
+    public static String dayLabel(Context context, LocalDate date) {
+        if (!LocalizationSettings.lunar(context)) return "";
+        LunarInfo info = getOrCalculate(date.getYear(), date.getMonthValue() - 1,
+                date.getDayOfMonth());
+        return info == null ? "" : info._label_long.substring(info.monthLabel.length());
+    }
+
+    public static ArrayList<String> festivalLabels(Context context, LocalDate date) {
+        if (!LocalizationSettings.festivals(context)) return new ArrayList<>();
+        LunarInfo info = getOrCalculate(date.getYear(), date.getMonthValue() - 1,
+                date.getDayOfMonth());
+        return info == null ? new ArrayList<>() : new ArrayList<>(info.festivals);
+    }
+
+    public static String solarTermLabel(Context context, LocalDate date) {
+        if (!LocalizationSettings.terms(context)) return "";
+        LunarInfo info = getOrCalculate(date.getYear(), date.getMonthValue() - 1,
+                date.getDayOfMonth());
+        if (info == null || info.term == null) return "";
+        if (LocalizationSettings.festivals(context) && info.festivals.contains(info.term)) return "";
+        return info.term;
+    }
+
     private static String getKey(int year, int month, int day) {
         return year + "-" + month + "-" + day;
     }

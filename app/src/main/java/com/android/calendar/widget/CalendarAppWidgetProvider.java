@@ -30,7 +30,6 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.provider.CalendarContract;
-import android.text.format.DateUtils;
 import android.util.Log;
 import android.widget.RemoteViews;
 
@@ -218,38 +217,33 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
             Time time = new Time(Utils.getTimeZone(context, null));
             time.set(System.currentTimeMillis());
             long millis = time.toMillis();
-            final String dayOfWeek = DateUtils.getDayOfWeekString(time.getWeekDay() + 1,
-                    DateUtils.LENGTH_MEDIUM);
-            final String date = Utils.formatDateRange(context, millis, millis,
-                    DateUtils.FORMAT_ABBREV_ALL | DateUtils.FORMAT_SHOW_DATE
-                            | DateUtils.FORMAT_NO_YEAR);
-            views.setTextViewText(R.id.day_of_week, dayOfWeek);
-            views.setTextViewText(R.id.date, date);
-            android.os.Bundle options = appWidgetManager.getAppWidgetOptions(appWidgetId);
-            boolean landscape = context.getResources().getConfiguration().orientation
-                    == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
-            int width = options.getInt(landscape
-                    ? AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH
-                    : AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 180);
-            boolean compact = width > 0 && width < 180;
-            views.setViewVisibility(R.id.widget_header_balance,
-                    compact ? android.view.View.GONE : android.view.View.VISIBLE);
-            int gravity = compact ? android.view.Gravity.START | android.view.Gravity.CENTER_VERTICAL
-                    : android.view.Gravity.CENTER;
-            views.setInt(R.id.day_of_week, "setGravity", gravity);
-            views.setInt(R.id.date, "setGravity", gravity);
-
-            // Set widget header background based on chosen primary app color
-            int headerColor = DynamicThemeKt.getColor(context, "widget_header");
-            int headerTextColor = DynamicThemeKt.getColor(context, "widget_on_header");
-            views.setInt(R.id.header, "setBackgroundColor", headerColor);
+            java.time.LocalDate today = java.time.Instant.ofEpochMilli(millis)
+                    .atZone(java.time.ZoneId.of(Utils.getTimeZone(context, null))).toLocalDate();
+            java.util.Locale locale = context.getResources().getConfiguration().getLocales().get(0);
+            String weekday = "zh".equals(locale.getLanguage())
+                    ? "周" + "一二三四五六日".charAt(today.getDayOfWeek().getValue() - 1)
+                    : today.getDayOfWeek().getDisplayName(java.time.format.TextStyle.SHORT, locale);
+            String lunar = com.android.calendar.LunarUtils.dayLabel(context, today);
+            views.setTextViewText(R.id.date, String.valueOf(today.getDayOfMonth()));
+            views.setTextViewText(R.id.day_of_week, "zh".equals(locale.getLanguage())
+                    ? WidgetHeaderUtils.vertical(weekday) : weekday);
+            views.setTextViewText(R.id.widget_lunar_day, WidgetHeaderUtils.vertical(lunar));
+            views.setViewVisibility(R.id.widget_lunar_day,
+                    lunar.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
+            int backgroundColor = DynamicThemeKt.getWidgetBackgroundStyle(context);
+            int headerTextColor = DynamicThemeKt.getColor(context, "widget_text");
             views.setTextColor(R.id.day_of_week, headerTextColor);
             views.setTextColor(R.id.date, headerTextColor);
+            views.setTextColor(R.id.widget_lunar_day, WidgetHeaderUtils.secondaryColor(context));
             views.setInt(R.id.iv_settings, "setColorFilter", headerTextColor);
-
-            // Set widget background color based on chosen app theme
-            int backgroundColor = DynamicThemeKt.getWidgetBackgroundStyle(context);
+            views.setInt(R.id.widget_header_divider, "setBackgroundColor",
+                    WidgetHeaderUtils.dividerColor(context));
             views.setInt(R.id.widget_background, "setBackgroundResource", backgroundColor);
+
+            CharSequence special = WidgetHeaderUtils.specialDates(context, today);
+            views.setTextViewText(R.id.widget_special_dates, special);
+            views.setViewVisibility(R.id.widget_special_dates,
+                    special.length() == 0 ? android.view.View.GONE : android.view.View.VISIBLE);
 
             // Attach to list of events
             views.setRemoteAdapter(R.id.events_list, updateIntent);

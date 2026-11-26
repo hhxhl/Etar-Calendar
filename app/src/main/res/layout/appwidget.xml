@@ -14,78 +14,104 @@
      limitations under the License.
 -->
 
-<RelativeLayout
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_background"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:clickable="true"
-    android:focusable="true">
+    android:orientation="vertical">
 
-    <!-- Header -->
-    <RelativeLayout
+    <LinearLayout
         android:id="@+id/header"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:gravity="center_vertical|start"
-        android:minHeight="48dip"
-        android:paddingStart="2dip"
-        android:paddingEnd="2dip">
-
-        <ImageView
-            android:id="@+id/iv_settings"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_alignParentEnd="true"
-            android:layout_centerVertical="true"
-            android:padding="8dp"
-            android:contentDescription="@string/widget_menu_more_options"
-            android:src="@drawable/ic_widget_more" />
-
-        <FrameLayout
-            android:id="@+id/widget_header_balance"
-            android:layout_width="40dp"
-            android:layout_height="1dp"
-            android:layout_alignParentStart="true" />
-
-        <TextView
-            android:id="@+id/day_of_week"
-            style="@style/WidgetDayOfWeekStyle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="3dip"
-            android:layout_toStartOf="@id/iv_settings"
-            android:layout_toEndOf="@id/widget_header_balance"
-            android:layout_alignWithParentIfMissing="true"
-            android:gravity="center"
-            android:shadowColor="#0dffffff"
-            android:shadowRadius="3"
-            android:textColor="@color/appwidget_week" />
+        android:layout_height="48dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp">
 
         <TextView
             android:id="@+id/date"
-            style="@style/WidgetDateStyle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_below="@+id/day_of_week"
-            android:layout_toStartOf="@id/iv_settings"
-            android:layout_toEndOf="@id/widget_header_balance"
-            android:layout_alignWithParentIfMissing="true"
+            android:layout_width="36dp"
+            android:layout_height="match_parent"
             android:gravity="center"
+            android:includeFontPadding="false"
+            android:maxLines="1"
             android:autoSizeTextType="uniform"
-            android:autoSizeMinTextSize="12sp"
-            android:autoSizeMaxTextSize="24sp"
+            android:autoSizeMinTextSize="18sp"
+            android:autoSizeMaxTextSize="34sp"
             android:autoSizeStepGranularity="1sp"
+            android:textSize="34sp"
             android:textColor="@color/appwidget_month" />
-    </RelativeLayout>
 
-    <!-- Event list -->
+        <TextView
+            android:id="@+id/widget_lunar_day"
+            android:layout_width="17dp"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:textSize="12sp"
+            android:autoSizeTextType="uniform"
+            android:autoSizeMinTextSize="9sp"
+            android:autoSizeMaxTextSize="12sp"
+            android:autoSizeStepGranularity="1sp"
+            android:maxLines="2"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/day_of_week"
+            android:layout_width="17dp"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:textSize="12sp"
+            android:autoSizeTextType="uniform"
+            android:autoSizeMinTextSize="8sp"
+            android:autoSizeMaxTextSize="12sp"
+            android:autoSizeStepGranularity="1sp"
+            android:maxLines="2"
+            android:textColor="@color/appwidget_week" />
+
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <ImageView
+            android:id="@+id/iv_settings"
+            android:layout_width="32dp"
+            android:layout_height="40dp"
+            android:padding="4dp"
+            android:contentDescription="@string/widget_menu_more_options"
+            android:src="@drawable/ic_widget_more" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/widget_header_divider"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp" />
+
+    <TextView
+        android:id="@+id/widget_special_dates"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="start"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="2dp"
+        android:textSize="12sp"
+        android:maxLines="3"
+        android:ellipsize="end"
+        android:visibility="gone" />
+
     <ListView
         android:id="@+id/events_list"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_below="@+id/header"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:paddingTop="6dp"
         android:clipToPadding="false"
         android:cacheColorHint="@null"
@@ -94,4 +120,4 @@
         android:scrollbarThumbVertical="@color/appwidget_scrollbar"
         android:listSelector="@android:color/transparent" />
 
-</RelativeLayout>
+</LinearLayout>
