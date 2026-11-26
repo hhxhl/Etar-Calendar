@@ -260,6 +260,11 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
             views.setInt(getHeaderViewId(), "setBackgroundColor", headerColor);
             views.setTextColor(getTitleViewId(), headerTextColor);
             views.setInt(R.id.grid_widget_settings, "setColorFilter", headerTextColor);
+            views.setInt(R.id.iv_add, "setColorFilter", DynamicThemeKt.getColor(context, "widget_fab_fg"));
+            if (android.os.Build.VERSION.SDK_INT >= 31) {
+                views.setColorStateList(R.id.iv_add, "setBackgroundTintList",
+                        android.content.res.ColorStateList.valueOf(DynamicThemeKt.getColor(context, "widget_fab_bg")));
+            }
             views.setInt(getBackgroundViewId(), "setBackgroundResource", backgroundColor);
 
             views.setTextViewText(getTitleViewId(), title);

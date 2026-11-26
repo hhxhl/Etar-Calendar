@@ -153,7 +153,12 @@ fun getColor(context: Context, id: String?): Int {
     // application, but not for the resources. This is to find the package name of a known
     // resource to know what package to lookup the colors in.
     val packageName = res.getResourcePackageName(R.string.app_label)
-    return res.getColor(res.getIdentifier(id + suffix, "color", packageName))
+    val explicitLight = if (suffix.isEmpty() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        res.getIdentifier(id + "_light", "color", packageName)
+    } else 0
+    val colorId = if (explicitLight != 0) explicitLight
+        else res.getIdentifier(id + suffix, "color", packageName)
+    return res.getColor(colorId)
 }
 
 fun getDrawableId(context: Context, id: String?): Int {

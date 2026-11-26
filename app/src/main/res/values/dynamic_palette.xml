@@ -9,4 +9,11 @@
     <color name="widget_text">#333333</color>
     <color name="widget_text_dark">#eeeeee</color>
     <color name="widget_text_black">#eeeeee</color>
+    <color name="widget_fab_bg">@color/colorAccent</color>
+    <color name="widget_fab_bg_dark">@color/colorAccent</color>
+    <color name="widget_fab_bg_black">@color/colorAccent</color>
+    <color name="widget_fab_fg">#ffffff</color>
+    <color name="widget_fab_fg_dark">#ffffff</color>
+    <color name="widget_fab_fg_black">#ffffff</color>
+    <color name="month_widget_today_bg_light">@color/month_widget_today_bg</color>
 </resources>

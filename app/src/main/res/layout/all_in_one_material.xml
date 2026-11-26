@@ -40,12 +40,12 @@
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|end"
             android:layout_margin="@dimen/fab_margin"
-            android:backgroundTint="@color/colorAccent"
+            app:backgroundTint="?attr/colorPrimary"
             android:contentDescription="@string/event_create"
             android:src="@drawable/ic_add_event"
             app:borderWidth="0dp"
             app:layout_anchorGravity="bottom|right|end"
-            app:tint="@android:color/white" />
+            app:tint="?attr/colorOnPrimary" />
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 

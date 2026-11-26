@@ -233,6 +233,11 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
             views.setTextColor(R.id.day_of_week, headerTextColor);
             views.setTextColor(R.id.date, headerTextColor);
             views.setInt(R.id.iv_settings, "setColorFilter", headerTextColor);
+            views.setInt(R.id.iv_add, "setColorFilter", DynamicThemeKt.getColor(context, "widget_fab_fg"));
+            if (android.os.Build.VERSION.SDK_INT >= 31) {
+                views.setColorStateList(R.id.iv_add, "setBackgroundTintList",
+                        android.content.res.ColorStateList.valueOf(DynamicThemeKt.getColor(context, "widget_fab_bg")));
+            }
 
             // Set widget background color based on chosen app theme
             int backgroundColor = DynamicThemeKt.getWidgetBackgroundStyle(context);
