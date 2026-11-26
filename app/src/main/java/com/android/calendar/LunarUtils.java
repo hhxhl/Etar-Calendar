@@ -118,6 +118,13 @@ public class LunarUtils {
         return buildInfo(visible, format, showLunarBeforeFestival, result);
     }
 
+    public static boolean isFestivalLabel(Context context, LocalDate date) {
+        LunarInfo info = getOrCalculate(date.getYear(), date.getMonthValue() - 1,
+                date.getDayOfMonth());
+        return info != null && LocalizationSettings.festivals(context)
+                && !info.festivals.isEmpty();
+    }
+
     private static LunarInfo getOrCalculate(int year, int month, int day) {
         String key = getKey(year, month, day);
         LunarInfo cached = sLunarInfos.get(key);
