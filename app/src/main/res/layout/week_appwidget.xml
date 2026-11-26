@@ -25,7 +25,7 @@
         android:layout_height="match_parent"
         android:scaleType="fitXY"
         android:importantForAccessibility="no"
-        android:src="@color/background_color" />
+        android:src="@drawable/widget_surface" android:tint="@color/widget_live_background" />
 
     <LinearLayout
         android:layout_width="match_parent"

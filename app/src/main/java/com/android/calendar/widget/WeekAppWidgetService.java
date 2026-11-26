@@ -145,7 +145,7 @@ public class WeekAppWidgetService extends RemoteViewsService {
                 views.setViewVisibility(R.id.week_cell_border_right, View.GONE);
             } else {
                 views.setViewVisibility(R.id.week_cell_border_right, View.VISIBLE);
-                views.setInt(R.id.week_cell_border_right, "setBackgroundColor", gridLineColor);
+                WidgetUtils.setThemeLine(mContext, views, R.id.week_cell_border_right, R.color.widget_live_grid, gridLineColor);
             }
 
             // Set cell height
@@ -157,17 +157,15 @@ public class WeekAppWidgetService extends RemoteViewsService {
             String localLabel = LocalizedDay.combined(mContext, localDate);
             views.setTextViewText(R.id.week_cell_localized, localLabel);
             views.setViewVisibility(R.id.week_cell_localized, localLabel.isEmpty() ? View.GONE : View.VISIBLE);
-            views.setTextColor(R.id.week_cell_localized, DynamicThemeKt.getColor(mContext, "month_day_number"));
+            WidgetUtils.setThemeText(mContext, views, R.id.week_cell_localized, R.color.widget_live_text, DynamicThemeKt.getColor(mContext, "month_day_number"));
 
             // Set text color based on today status
             if (day.isToday) {
-                views.setTextColor(R.id.week_cell_day,
-                        DynamicThemeKt.getColor(mContext, "month_widget_today_text"));
-                views.setInt(R.id.week_cell_day, "setBackgroundResource",
-                        DynamicThemeKt.getDrawableId(mContext, "month_widget_today_circle"));
+                WidgetUtils.setThemeText(mContext, views, R.id.week_cell_day, R.color.widget_live_on_primary, DynamicThemeKt.getColor(mContext, "month_widget_today_text"));
+                views.setInt(R.id.week_cell_day, "setBackgroundResource", WidgetUtils.usesLiveTheme(mContext)
+                        ? R.drawable.widget_today_live : DynamicThemeKt.getDrawableId(mContext, "month_widget_today_circle"));
             } else {
-                views.setTextColor(R.id.week_cell_day,
-                        DynamicThemeKt.getColor(mContext, "month_day_number"));
+                WidgetUtils.setThemeText(mContext, views, R.id.week_cell_day, R.color.widget_live_text, DynamicThemeKt.getColor(mContext, "month_day_number"));
                 views.setInt(R.id.week_cell_day, "setBackgroundResource", 0);
             }
 
@@ -230,13 +228,13 @@ public class WeekAppWidgetService extends RemoteViewsService {
                         if (event.timeLabel != null && !event.timeLabel.isEmpty()) {
                             views.setViewVisibility(timeIds[i], View.VISIBLE);
                             views.setTextViewText(timeIds[i], event.timeLabel);
-                            views.setTextColor(timeIds[i], dayTextColor);
+                            WidgetUtils.setThemeText(mContext, views, timeIds[i], R.color.widget_live_text, dayTextColor);
                         } else {
                             views.setViewVisibility(timeIds[i], View.GONE);
                         }
 
                         views.setTextViewText(textIds[i], event.title);
-                        views.setTextColor(textIds[i], dayTextColor);
+                        WidgetUtils.setThemeText(mContext, views, textIds[i], R.color.widget_live_text, dayTextColor);
                         views.setViewPadding(rowIds[i], 1, 0, 1, 0);
                     }
                 } else {
@@ -249,8 +247,7 @@ public class WeekAppWidgetService extends RemoteViewsService {
                 int extra = totalEvents - visibleCount;
                 views.setTextViewText(R.id.week_cell_overflow,
                         mContext.getString(R.string.widget_event_overflow, extra));
-                views.setTextColor(R.id.week_cell_overflow,
-                        DynamicThemeKt.getColor(mContext, "month_day_number"));
+                WidgetUtils.setThemeText(mContext, views, R.id.week_cell_overflow, R.color.widget_live_text, DynamicThemeKt.getColor(mContext, "month_day_number"));
                 views.setViewVisibility(R.id.week_cell_overflow, View.VISIBLE);
             } else {
                 views.setViewVisibility(R.id.week_cell_overflow, View.GONE);

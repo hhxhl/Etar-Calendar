@@ -243,7 +243,6 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
         java.time.LocalDate today = java.time.Instant.ofEpochMilli(now)
                 .atZone(java.time.ZoneId.of(Utils.getTimeZone(context, null))).toLocalDate();
         String lunar = com.android.calendar.LunarUtils.header(context, today, today, today, today, true);
-        int backgroundColor = DynamicThemeKt.getWidgetBackgroundStyle(context);
         int dowTextColor = DynamicThemeKt.getColor(context, "month_day_names_color");
 
         int[] dowIds = getDowViewIds();
@@ -259,23 +258,32 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
 
             RemoteViews views = new RemoteViews(context.getPackageName(), getWidgetLayoutId());
 
-            views.setInt(R.id.grid_header_divider, "setBackgroundColor",
-                    WidgetHeaderUtils.dividerColor(context));
+            WidgetUtils.setThemeLine(context, views, R.id.grid_header_divider,
+                    R.color.widget_live_divider, WidgetHeaderUtils.dividerColor(context));
             views.setTextViewText(R.id.grid_widget_lunar_title, lunar);
-            views.setTextColor(R.id.grid_widget_lunar_title, WidgetHeaderUtils.secondaryColor(context));
+            WidgetUtils.setThemeText(context, views, R.id.grid_widget_lunar_title,
+                    R.color.widget_live_secondary, WidgetHeaderUtils.secondaryColor(context));
             views.setViewVisibility(R.id.grid_widget_lunar_title,
                     lunar.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
-            views.setTextColor(getTitleViewId(), headerTextColor);
-            views.setInt(R.id.grid_widget_settings, "setColorFilter", headerTextColor);
-            views.setInt(getBackgroundViewId(), "setBackgroundResource", 0);
-            WidgetUtils.applyBackgroundOpacity(context, views, R.id.widget_background_image,
-                    appWidgetId, backgroundColor);
+            WidgetUtils.setThemeText(context, views, getTitleViewId(),
+                    R.color.widget_live_text, headerTextColor);
+            if (WidgetUtils.usesLiveTheme(context)) {
+                views.setColorStateList(R.id.grid_widget_settings, "setImageTintList", R.color.widget_live_text);
+            } else {
+                if (android.os.Build.VERSION.SDK_INT >= 31) {
+                    views.setColorStateList(R.id.grid_widget_settings, "setImageTintList",
+                            android.content.res.ColorStateList.valueOf(headerTextColor));
+                } else {
+                    views.setInt(R.id.grid_widget_settings, "setColorFilter", headerTextColor);
+                }
+            }
+            WidgetUtils.applyWidgetBackground(context, views, getBackgroundViewId(), appWidgetId);
 
             views.setTextViewText(getTitleViewId(), title);
 
             for (int i = 0; i < DAYS_PER_WEEK; i++) {
                 views.setTextViewText(dowIds[i], dowLabels[i]);
-                views.setTextColor(dowIds[i], dowTextColor);
+                WidgetUtils.setThemeText(context, views, dowIds[i], R.color.widget_live_secondary, dowTextColor);
             }
 
             views.setRemoteAdapter(getGridViewId(), serviceIntent);

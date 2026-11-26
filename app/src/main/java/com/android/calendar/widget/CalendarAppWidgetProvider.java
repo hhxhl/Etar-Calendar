@@ -34,7 +34,6 @@ import android.util.Log;
 import android.widget.RemoteViews;
 
 import com.android.calendar.AllInOneActivity;
-import com.android.calendar.theme.DynamicThemeKt;
 import com.android.calendar.EventInfoActivity;
 import com.android.calendar.Utils;
 import com.android.calendar.calendarcommon2.Time;
@@ -236,9 +235,8 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
             views.setTextViewText(R.id.widget_lunar_day, WidgetHeaderUtils.vertical(lunar));
             views.setViewVisibility(R.id.widget_lunar_day,
                     lunar.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
-            int backgroundColor = DynamicThemeKt.getWidgetBackgroundStyle(context);
             int headerTextColor = WidgetHeaderUtils.accentColor(context);
-            if (android.os.Build.VERSION.SDK_INT >= 31) {
+            if (WidgetUtils.usesLiveTheme(context)) {
                 for (int id : new int[]{R.id.day_of_week, R.id.date, R.id.widget_lunar_day}) {
                     views.setColorStateList(id, "setTextColor", R.color.widget_live_accent);
                 }
@@ -259,14 +257,7 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
             }
             views.setViewVisibility(R.id.widget_lunar_weekday_divider,
                     lunar.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
-            int roundedBackground = backgroundColor == R.color.bg_black
-                    ? R.drawable.widget_agenda_bg_black
-                    : backgroundColor == R.color.bg_dark
-                    ? R.drawable.widget_agenda_bg_dark : R.drawable.widget_agenda_bg_light;
-            // Remove any background retained from an earlier layout version.
-            views.setInt(R.id.widget_background, "setBackgroundResource", 0);
-            WidgetUtils.applyBackgroundOpacity(context, views, R.id.widget_background_image,
-                    appWidgetId, roundedBackground);
+            WidgetUtils.applyWidgetBackground(context, views, R.id.widget_background, appWidgetId);
             if (android.os.Build.VERSION.SDK_INT >= 31) {
                 android.os.Bundle options = appWidgetManager.getAppWidgetOptions(appWidgetId);
                 boolean landscape = context.getResources().getConfiguration().orientation

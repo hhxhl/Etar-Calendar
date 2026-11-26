@@ -149,14 +149,14 @@ public class MonthAppWidgetService extends RemoteViewsService {
                 views.setViewVisibility(R.id.month_cell_border_right, View.GONE);
             } else {
                 views.setViewVisibility(R.id.month_cell_border_right, View.VISIBLE);
-                views.setInt(R.id.month_cell_border_right, "setBackgroundColor", gridLineColor);
+                WidgetUtils.setThemeLine(mContext, views, R.id.month_cell_border_right, R.color.widget_live_grid, gridLineColor);
             }
 
             if (lastRow) {
                 views.setViewVisibility(R.id.month_cell_border_bottom, View.GONE);
             } else {
                 views.setViewVisibility(R.id.month_cell_border_bottom, View.VISIBLE);
-                views.setInt(R.id.month_cell_border_bottom, "setBackgroundColor", gridLineColor);
+                WidgetUtils.setThemeLine(mContext, views, R.id.month_cell_border_bottom, R.color.widget_live_grid, gridLineColor);
             }
 
             // Set cell height to fill available grid space
@@ -168,21 +168,18 @@ public class MonthAppWidgetService extends RemoteViewsService {
             String localLabel = LocalizedDay.combined(mContext, localDate);
             views.setTextViewText(R.id.month_cell_localized, localLabel);
             views.setViewVisibility(R.id.month_cell_localized, localLabel.isEmpty() ? View.GONE : View.VISIBLE);
-            views.setTextColor(R.id.month_cell_localized, DynamicThemeKt.getColor(mContext, "month_day_number"));
+            WidgetUtils.setThemeText(mContext, views, R.id.month_cell_localized, R.color.widget_live_text, DynamicThemeKt.getColor(mContext, "month_day_number"));
 
             // Set text color based on current month / today status
             if (cell.isToday) {
-                views.setTextColor(R.id.month_cell_day,
-                        DynamicThemeKt.getColor(mContext, "month_widget_today_text"));
-                views.setInt(R.id.month_cell_day, "setBackgroundResource",
-                        DynamicThemeKt.getDrawableId(mContext, "month_widget_today_circle"));
+                WidgetUtils.setThemeText(mContext, views, R.id.month_cell_day, R.color.widget_live_on_primary, DynamicThemeKt.getColor(mContext, "month_widget_today_text"));
+                views.setInt(R.id.month_cell_day, "setBackgroundResource", WidgetUtils.usesLiveTheme(mContext)
+                        ? R.drawable.widget_today_live : DynamicThemeKt.getDrawableId(mContext, "month_widget_today_circle"));
             } else if (cell.isCurrentMonth) {
-                views.setTextColor(R.id.month_cell_day,
-                        DynamicThemeKt.getColor(mContext, "month_day_number"));
+                WidgetUtils.setThemeText(mContext, views, R.id.month_cell_day, R.color.widget_live_text, DynamicThemeKt.getColor(mContext, "month_day_number"));
                 views.setInt(R.id.month_cell_day, "setBackgroundResource", 0);
             } else {
-                views.setTextColor(R.id.month_cell_day,
-                        DynamicThemeKt.getColor(mContext, "month_day_number_other"));
+                WidgetUtils.setThemeText(mContext, views, R.id.month_cell_day, R.color.widget_live_secondary, DynamicThemeKt.getColor(mContext, "month_day_number_other"));
                 views.setInt(R.id.month_cell_day, "setBackgroundResource", 0);
             }
 
@@ -251,7 +248,7 @@ public class MonthAppWidgetService extends RemoteViewsService {
                         views.setInt(barIds[i], "setBackgroundColor", chip.color);
                         views.setInt(rowIds[i], "setBackgroundColor", 0);
                         views.setTextViewText(textIds[i], chip.title);
-                        views.setTextColor(textIds[i], dayTextColor);
+                        WidgetUtils.setThemeText(mContext, views, textIds[i], R.color.widget_live_text, dayTextColor);
                         views.setViewPadding(rowIds[i], pad, 0, pad, 0);
                     }
                 } else {
@@ -264,8 +261,7 @@ public class MonthAppWidgetService extends RemoteViewsService {
                 int extra = totalEvents - visibleCount;
                 views.setTextViewText(R.id.month_cell_overflow,
                         mContext.getString(R.string.widget_event_overflow, extra));
-                views.setTextColor(R.id.month_cell_overflow,
-                        DynamicThemeKt.getColor(mContext, "month_day_number"));
+                WidgetUtils.setThemeText(mContext, views, R.id.month_cell_overflow, R.color.widget_live_text, DynamicThemeKt.getColor(mContext, "month_day_number"));
                 views.setViewVisibility(R.id.month_cell_overflow, View.VISIBLE);
             } else {
                 views.setViewVisibility(R.id.month_cell_overflow, View.GONE);

@@ -20,6 +20,11 @@ import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
+import android.os.Build
+import com.android.calendar.theme.ThemeUtils
+import com.android.calendar.theme.ThemeUtils.isPureBlackModeEnabled
+import com.android.calendar.theme.model.Theme
+import ws.xsoh.etar.R
 import android.net.Uri
 import android.provider.CalendarContract
 import android.provider.CalendarContract.Attendees
@@ -77,10 +82,45 @@ object WidgetUtils {
     }
 
     @JvmStatic
-    fun applyBackgroundOpacity(context: Context, views: android.widget.RemoteViews,
-                               viewId: Int, appWidgetId: Int, resourceId: Int) {
-        views.setImageViewResource(viewId, resourceId)
-        applyOpacity(views, viewId, getBackgroundOpacity(context, appWidgetId))
+    fun usesLiveTheme(context: Context): Boolean =
+        Build.VERSION.SDK_INT >= 31 && ThemeUtils.getTheme(context) == Theme.SYSTEM
+
+    // Use the same background shape and host-resolved color for every widget.
+    @JvmStatic
+    fun applyWidgetBackground(context: Context, views: android.widget.RemoteViews,
+                              rootId: Int, appWidgetId: Int) {
+        val color = when (ThemeUtils.getTheme(context)) {
+            Theme.SYSTEM -> if (context.isPureBlackModeEnabled)
+                R.color.widget_live_background_black else R.color.widget_live_background
+            Theme.LIGHT -> R.color.widget_background_light
+            Theme.DARK -> if (context.isPureBlackModeEnabled)
+                R.color.bg_black else R.color.widget_background_dark
+            Theme.BLACK -> R.color.bg_black
+        }
+        val id = R.id.widget_background_image
+        views.setInt(rootId, "setBackgroundResource", 0)
+        views.setImageViewResource(id, R.drawable.widget_surface)
+        if (Build.VERSION.SDK_INT >= 31) {
+            // Resolve at RemoteViews application time in the host, not the provider.
+            views.setColorStateList(id, "setImageTintList", color)
+        } else {
+            views.setInt(id, "setColorFilter", context.getColor(color))
+        }
+        applyOpacity(views, id, getBackgroundOpacity(context, appWidgetId))
+    }
+
+    @JvmStatic
+    fun setThemeText(context: Context, views: android.widget.RemoteViews, viewId: Int,
+                     liveColor: Int, fallback: Int) {
+        if (usesLiveTheme(context)) views.setColorStateList(viewId, "setTextColor", liveColor)
+        else views.setTextColor(viewId, fallback)
+    }
+
+    @JvmStatic
+    fun setThemeLine(context: Context, views: android.widget.RemoteViews, viewId: Int,
+                     liveColor: Int, fallback: Int) {
+        if (usesLiveTheme(context)) views.setInt(viewId, "setBackgroundResource", liveColor)
+        else views.setInt(viewId, "setBackgroundColor", fallback)
     }
 
     private fun applyOpacity(views: android.widget.RemoteViews, viewId: Int, opacity: Int) {
