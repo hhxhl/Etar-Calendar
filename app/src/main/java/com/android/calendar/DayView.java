@@ -2560,33 +2560,53 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         // Draw day of the month
         String dateNumStr = String.valueOf(dateNum);
         if (mNumDays > 1) {
-            float y = -1;
-            if (LocalizedDay.enabled(mContext)) {
-                y = DAY_HEADER_HEIGHT - DAY_HEADER_BOTTOM_MARGIN - DATE_HEADER_FONT_SIZE - 2;
-            } else {
-                y = DAY_HEADER_HEIGHT - DAY_HEADER_BOTTOM_MARGIN;
-            }
-            // Draw day of the month
-            x = computeDayLeftPosition(day) + DAY_HEADER_RIGHT_MARGIN;
-            p.setTextAlign(Align.LEFT);
+            boolean localized = LocalizedDay.enabled(mContext);
+            float y = DAY_HEADER_HEIGHT - DAY_HEADER_BOTTOM_MARGIN;
+            if (localized) y -= DATE_HEADER_FONT_SIZE + 2;
+
+            int left = computeDayLeftPosition(day);
+            int right = computeDayLeftPosition(day + 1);
+            float center = (left + right) / 2f;
+            p.setTextAlign(Align.CENTER);
             p.setTextSize(DATE_HEADER_FONT_SIZE);
-
             p.setTypeface(todayIndex == day ? mBold : Typeface.DEFAULT);
-            p.setColor(todayIndex == day? mWeek_todayColor : color);
-            canvas.drawText(dateNumStr, x, y, p);
+            int dateColor = todayIndex == day ? mWeek_todayColor : color;
+            p.setColor(dateColor);
+            float dateWidth = p.measureText(dateNumStr);
+            canvas.drawText(dateNumStr, center, y, p);
 
-            // Draw day of the week
+            float dateY = y;
             y -= DATE_HEADER_FONT_SIZE;
             p.setTextSize(DAY_HEADER_FONT_SIZE);
             p.setTypeface(Typeface.DEFAULT);
-            canvas.drawText(dayStr, x, y, p);
+            canvas.drawText(dayStr, center, y, p);
 
-            if (LocalizedDay.enabled(mContext)) {
-                String label = LocalizedDay.combined(mContext, LocalizedDay.fromJulian(cell));
+            if (localized) {
+                java.time.LocalDate date = LocalizedDay.fromJulian(cell);
+                String label = LocalizedDay.label(mContext, date);
+                String marker = LocalizedDay.marker(mContext, date);
+                if (!marker.isEmpty()) {
+                    float available = right - DAY_HEADER_RIGHT_MARGIN - center - dateWidth / 2f - 1f;
+                    float markerWidth = p.measureText(marker);
+                    if (available > 0 && markerWidth > 0) {
+                        p.setTextSize(DAY_HEADER_FONT_SIZE * Math.min(1f, available / markerWidth));
+                        p.setTextAlign(Align.RIGHT);
+                        p.setColor("休".equals(marker) ? 0xffd84343 : 0xff39865a);
+                        canvas.drawText(marker, right - DAY_HEADER_RIGHT_MARGIN, dateY, p);
+                    }
+                }
+                p.setTextSize(DAY_HEADER_FONT_SIZE);
+                p.setTextAlign(Align.CENTER);
+                p.setColor(dateColor);
                 if (!label.isEmpty()) {
-                    canvas.drawText(label, x, DAY_HEADER_HEIGHT - DAY_HEADER_BOTTOM_MARGIN, p);
+                    CharSequence fitted = TextUtils.ellipsize(label, new TextPaint(p),
+                            Math.max(0, right - left - 2 * DAY_HEADER_RIGHT_MARGIN),
+                            TextUtils.TruncateAt.END);
+                    canvas.drawText(fitted.toString(), center,
+                            DAY_HEADER_HEIGHT - DAY_HEADER_BOTTOM_MARGIN, p);
                 }
             }
+            p.setTextAlign(Align.LEFT);
         } else {
             float y = ONE_DAY_HEADER_HEIGHT - DAY_HEADER_ONE_DAY_BOTTOM_MARGIN;
             p.setTextAlign(Align.LEFT);
@@ -2881,7 +2901,8 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
 
             // Leave a one pixel boundary on the left and right of the rectangle for the event
             layout = new StaticLayout(bob, 0, bob.length(), new TextPaint(paint), r.width(),
-                    Alignment.ALIGN_NORMAL, 1.0f, 0.0f, true, null, r.width());
+                    mNumDays > 1 ? Alignment.ALIGN_CENTER : Alignment.ALIGN_NORMAL,
+                    1.0f, 0.0f, true, null, r.width());
 
             layouts[i] = layout;
         }

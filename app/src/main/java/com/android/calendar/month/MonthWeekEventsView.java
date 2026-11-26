@@ -631,8 +631,12 @@ public class MonthWeekEventsView extends SimpleWeekView {
                 isFocusMonth = mFocusDay[i];
                 mMonthNumPaint.setColor(isFocusMonth ? mMonthNumColor : mMonthNumOtherColor);
             }
-            x = computeDayLeftPosition(i - offset) - (mSidePaddingMonthNumber);
-            canvas.drawText(mDayNumbers[i], x, y, mMonthNumPaint);
+            int left = computeDayLeftPosition(i - offset - 1);
+            int right = computeDayLeftPosition(i - offset);
+            float center = (left + right) / 2f;
+            mMonthNumPaint.setTextAlign(Align.CENTER);
+            float dateWidth = mMonthNumPaint.measureText(mDayNumbers[i]);
+            canvas.drawText(mDayNumbers[i], center, y, mMonthNumPaint);
             if (isBold) {
                 mMonthNumPaint.setFakeBoldText(isBold = false);
             }
@@ -644,17 +648,30 @@ public class MonthWeekEventsView extends SimpleWeekView {
                 float oldSize = mMonthNumPaint.getTextSize();
                 int oldColor = mMonthNumPaint.getColor();
                 mMonthNumPaint.setTextSize(mTextSizeLunar);
-                int left = computeDayLeftPosition(i - offset - 1) + mSidePaddingMonthNumber;
                 if (!marker.isEmpty()) {
-                    mMonthNumPaint.setColor("休".equals(marker) ? 0xffd84343 : 0xff39865a);
-                    canvas.drawText(marker, left + mMonthNumPaint.measureText(marker), y, mMonthNumPaint);
+                    // Reserve only the right-hand space; the day number remains centered.
+                    float available = right - mSidePaddingMonthNumber - center - dateWidth / 2f - 1f;
+                    float markerWidth = mMonthNumPaint.measureText(marker);
+                    if (available > 0 && markerWidth > 0) {
+                        mMonthNumPaint.setTextSize(mTextSizeLunar * Math.min(1f, available / markerWidth));
+                        mMonthNumPaint.setTextAlign(Align.RIGHT);
+                        mMonthNumPaint.setColor("休".equals(marker) ? 0xffd84343 : 0xff39865a);
+                        canvas.drawText(marker, right - mSidePaddingMonthNumber, y, mMonthNumPaint);
+                    }
                 }
                 mMonthNumPaint.setColor(oldColor);
+                mMonthNumPaint.setTextSize(mTextSizeLunar);
+                mMonthNumPaint.setTextAlign(Align.CENTER);
                 if (!label.isEmpty()) {
-                    canvas.drawText(label, x, y + mTextSizeLunar + mLunarPaddingLunar, mMonthNumPaint);
+                    CharSequence fitted = TextUtils.ellipsize(label, new TextPaint(mMonthNumPaint),
+                            Math.max(0, right - left - 2 * mSidePaddingMonthNumber),
+                            TextUtils.TruncateAt.END);
+                    canvas.drawText(fitted.toString(), center, y + mTextSizeLunar + mLunarPaddingLunar,
+                            mMonthNumPaint);
                 }
                 mMonthNumPaint.setTextSize(oldSize);
             }
+            mMonthNumPaint.setTextAlign(Align.RIGHT);
         }
     }
 
@@ -1535,7 +1552,7 @@ public class MonthWeekEventsView extends SimpleWeekView {
                 return;
             }
             mTextLayout = new DynamicLayout(getBaseText(preferences), mEventPaint,
-                    getAvailableSpaceForText(span), Layout.Alignment.ALIGN_NORMAL,
+                    Math.max(1, getAvailableSpaceForText(span)), Layout.Alignment.ALIGN_CENTER,
                     0.0f, 0.0f, false);
         }
 
@@ -1595,8 +1612,8 @@ public class MonthWeekEventsView extends SimpleWeekView {
                     lineText = baseText.subSequence(mTextLayout.getLineStart(i),
                             mTextLayout.getLineEnd(i));
                 }
-                canvas.drawText(lineText.toString(), mBoundaries.getTextX(), mBoundaries.getTextY(),
-                        getTextPaint());
+                drawCenteredText(canvas, lineText.toString(), mBoundaries.getTextX(),
+                        mBoundaries.getTextRightEdge(span), mBoundaries.getTextY(), getTextPaint());
                 mBoundaries.moveLinesDown(1);
             }
         }
@@ -1647,8 +1664,8 @@ public class MonthWeekEventsView extends SimpleWeekView {
             CharSequence text = getFormattedTime(preferences);
             float avail = getAvailableSpaceForText(1);
             text = TextUtils.ellipsize(text, mEventExtrasPaint, avail, TextUtils.TruncateAt.END);
-            canvas.drawText(text.toString(), mBoundaries.getTextX(),
-                    mBoundaries.getTextY(), getTimesPaint());
+            drawCenteredText(canvas, text.toString(), mBoundaries.getTextX(),
+                    mBoundaries.getTextRightEdge(1), mBoundaries.getTextY(), getTimesPaint());
             mBoundaries.moveAfterDrawingTimes();
         }
 
@@ -1667,13 +1684,26 @@ public class MonthWeekEventsView extends SimpleWeekView {
         public boolean containsEvent(Event event) { return event.equals(mEvent); }
     }
 
+    private void drawCenteredText(Canvas canvas, String text, float left, float right,
+            float y, Paint paint) {
+        if (right <= left) return;
+        Paint.Align oldAlign = paint.getTextAlign();
+        paint.setTextAlign(Align.CENTER);
+        canvas.save();
+        canvas.clipRect(left, 0, right, mHeight);
+        canvas.drawText(text, (left + right) / 2f, y, paint);
+        canvas.restore();
+        paint.setTextAlign(oldAlign);
+    }
+
     protected void drawMoreEvents(Canvas canvas, int remainingEvents, int x) {
         int y = mHeight - (mExtrasDescent + mEventBottomPadding);
         String text = getContext().getResources().getQuantityString(
                 R.plurals.month_more_events, remainingEvents);
         mEventExtrasPaint.setAntiAlias(true);
         mEventExtrasPaint.setFakeBoldText(true);
-        canvas.drawText(String.format(text, remainingEvents), x, y, mEventExtrasPaint);
+        drawCenteredText(canvas, String.format(text, remainingEvents), x,
+                x + mWidth / mNumDays - 2, y, mEventExtrasPaint);
         mEventExtrasPaint.setFakeBoldText(false);
     }
 
