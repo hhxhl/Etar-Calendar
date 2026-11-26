@@ -18,7 +18,12 @@ package com.android.calendar.icalendar
 
 import android.content.Context
 import android.provider.CalendarContract.Events
-import com.android.calendar.Utils
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+import java.util.UUID
 
 class IcalExporter(private val context: Context) {
 
@@ -37,7 +42,12 @@ class IcalExporter(private val context: Context) {
             Events.RRULE,               // 8
             Events.DURATION,            // 9
             Events._SYNC_ID,            // 10
-            Events.ORGANIZER            // 11
+            Events.ORGANIZER,           // 11
+            Events.UID_2445,            // 12
+            Events.RDATE,               // 13
+            Events.EXDATE,              // 14
+            Events.ORIGINAL_ID,         // 15
+            Events.ORIGINAL_SYNC_ID     // 16
         )
 
         private const val INDEX_ID = 0
@@ -52,6 +62,14 @@ class IcalExporter(private val context: Context) {
         private const val INDEX_DURATION = 9
         private const val INDEX_SYNC_ID = 10
         private const val INDEX_ORGANIZER = 11
+    }
+
+    @Synchronized
+    private fun exportNamespace(): String {
+        val prefs = context.getSharedPreferences("ical_export", Context.MODE_PRIVATE)
+        return prefs.getString("namespace", null) ?: UUID.randomUUID().toString().also {
+            prefs.edit().putString("namespace", it).apply()
+        }
     }
 
     fun exportCalendar(calendarId: Long): VCalendar? {
@@ -81,40 +99,53 @@ class IcalExporter(private val context: Context) {
                 val timeZone = cursor.getString(INDEX_TIMEZONE) ?: "UTC"
                 val allDay = cursor.getInt(INDEX_ALL_DAY) != 0
                 val rrule = cursor.getString(INDEX_RRULE)
-                val syncId = cursor.getString(INDEX_SYNC_ID)
+                val uid = cursor.getString(12)
+                val duration = cursor.getString(INDEX_DURATION)
+                val rdate = cursor.getString(13)
+                val exdate = cursor.getString(14)
+                // Do not export detached instances as unrelated independent events.
+                if (!cursor.isNull(15) || !cursor.isNull(16)) return null
                 val organizer = cursor.getString(INDEX_ORGANIZER)
 
                 event.addProperty(VEvent.SUMMARY, title)
                 event.addProperty(VEvent.DESCRIPTION, description)
                 event.addProperty(VEvent.LOCATION, location)
 
-                if (allDay) {
-                    val localTimeZone = Utils.getTimeZone(context, null)
-                    val eventStart = IcalendarUtils.convertTimeToUtc(dtStart, localTimeZone)
-                    // If dtEnd is 0 (can happen for recurring events), we might need to handle it.
-                    // But for simple all-day events it should be set.
-                    val eventEnd = if (dtEnd > 0) {
-                        IcalendarUtils.convertTimeToUtc(dtEnd, localTimeZone)
+                val dateFormat = DateTimeFormatter.ofPattern("uuuuMMdd", Locale.ROOT)
+                val timeFormat = DateTimeFormatter.ofPattern("uuuuMMdd'T'HHmmss", Locale.ROOT)
+                val zone = if (allDay) ZoneOffset.UTC else runCatching { ZoneId.of(timeZone) }.getOrDefault(ZoneOffset.UTC)
+                fun putDate(key: String, millis: Long) {
+                    val time = Instant.ofEpochMilli(millis).atZone(zone)
+                    if (allDay) {
+                        event.mProperties[key] = dateFormat.format(time)
+                        event.mPropertyParameters[key] = "VALUE=DATE"
+                    } else if (zone == ZoneOffset.UTC || zone.id == "UTC" || zone.id == "GMT") {
+                        event.mProperties[key] = timeFormat.format(time) + "Z"
                     } else {
-                        eventStart + 86400000 // +1 day
-                    }
-                    event.addEventStart(eventStart, "UTC")
-                    event.addEventEnd(eventEnd, "UTC")
-                } else {
-                    event.addEventStart(dtStart, timeZone)
-                    if (dtEnd > 0) {
-                        event.addEventEnd(dtEnd, timeZone)
+                        event.mProperties[key] = timeFormat.format(time)
+                        event.mPropertyParameters[key] = "TZID=${zone.id}"
                     }
                 }
-
-                if (!rrule.isNullOrEmpty()) {
-                    event.addProperty(VEvent.RRULE, rrule)
+                putDate(VEvent.DTSTART, dtStart)
+                if (!duration.isNullOrEmpty() && (!rrule.isNullOrEmpty() || !rdate.isNullOrEmpty())) {
+                    // Calendar Provider accepts P3600S; RFC 5545 uses PT3600S.
+                    event.mProperties[VEvent.DURATION] = duration.replace(Regex("^P([0-9]+)S$"), "PT\$1S")
+                } else if (!cursor.isNull(INDEX_DTEND)) {
+                    putDate(VEvent.DTEND, dtEnd)
+                } else if (allDay) {
+                    putDate(VEvent.DTEND, dtStart + 86400000L)
                 }
-
-                if (!syncId.isNullOrEmpty()) {
-                    // Use syncId if available as UID or part of it
-                    // VEvent constructor already generates a UUID, but we could override it if we want stability
+                if (!rrule.isNullOrEmpty()) event.mProperties[VEvent.RRULE] = rrule
+                if (!rdate.isNullOrEmpty()) {
+                    event.mProperties["RDATE"] = rdate
+                    if (allDay) event.mPropertyParameters["RDATE"] = "VALUE=DATE"
                 }
+                if (!exdate.isNullOrEmpty()) {
+                    event.mProperties["EXDATE"] = exdate
+                    if (allDay) event.mPropertyParameters["EXDATE"] = "VALUE=DATE"
+                }
+                event.mProperties[VEvent.UID] = uid?.takeIf { it.isNotEmpty() }
+                    ?: "${exportNamespace()}-${calendarId}-${cursor.getLong(INDEX_ID)}@ws.xsoh.etar"
 
                 if (!organizer.isNullOrEmpty()) {
                     event.addOrganizer(Organizer(organizer, organizer))

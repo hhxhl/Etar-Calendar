@@ -201,14 +201,23 @@ public class IcalendarUtils {
 
         ArrayList<String> result = new ArrayList<String>();
 
-        try {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream,
+                java.nio.charset.StandardCharsets.UTF_8))) {
             String line;
+            long chars = 0;
             while ((line = reader.readLine()) != null) {
-                result.add(line);
+                chars += line.length() + 1L;
+                if (chars > 16L * 1024 * 1024) return null;
+                if (result.isEmpty() && line.startsWith("\uFEFF")) line = line.substring(1);
+                if (!result.isEmpty() && (line.startsWith(" ") || line.startsWith("\t"))) {
+                    int last = result.size() - 1;
+                    result.set(last, result.get(last) + line.substring(1));
+                } else {
+                    result.add(line);
+                }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            return null;
         }
         return result;
     }

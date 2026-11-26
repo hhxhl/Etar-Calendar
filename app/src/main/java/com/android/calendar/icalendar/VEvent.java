@@ -80,6 +80,8 @@ public class VEvent {
 
     public LinkedList<Attendee> mAttendees;
     public Organizer mOrganizer;
+    public boolean hasAlarm;
+    public boolean hasUnsupportedComponent;
 
     /**
      * Constructor
@@ -182,7 +184,10 @@ public class VEvent {
         // Add Event properties
         sb.append("BEGIN:VEVENT\n");
         for (String property : mProperties.keySet() ) {
-            sb.append(property + ":" + mProperties.get(property) + "\n");
+            sb.append(property);
+            String parameters = mPropertyParameters.get(property);
+            if (parameters != null) sb.append(';').append(parameters);
+            sb.append(':').append(mProperties.get(property)).append('\n');
         }
 
         // Enforce line length requirements
@@ -203,16 +208,28 @@ public class VEvent {
     }
 
     public void populateFromEntries(ListIterator<String> iter) {
+        int depth = 0;
+        // A parsed event must not inherit the synthetic UID used for newly exported events.
+        mProperties.clear();
         while (iter.hasNext()) {
             String line = iter.next();
-            if (line.contains("BEGIN:VEVENT")) {
+            if (line.equalsIgnoreCase("BEGIN:VEVENT")) {
                 // Continue
-            } else if (line.startsWith("END:VEVENT")) {
-                break;
-            } else if (line.startsWith("ORGANIZER")) {
+            } else if (line.equalsIgnoreCase("END:VEVENT") && depth == 0) {
+                return;
+            } else if (line.regionMatches(true, 0, "BEGIN:", 0, 6)) {
+                if (line.equalsIgnoreCase("BEGIN:VALARM")) hasAlarm = true;
+                else hasUnsupportedComponent = true;
+                depth++;
+            } else if (line.regionMatches(true, 0, "END:", 0, 4)) {
+                if (depth == 0) throw new IllegalArgumentException("Invalid event component");
+                depth--;
+            } else if (depth != 0) {
+                // Nested component properties must not overwrite VEVENT properties.
+            } else if (line.regionMatches(true, 0, "ORGANIZER", 0, 9)) {
                 String entry = parseTillNextAttribute(iter, line);
                 mOrganizer = Organizer.populateFromICalString(entry);
-            } else if (line.startsWith("ATTENDEE")) {
+            } else if (line.regionMatches(true, 0, "ATTENDEE", 0, 8)) {
                 // Go one previous, so VEvent, parses current line
                 iter.previous();
 
@@ -228,14 +245,18 @@ public class VEvent {
                 if (indexOfFirstParamDelimiter != -1 && indexOfFirstParamDelimiter < indexOfFirstColon) {
                     key = entry.substring(0, indexOfFirstParamDelimiter);
                     String params = entry.substring(indexOfFirstParamDelimiter + 1, indexOfFirstColon);
-                    mPropertyParameters.put(key, params);
+                    mPropertyParameters.put(key.toUpperCase(java.util.Locale.ROOT), params);
                 } else {
                     key = entry.substring(0, indexOfFirstColon);
                 }
                 String value = entry.substring(indexOfFirstColon + 1);
+                key = key.toUpperCase(java.util.Locale.ROOT);
+                if (mProperties.containsKey(key) && ("RDATE".equals(key) || "EXDATE".equals(key)
+                        || "RRULE".equals(key))) hasUnsupportedComponent = true;
                 mProperties.put(key, value);
             }
         }
+        throw new IllegalArgumentException("Unterminated event");
     }
 
     public static String parseTillNextAttribute(ListIterator<String> iter, String currentLine) {
@@ -243,8 +264,8 @@ public class VEvent {
         parse.append(currentLine);
         while (iter.hasNext()) {
             String line = iter.next();
-            if (line.startsWith(" ")) {
-                parse.append(line.replaceFirst(" ", ""));
+            if (line.startsWith(" ") || line.startsWith("\t")) {
+                parse.append(line.substring(1));
             } else {
                 iter.previous();
                 break;

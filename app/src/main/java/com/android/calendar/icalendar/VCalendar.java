@@ -121,7 +121,7 @@ public class VCalendar {
 
         while (iter.hasNext()) {
             String line = iter.next();
-            if (line.contains("BEGIN:VEVENT")) {
+            if (line.equalsIgnoreCase("BEGIN:VEVENT")) {
                 // Go one previous, so VEvent, parses current line
                 iter.previous();
 
@@ -129,7 +129,7 @@ public class VCalendar {
                 VEvent event = new VEvent();
                 event.populateFromEntries(iter);
                 mEvents.add(event);
-            } else if (line.contains("END:VCALENDAR")) {
+            } else if (line.equalsIgnoreCase("END:VCALENDAR")) {
                 break;
             }
         }

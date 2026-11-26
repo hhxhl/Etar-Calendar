@@ -198,7 +198,8 @@
 
         <activity android:name="com.android.calendar.ImportActivity"
             android:exported="true"
-            android:theme="@android:style/Theme.NoDisplay"
+            android:theme="@android:style/Theme.Material.Light.Dialog.NoActionBar"
+            android:configChanges="orientation|screenSize|keyboardHidden"
             android:launchMode="singleTop">
              <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

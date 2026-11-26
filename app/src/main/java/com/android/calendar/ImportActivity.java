@@ -1,16 +1,21 @@
 package com.android.calendar;
 
 import android.app.Activity;
-import android.content.ActivityNotFoundException;
+import android.app.AlertDialog;
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.database.Cursor;
+import android.content.ContentValues;
+import android.provider.CalendarContract.Calendars;
+import android.provider.CalendarContract.Events;
+import com.android.calendar.icalendar.IcalImporter;
+import java.util.ArrayList;
+import java.util.List;
 import android.content.ContentResolver;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
 import android.provider.CalendarContract;
-import android.text.TextUtils;
 import android.widget.Toast;
 
 import com.android.calendar.event.EditEventActivity;
@@ -19,16 +24,7 @@ import com.android.calendar.icalendar.Attendee;
 import com.android.calendar.icalendar.IcalendarUtils;
 import com.android.calendar.icalendar.VCalendar;
 import com.android.calendar.icalendar.VEvent;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-import java.io.File;
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.LinkedList;
-import java.util.TimeZone;
 
 import ws.xsoh.etar.R;
 
@@ -41,82 +37,23 @@ public class ImportActivity extends Activity {
             Toast.makeText(this, R.string.cal_nothing_to_import, Toast.LENGTH_SHORT).show();
             finish();
         } else {
-            parseCalFile();
+            checkPermissions();
         }
     }
 
-    private long getLocalTimeFromString(String iCalDate, String iCalDateParam) {
-        // see https://tools.ietf.org/html/rfc5545#section-3.3.5
+    private void checkPermissions() {
+        if (checkSelfPermission(Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED
+                || checkSelfPermission(Manifest.permission.WRITE_CALENDAR) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR}, 1);
+        } else parseCalFile();
+    }
 
-        // FORM #2: DATE WITH UTC TIME, e.g. 19980119T070000Z
-        if (iCalDate.endsWith("Z")) {
-            SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd'T'HHmmss'Z'");
-            format.setTimeZone(TimeZone.getTimeZone("UTC"));
-
-            try {
-                format.parse(iCalDate);
-                format.setTimeZone(TimeZone.getDefault());
-                return format.getCalendar().getTimeInMillis();
-            } catch (ParseException e) { }
-        }
-
-        // FORM #3: DATE WITH LOCAL TIME AND TIME ZONE REFERENCE, e.g. TZID=America/New_York:19980119T020000
-        else if (iCalDateParam != null && iCalDateParam.startsWith("TZID=")) {
-            SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd'T'HHmmss");
-            String timeZone = iCalDateParam.substring(5).replace("\"", "");
-            // This is a pretty hacky workaround to prevent exact parsing of VTimezones.
-            // It assumes the TZID to be refered to with one of the names recognizable by Java.
-            // (which are quite a lot, see e.g. http://tutorials.jenkov.com/java-date-time/java-util-timezone.html)
-            if (Arrays.asList(TimeZone.getAvailableIDs()).contains(timeZone)) {
-                format.setTimeZone(TimeZone.getTimeZone(timeZone));
-            }
-            else {
-                String convertedTimeZoneId = android.icu.util.TimeZone
-                        .getIDForWindowsID(timeZone, "001");
-                if (convertedTimeZoneId != null && !convertedTimeZoneId.isEmpty()) {
-                    format.setTimeZone(TimeZone.getTimeZone(convertedTimeZoneId));
-                }
-                else {
-                    format.setTimeZone(TimeZone.getDefault());
-                    Toast.makeText(
-                            this,
-                            getString(R.string.cal_import_error_time_zone_msg, timeZone),
-                            Toast.LENGTH_SHORT).show();
-                }
-            }
-            try {
-                format.parse(iCalDate);
-                return format.getCalendar().getTimeInMillis();
-            } catch (ParseException e) {  }
-        }
-
-        // ONLY DATE, e.g. 20190415
-        else if (iCalDateParam != null && iCalDateParam.equals("VALUE=DATE")) {
-            SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd");
-            format.setTimeZone(TimeZone.getDefault());
-
-            try {
-                format.parse(iCalDate);
-                return format.getCalendar().getTimeInMillis();
-            } catch (ParseException e) {
-            }
-        }
-
-        // FORM #1: DATE WITH LOCAL TIME, e.g. 19980118T230000
-        else {
-            SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd'T'HHmmss");
-            format.setTimeZone(TimeZone.getDefault());
-
-            try {
-                format.parse(iCalDate);
-                return format.getCalendar().getTimeInMillis();
-            } catch (ParseException e) {
-            }
-        }
-
-        Toast.makeText(this, getString(R.string.cal_import_error_date_msg, iCalDate), Toast.LENGTH_SHORT).show();
-
-        return System.currentTimeMillis();
+    @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
+        super.onRequestPermissionsResult(requestCode, permissions, results);
+        if (requestCode == 1 && results.length == 2
+                && results[0] == PackageManager.PERMISSION_GRANTED && results[1] == PackageManager.PERMISSION_GRANTED) {
+            parseCalFile();
+        } else showErrorToast();
     }
 
     private void showErrorToast() {
@@ -125,101 +62,108 @@ public class ImportActivity extends Activity {
     }
 
     private void parseCalFile() {
-        Uri uri = getIntent().getData();
-        VCalendar calendar = IcalendarUtils.readCalendarFromFile(this, uri);
-
-        if (calendar == null) {
-            showErrorToast();
-            return;
-        }
-
-        Intent calIntent = new Intent(Intent.ACTION_INSERT);
-        calIntent.setType("vnd.android.cursor.item/event");
-
-        LinkedList<VEvent> events = calendar.getAllEvents();
-        if (events == null) {
-            showErrorToast();
-            return;
-        }
-
-        VEvent firstEvent = calendar.getAllEvents().getFirst();
-        calIntent.putExtra(CalendarContract.Events.TITLE,
-                IcalendarUtils.uncleanseString(firstEvent.getProperty(VEvent.SUMMARY)));
-        calIntent.putExtra(CalendarContract.Events.EVENT_LOCATION,
-                IcalendarUtils.uncleanseString(firstEvent.getProperty(VEvent.LOCATION)));
-        calIntent.putExtra(CalendarContract.Events.DESCRIPTION,
-                IcalendarUtils.uncleanseString(firstEvent.getProperty(VEvent.DESCRIPTION)));
-        calIntent.putExtra(ExtendedProperty.URL,
-                IcalendarUtils.uncleanseString(firstEvent.getProperty(VEvent.URL)));
-        calIntent.putExtra(CalendarContract.Events.ORGANIZER,
-                IcalendarUtils.uncleanseString(firstEvent.getProperty(VEvent.ORGANIZER)));
-        calIntent.putExtra(CalendarContract.Events.RRULE,
-                IcalendarUtils.uncleanseString(firstEvent.getProperty(VEvent.RRULE)));
-
-        if (firstEvent.mAttendees.size() > 0) {
-            StringBuilder builder = new StringBuilder();
-            for (Attendee attendee : firstEvent.mAttendees) {
-                builder.append(attendee.mEmail);
-                builder.append(",");
+        new Thread(() -> {
+            try {
+                VCalendar calendar = IcalendarUtils.readCalendarFromFile(this, getIntent().getData());
+                if (calendar == null || calendar.getAllEvents().isEmpty()) throw new IllegalArgumentException();
+                List<IcalImporter.Parsed> parsed = new ArrayList<>();
+                int invalid = 0, limited = 0;
+                for (VEvent event : calendar.getAllEvents()) {
+                    try {
+                        IcalImporter.Parsed data = IcalImporter.parse(event);
+                        parsed.add(data);
+                        if (data.limited) limited++;
+                    } catch (RuntimeException e) {
+                        invalid++;
+                    }
+                }
+                int skipped = invalid, warnings = limited;
+                runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed()) return;
+                    // Refuse the entire file if events cannot be represented safely, particularly recurrence exceptions.
+                    if (skipped != 0) {
+                        new AlertDialog.Builder(this).setMessage(getString(R.string.ics_import_unsupported, skipped))
+                                .setPositiveButton(android.R.string.ok, (d,w) -> finish())
+                                .setOnCancelListener(d -> finish()).show();
+                    } else if (parsed.size() == 1 && !parsed.get(0).values.containsKey(Events.RDATE)
+                            && !parsed.get(0).values.containsKey(Events.EXDATE)) {
+                        openSingle(calendar.getAllEvents().getFirst(), parsed.get(0));
+                    } else chooseCalendar(parsed, warnings);
+                });
+            } catch (Exception e) {
+                runOnUiThread(this::showErrorToast);
             }
-            calIntent.putExtra(Intent.EXTRA_EMAIL, builder.toString());
-        }
-
-        String dtStart = firstEvent.getProperty(VEvent.DTSTART);
-        String dtStartParam = firstEvent.getPropertyParameters(VEvent.DTSTART);
-        if (!TextUtils.isEmpty(dtStart)) {
-            calIntent.putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME,
-                    getLocalTimeFromString(dtStart, dtStartParam));
-        }
-
-        String dtEnd = firstEvent.getProperty(VEvent.DTEND);
-        String dtEndParam = firstEvent.getPropertyParameters(VEvent.DTEND);
-        if (dtEnd != null && !TextUtils.isEmpty(dtEnd)) {
-            calIntent.putExtra(CalendarContract.EXTRA_EVENT_END_TIME,
-                    getLocalTimeFromString(dtEnd, dtEndParam));
-        } else {
-            // Treat start date as end date if un-specified
-            dtEnd = dtStart;
-            dtEndParam = dtStartParam;
-        }
-
-        boolean isAllDay = getLocalTimeFromString(dtEnd, dtEndParam)
-                - getLocalTimeFromString(dtStart, dtStartParam) == 86400000;
-
-
-        if (isTimeStartOfDay(dtStart, dtStartParam)) {
-            calIntent.putExtra(CalendarContract.EXTRA_EVENT_ALL_DAY, isAllDay);
-        }
-        //Check if some special property which say it is a "All-Day" event.
-
-        String microsoft_all_day_event = firstEvent.getProperty("X-MICROSOFT-CDO-ALLDAYEVENT");
-        if(!TextUtils.isEmpty(microsoft_all_day_event) && microsoft_all_day_event.equals("TRUE")){
-            calIntent.putExtra(CalendarContract.EXTRA_EVENT_ALL_DAY, true);
-        }
-
-
-        calIntent.putExtra(EditEventActivity.EXTRA_READ_ONLY, true);
-
-        try {
-            startActivity(calIntent);
-        } catch (ActivityNotFoundException e) {
-            // Oh well...
-        } finally {
-            finish();
-        }
+        }, "ics-parse").start();
     }
 
-    private boolean isTimeStartOfDay(String dtStart, String dtStartParam) {
-        // convert to epoch milli seconds
-        long timeStamp = getLocalTimeFromString(dtStart, dtStartParam);
-        Date date = new Date(timeStamp);
-
-        DateFormat dateFormat = new SimpleDateFormat("HH:mm");
-        String dateStr = dateFormat.format(date);
-        if (dateStr.equals("00:00")) {
-            return true;
+    private void openSingle(VEvent event, IcalImporter.Parsed parsed) {
+        ContentValues v = parsed.values;
+        Intent intent = new Intent(this, EditEventActivity.class);
+        intent.setAction(Intent.ACTION_INSERT);
+        intent.setType("vnd.android.cursor.item/event");
+        intent.putExtra(Events.TITLE, v.getAsString(Events.TITLE));
+        intent.putExtra(Events.DESCRIPTION, v.getAsString(Events.DESCRIPTION));
+        intent.putExtra(Events.EVENT_LOCATION, v.getAsString(Events.EVENT_LOCATION));
+        intent.putExtra(Events.RRULE, v.getAsString(Events.RRULE));
+        intent.putExtra(ExtendedProperty.URL, IcalendarUtils.uncleanseString(event.getProperty(VEvent.URL)));
+        intent.putExtra(Events.ORGANIZER, IcalendarUtils.uncleanseString(event.getProperty(VEvent.ORGANIZER)));
+        if (!event.mAttendees.isEmpty()) {
+            StringBuilder emails = new StringBuilder();
+            for (Attendee attendee : event.mAttendees) {
+                if (emails.length() > 0) emails.append(',');
+                emails.append(attendee.mEmail);
+            }
+            intent.putExtra(Intent.EXTRA_EMAIL, emails.toString());
         }
-        return false;
+        intent.putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, v.getAsLong(Events.DTSTART));
+        intent.putExtra(CalendarContract.EXTRA_EVENT_END_TIME, parsed.end);
+        intent.putExtra(CalendarContract.EXTRA_EVENT_ALL_DAY, v.getAsInteger(Events.ALL_DAY) == 1);
+        intent.putExtra(EditEventActivity.EXTRA_READ_ONLY, true);
+        try { startActivity(intent); } finally { finish(); }
+    }
+
+    private void chooseCalendar(List<IcalImporter.Parsed> events, int warnings) {
+        List<Long> ids = new ArrayList<>();
+        List<String> names = new ArrayList<>();
+        try (Cursor c = getContentResolver().query(Calendars.CONTENT_URI,
+                new String[]{Calendars._ID, Calendars.CALENDAR_DISPLAY_NAME, Calendars.ACCOUNT_NAME},
+                Calendars.CALENDAR_ACCESS_LEVEL + ">=? AND " + Calendars.VISIBLE + "=1",
+                new String[]{Integer.toString(Calendars.CAL_ACCESS_CONTRIBUTOR)}, Calendars.CALENDAR_DISPLAY_NAME)) {
+            if (c != null) while (c.moveToNext()) {
+                ids.add(c.getLong(0));
+                names.add(c.getString(1) + " (" + c.getString(2) + ")");
+            }
+        } catch (RuntimeException e) { showErrorToast(); return; }
+        if (ids.isEmpty()) {
+            Toast.makeText(this, R.string.ics_import_no_calendar, Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
+        new AlertDialog.Builder(this).setTitle(R.string.ics_import_choose_calendar)
+                .setItems(names.toArray(new String[0]), (d, i) -> {
+                    String message = getString(R.string.ics_import_confirm, events.size(), names.get(i));
+                    if (warnings > 0) message += "\n\n" + getString(R.string.ics_import_limited, warnings);
+                    new AlertDialog.Builder(this).setMessage(message)
+                            .setPositiveButton(R.string.ics_import_action, (dialog, which) -> importEvents(ids.get(i), events))
+                            .setNegativeButton(android.R.string.cancel, (dialog, which) -> finish())
+                            .setOnCancelListener(dialog -> finish()).show();
+                }).setNegativeButton(android.R.string.cancel, (d,w) -> finish())
+                .setOnCancelListener(d -> finish()).show();
+    }
+
+    private void importEvents(long calendarId, List<IcalImporter.Parsed> events) {
+        new Thread(() -> {
+            try {
+                IcalImporter.Result r = IcalImporter.insert(getContentResolver(), calendarId, events);
+                runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed()) return;
+                    new AlertDialog.Builder(this).setMessage(getString(R.string.ics_import_result,
+                                    r.inserted, r.duplicates, r.failed))
+                            .setPositiveButton(android.R.string.ok, (d,w) -> finish())
+                            .setOnCancelListener(d -> finish()).show();
+                });
+            } catch (Exception e) { runOnUiThread(this::showErrorToast); }
+        }, "ics-import").start();
     }
 
     private boolean isValidIntent() {

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ics_import_choose_calendar">Choose calendar</string>
+    <string name="ics_import_no_calendar">No writable calendar</string>
+    <string name="ics_import_confirm">Import %1$d events into %2$s? Existing duplicates will be skipped.</string>
+    <string name="ics_import_limited">%1$d events contain reminders, attendees, links or attachments that will not be imported in batch mode.</string>
+    <string name="ics_import_action">Import</string>
+    <string name="ics_import_result">Imported: %1$d\nDuplicates skipped: %2$d\nFailed or not attempted: %3$d</string>
+    <string name="ics_import_unsupported">Import cancelled: %1$d events have invalid or unsupported data. No events were written.</string>
+</resources>
