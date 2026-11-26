@@ -61,6 +61,8 @@ public class LunarUtils {
             "初六", "初七", "初八", "初九", "初十", "十一", "十二", "十三", "十四",
             "十五", "十六", "十七", "十八", "十九", "二十", "廿一", "廿二", "廿三",
             "廿四", "廿五", "廿六", "廿七", "廿八", "廿九", "三十"};
+    private static final String STEMS = "甲乙丙丁戊己庚辛壬癸";
+    private static final String BRANCHES = "子丑寅卯辰巳午未申酉戌亥";
     private static final String[] ANIMALS = {"鼠", "牛", "虎", "兔", "龙", "蛇",
             "马", "羊", "猴", "鸡", "狗", "猪"};
 
@@ -142,22 +144,32 @@ public class LunarUtils {
         info.monthLabel = monthLabel;
         info._label_long = monthLabel + DAYS[lunarDay - 1];
         info._label_short = lunarDay == 1 ? monthLabel : DAYS[lunarDay - 1];
-        info._animal = ANIMALS[Math.floorMod(lunar.get(Calendar.YEAR) - 1, 12)];
+        int cycleYear = lunar.get(Calendar.YEAR) - 1;
+        info.yearLabel = "" + STEMS.charAt(Math.floorMod(cycleYear, 10))
+                + BRANCHES.charAt(Math.floorMod(cycleYear, 12)) + "年";
+        info._animal = ANIMALS[Math.floorMod(cycleYear, 12)];
         info.festivals = ChineseFestivals.get(year, month, day, lunar);
         info.term = SolarTerms.get(year, month, day);
         sLunarInfos.put(key, info);
         return info;
     }
 
-    /** Header uses lunar dates only, independent of festival and solar-term settings. */
-    public static String header(Context context, LocalDate start, LocalDate end, boolean monthOnly) {
+    /** Use today's lunar month when visible; otherwise use the displayed date. */
+    public static String header(Context context, LocalDate reference, LocalDate start,
+            LocalDate end, LocalDate today, boolean monthOnly) {
         if (!LocalizationSettings.lunar(context)) return "";
-        LunarInfo first = getOrCalculate(start.getYear(), start.getMonthValue() - 1, start.getDayOfMonth());
-        LunarInfo last = getOrCalculate(end.getYear(), end.getMonthValue() - 1, end.getDayOfMonth());
-        if (first == null || last == null) return "";
-        String a = monthOnly ? first.monthLabel : first._label_long;
-        String b = monthOnly ? last.monthLabel : last._label_long;
-        return "农历" + a + (a.equals(b) ? "" : " – " + b);
+        LocalDate date = reference;
+        if (monthOnly) {
+            if (!today.isBefore(start) && !today.isAfter(end)) {
+                date = today;
+            } else if (reference.isBefore(start) || reference.isAfter(end)) {
+                date = start;
+            }
+        }
+        LunarInfo info = getOrCalculate(date.getYear(), date.getMonthValue() - 1,
+                date.getDayOfMonth());
+        if (info == null) return "";
+        return info.yearLabel + (monthOnly ? info.monthLabel : info._label_long);
     }
 
     private static String getKey(int year, int month, int day) {
@@ -251,6 +263,7 @@ public class LunarUtils {
 
     private static class LunarInfo {
         String monthLabel;
+        String yearLabel;
         ArrayList<String> festivals;
         String term;
         public String _label_long;

@@ -1231,12 +1231,14 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
             ZoneId zone = getZoneId();
             LocalDate first = Instant.ofEpochMilli(start).atZone(zone).toLocalDate();
             LocalDate last = Instant.ofEpochMilli(end).atZone(zone).toLocalDate();
-            boolean monthOnly = mCurrentView == ViewType.MONTH;
-            if (monthOnly) {
+            LocalDate reference = event.selectedTime != null
+                    ? Instant.ofEpochMilli(event.selectedTime.toMillis()).atZone(zone).toLocalDate() : first;
+            boolean monthOnly = mCurrentView == ViewType.MONTH || mCurrentView == ViewType.WEEK;
+            if (mCurrentView == ViewType.MONTH) {
                 first = first.withDayOfMonth(1);
                 last = first.withDayOfMonth(first.lengthOfMonth());
             }
-            String lunar = LunarUtils.header(this, first, last, monthOnly);
+            String lunar = LunarUtils.header(this, reference, first, last, LocalDate.now(zone), monthOnly);
             if (!lunar.isEmpty()) {
                 android.text.SpannableString label = new android.text.SpannableString(msg + "\n" + lunar);
                 label.setSpan(new android.text.style.RelativeSizeSpan(0.65f), msg.length() + 1,

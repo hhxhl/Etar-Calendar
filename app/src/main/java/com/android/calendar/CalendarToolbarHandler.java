@@ -143,10 +143,12 @@ public class CalendarToolbarHandler {
         } catch (RuntimeException e) {
             zone = ZoneId.systemDefault();
         }
-        LocalDate start = Instant.ofEpochMilli(mMilliTime).atZone(zone).toLocalDate();
+        LocalDate reference = Instant.ofEpochMilli(mMilliTime).atZone(zone).toLocalDate();
+        LocalDate start = reference;
         LocalDate end = start;
-        boolean monthOnly = mCurrentViewType == CalendarController.ViewType.MONTH;
-        if (monthOnly) {
+        boolean monthOnly = mCurrentViewType == CalendarController.ViewType.MONTH
+                || mCurrentViewType == CalendarController.ViewType.WEEK;
+        if (mCurrentViewType == CalendarController.ViewType.MONTH) {
             start = start.withDayOfMonth(1);
             end = start.withDayOfMonth(start.lengthOfMonth());
         } else if (mCurrentViewType == CalendarController.ViewType.WEEK) {
@@ -163,7 +165,7 @@ public class CalendarToolbarHandler {
                 end = start.plusDays(count - 1L);
             }
         }
-        return LunarUtils.header(mContext, start, end, monthOnly);
+        return LunarUtils.header(mContext, reference, start, end, LocalDate.now(zone), monthOnly);
     }
 
     // Sets a thread to run 1 second after midnight and update the current date
