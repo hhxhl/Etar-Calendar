@@ -1572,17 +1572,17 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
             last = Instant.ofEpochMilli(mTodayIconRangeEnd).atZone(zone).toLocalDate();
         }
         boolean visible = !today.isBefore(first) && !today.isAfter(last);
-        android.graphics.drawable.Drawable icon = item.getIcon().mutate();
-        if (visible) {
-            icon.setTintList(null);
-        } else {
-            android.util.TypedValue value = new android.util.TypedValue();
-            if (getTheme().resolveAttribute(androidx.appcompat.R.attr.colorPrimary,
-                    value, true)) {
-                icon.setTint(value.resourceId != 0
-                        ? androidx.core.content.ContextCompat.getColor(this, value.resourceId)
-                        : value.data);
-            }
+        if (!(item.getIcon() instanceof LayerDrawable)) return;
+        LayerDrawable icon = (LayerDrawable) item.getIcon().mutate();
+        int normal = com.google.android.material.color.MaterialColors.getColor(
+                this, android.R.attr.colorControlNormal, android.graphics.Color.BLACK);
+        int color = visible ? normal : com.google.android.material.color.MaterialColors.getColor(
+                this, androidx.appcompat.R.attr.colorPrimary, normal);
+        android.graphics.drawable.Drawable frame = icon.findDrawableByLayerId(R.id.today_icon_background);
+        if (frame != null) frame.setTint(color);
+        android.graphics.drawable.Drawable day = icon.findDrawableByLayerId(R.id.today_icon_day);
+        if (day instanceof DayOfMonthDrawable) {
+            ((DayOfMonthDrawable) day).setTextColor(color);
         }
         item.setIcon(icon);
     }
