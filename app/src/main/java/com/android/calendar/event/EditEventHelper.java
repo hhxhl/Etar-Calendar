@@ -16,6 +16,8 @@
 
 package com.android.calendar.event;
 
+import ws.xsoh.etar.R;
+
 import android.content.ContentProviderOperation;
 import android.content.ContentResolver;
 import android.content.ContentUris;
