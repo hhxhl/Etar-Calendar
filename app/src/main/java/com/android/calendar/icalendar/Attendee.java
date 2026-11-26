@@ -90,11 +90,12 @@ public class Attendee {
 
     public void populateFromEntries(ListIterator<String> iter) {
         String line = iter.next();
-        if (line.startsWith("ATTENDEE")) {
+        if (line.regionMatches(true, 0, "ATTENDEE", 0, 8)) {
             String entry = VEvent.parseTillNextAttribute(iter, line);
 
             ArrayList<String> parts = IcalendarUtils.splitQuoted(entry, ':', 1);
 
+            if (parts.size() < 2) throw new IllegalArgumentException("Invalid attendee");
             String uri = parts.get(1);
             if (uri.toUpperCase().startsWith("MAILTO:")) {
                 mEmail = uri.substring(7, uri.length());

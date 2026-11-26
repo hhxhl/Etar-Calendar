@@ -118,10 +118,14 @@ public class VCalendar {
 
     public void populateFromString(ArrayList<String> input) {
         ListIterator<String> iter = input.listIterator();
+        boolean started = false;
 
         while (iter.hasNext()) {
             String line = iter.next();
-            if (line.equalsIgnoreCase("BEGIN:VEVENT")) {
+            if (line.equalsIgnoreCase("BEGIN:VCALENDAR")) {
+                if (started) throw new IllegalArgumentException("Nested calendar");
+                started = true;
+            } else if (line.equalsIgnoreCase("BEGIN:VEVENT") && started) {
                 // Go one previous, so VEvent, parses current line
                 iter.previous();
 
@@ -129,10 +133,13 @@ public class VCalendar {
                 VEvent event = new VEvent();
                 event.populateFromEntries(iter);
                 mEvents.add(event);
-            } else if (line.equalsIgnoreCase("END:VCALENDAR")) {
-                break;
+            } else if (line.equalsIgnoreCase("END:VCALENDAR") && started) {
+                return;
+            } else if (started && line.regionMatches(true, 0, "METHOD:", 0, 7)) {
+                mProperties.put(METHOD, line.substring(7));
             }
         }
+        throw new IllegalArgumentException("Incomplete calendar");
     }
 
     public String getProperty(String key) {

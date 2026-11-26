@@ -7,4 +7,5 @@
     <string name="ics_import_action">导入</string>
     <string name="ics_import_result">成功导入：%1$d 条\n跳过重复：%2$d 条\n失败或未执行：%3$d 条</string>
     <string name="ics_import_unsupported">有 %1$d 条日程数据无效或暂不支持，已取消导入，未写入任何日程。</string>
+    <string name="ics_import_single_limited">此日程含暂不支持导入的提醒或附件。是否继续？</string>
 </resources>

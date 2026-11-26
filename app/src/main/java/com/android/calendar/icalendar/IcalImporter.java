@@ -141,7 +141,11 @@ public final class IcalImporter {
         String rule = event.getProperty(VEvent.RRULE);
         String rdate = recurrenceDates(event, "RDATE", date, startZone);
         String exdate = recurrenceDates(event, "EXDATE", date, startZone);
-        if (rule != null && !rule.isEmpty()) values.put(Events.RRULE, rule.replace("\\;", ";"));
+        if (rule != null && !rule.isEmpty()) {
+            rule = rule.replace("\\;", ";");
+            new com.android.calendar.calendarcommon2.EventRecurrence().parse(rule);
+            values.put(Events.RRULE, rule);
+        }
         if (rdate != null) values.put(Events.RDATE, rdate);
         if (exdate != null) values.put(Events.EXDATE, exdate);
         if (values.containsKey(Events.RRULE) || rdate != null) {
@@ -152,7 +156,8 @@ public final class IcalImporter {
         }
         return new Parsed(values, endMs, event.hasAlarm || !event.mAttendees.isEmpty()
                 || event.getProperty(VEvent.ORGANIZER) != null || event.getProperty(VEvent.URL) != null
-                || event.getProperty("ATTACH") != null);
+                || event.getProperty("ATTACH") != null || event.getProperty("CATEGORIES") != null
+                || event.getProperty("CLASS") != null || event.getProperty("TRANSP") != null);
     }
 
     private static final String[] KEY_COLUMNS = {Events.TITLE, Events.DTSTART, Events.DTEND,
@@ -174,6 +179,13 @@ public final class IcalImporter {
 
     public static Result insert(ContentResolver resolver, long calendarId, List<Parsed> events) {
         Result result = new Result();
+        // Recheck access just before writing, in case the calendar was removed or changed.
+        try (Cursor calendar = resolver.query(CalendarContract.Calendars.CONTENT_URI,
+                new String[]{CalendarContract.Calendars._ID},
+                CalendarContract.Calendars._ID + "=? AND " + CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL + ">=?",
+                new String[]{Long.toString(calendarId), Integer.toString(CalendarContract.Calendars.CAL_ACCESS_CONTRIBUTOR)}, null)) {
+            if (calendar == null || !calendar.moveToFirst()) throw new IllegalStateException("Calendar is not writable");
+        }
         Set<String> uids = new HashSet<>();
         Set<List<String>> keys = new HashSet<>(), noUidKeys = new HashSet<>();
         String[] projection = Arrays.copyOf(KEY_COLUMNS, KEY_COLUMNS.length + 1);

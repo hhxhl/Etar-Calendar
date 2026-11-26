@@ -65,7 +65,8 @@ public class ImportActivity extends Activity {
         new Thread(() -> {
             try {
                 VCalendar calendar = IcalendarUtils.readCalendarFromFile(this, getIntent().getData());
-                if (calendar == null || calendar.getAllEvents().isEmpty()) throw new IllegalArgumentException();
+                if (calendar == null || calendar.getAllEvents().isEmpty()
+                        || "CANCEL".equalsIgnoreCase(calendar.getProperty(VCalendar.METHOD))) throw new IllegalArgumentException();
                 List<IcalImporter.Parsed> parsed = new ArrayList<>();
                 int invalid = 0, limited = 0;
                 for (VEvent event : calendar.getAllEvents()) {
@@ -87,7 +88,13 @@ public class ImportActivity extends Activity {
                                 .setOnCancelListener(d -> finish()).show();
                     } else if (parsed.size() == 1 && !parsed.get(0).values.containsKey(Events.RDATE)
                             && !parsed.get(0).values.containsKey(Events.EXDATE)) {
-                        openSingle(calendar.getAllEvents().getFirst(), parsed.get(0));
+                        VEvent event = calendar.getAllEvents().getFirst();
+                        if (event.hasAlarm || event.getProperty("ATTACH") != null) {
+                            new AlertDialog.Builder(this).setMessage(R.string.ics_import_single_limited)
+                                    .setPositiveButton(android.R.string.ok, (d,w) -> openSingle(event, parsed.get(0)))
+                                    .setNegativeButton(android.R.string.cancel, (d,w) -> finish())
+                                    .setOnCancelListener(d -> finish()).show();
+                        } else openSingle(event, parsed.get(0));
                     } else chooseCalendar(parsed, warnings);
                 });
             } catch (Exception e) {
@@ -115,7 +122,7 @@ public class ImportActivity extends Activity {
             }
             intent.putExtra(Intent.EXTRA_EMAIL, emails.toString());
         }
-        intent.putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, v.getAsLong(Events.DTSTART));
+        intent.putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, v.getAsLong(Events.DTSTART).longValue());
         intent.putExtra(CalendarContract.EXTRA_EVENT_END_TIME, parsed.end);
         intent.putExtra(CalendarContract.EXTRA_EVENT_ALL_DAY, v.getAsInteger(Events.ALL_DAY) == 1);
         intent.putExtra(EditEventActivity.EXTRA_READ_ONLY, true);

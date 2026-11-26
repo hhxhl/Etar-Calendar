@@ -113,7 +113,8 @@ class IcalExporter(private val context: Context) {
 
                 val dateFormat = DateTimeFormatter.ofPattern("uuuuMMdd", Locale.ROOT)
                 val timeFormat = DateTimeFormatter.ofPattern("uuuuMMdd'T'HHmmss", Locale.ROOT)
-                val zone = if (allDay) ZoneOffset.UTC else runCatching { ZoneId.of(timeZone) }.getOrDefault(ZoneOffset.UTC)
+                val recurring = !rrule.isNullOrEmpty() || !rdate.isNullOrEmpty()
+                val zone = if (allDay || !recurring) ZoneOffset.UTC else runCatching { ZoneId.of(timeZone) }.getOrElse { return null }
                 fun putDate(key: String, millis: Long) {
                     val time = Instant.ofEpochMilli(millis).atZone(zone)
                     if (allDay) {
