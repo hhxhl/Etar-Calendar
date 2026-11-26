@@ -1226,6 +1226,8 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         }
 
         final String msg = Utils.formatDateRange(this, start, end, (int) event.extraLong);
+        CharSequence dateTitle = mIsTabletConfig && mCurrentView == ViewType.DAY
+                ? CalendarToolbarHandler.appendShortWeekday(this, msg, start, mTimeZone) : msg;
         CharSequence oldDate = mDateRange.getText();
         if (mIsTabletConfig && LocalizationSettings.lunar(this)) {
             ZoneId zone = getZoneId();
@@ -1240,15 +1242,16 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
             }
             String lunar = LunarUtils.header(this, reference, first, last, LocalDate.now(zone), monthOnly);
             if (!lunar.isEmpty()) {
-                android.text.SpannableString label = new android.text.SpannableString(msg + "\n" + lunar);
-                label.setSpan(new android.text.style.RelativeSizeSpan(0.65f), msg.length() + 1,
+                android.text.SpannableStringBuilder label = new android.text.SpannableStringBuilder(dateTitle);
+                label.append("\n").append(lunar);
+                label.setSpan(new android.text.style.RelativeSizeSpan(0.65f), dateTitle.length() + 1,
                         label.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 mDateRange.setText(label);
-            } else mDateRange.setText(msg);
-        } else mDateRange.setText(msg);
+            } else mDateRange.setText(dateTitle);
+        } else mDateRange.setText(dateTitle);
         updateSecondaryTitleFields(event.selectedTime != null ? event.selectedTime.toMillis()
                 : start);
-        if (!TextUtils.equals(oldDate, msg)) {
+        if (!TextUtils.equals(oldDate, mDateRange.getText())) {
             mDateRange.sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_FOCUSED);
             if (mShowWeekNum && mWeekTextView != null) {
                 mWeekTextView.sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_FOCUSED);
@@ -1269,18 +1272,7 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
                     mWeekNum);
             mWeekTextView.setText(weekString);
             mWeekTextView.setVisibility(View.VISIBLE);
-        } else if (visibleMillisSinceEpoch != -1 && mWeekTextView != null
-                && mCurrentView == ViewType.DAY && mIsTabletConfig) {
-            Time time = new Time(mTimeZone);
-            time.set(visibleMillisSinceEpoch);
-            int julianDay = Time.getJulianDay(visibleMillisSinceEpoch, time.getGmtOffset());
-            time.set(System.currentTimeMillis());
-            int todayJulianDay = Time.getJulianDay(time.toMillis(), time.getGmtOffset());
-            String dayString = Utils.getDayOfWeekString(julianDay, todayJulianDay,
-                    visibleMillisSinceEpoch, this);
-            mWeekTextView.setText(dayString);
-            mWeekTextView.setVisibility(View.VISIBLE);
-        } else if (mWeekTextView != null && (!mIsTabletConfig || mCurrentView != ViewType.DAY)) {
+        } else if (mWeekTextView != null) {
             mWeekTextView.setVisibility(View.GONE);
         }
 

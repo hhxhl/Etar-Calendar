@@ -4,6 +4,9 @@ import android.content.Context;
 import android.os.Handler;
 import android.text.format.DateUtils;
 import android.text.TextUtils;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.RelativeSizeSpan;
 import android.view.View;
 import android.widget.TextView;
 import java.time.LocalDate;
@@ -41,7 +44,6 @@ public class CalendarToolbarHandler {
     private long mVisibleStart = Long.MIN_VALUE;
     private long mVisibleEnd = Long.MIN_VALUE;
     private String mTimeZone;
-    private long mTodayJulianDay;
     private Handler mMidnightHandler = null; // Used to run a time update every midnight
 
     private final Runnable mTimeUpdater = new Runnable() {
@@ -69,10 +71,6 @@ public class CalendarToolbarHandler {
     // Also, update the change and resets the midnight update thread.
     public void refresh(Context context) {
         mTimeZone = Utils.getTimeZone(context, mTimeUpdater);
-        Time time = new Time(mTimeZone);
-        long now = System.currentTimeMillis();
-        time.set(now);
-        mTodayJulianDay = Time.getJulianDay(now, time.getGmtOffset());
         updateTitle();
         setMidnightHandler();
     }
@@ -96,14 +94,14 @@ public class CalendarToolbarHandler {
         updateTitle();
     }
 
-    /** Match the original Gregorian title and keep the weekday/week number below lunar text. */
+    /** Day/agenda place the short weekday next to the Gregorian date. */
     private void updateTitle() {
         String secondary;
         switch (mCurrentViewType) {
             case CalendarController.ViewType.DAY:
             case CalendarController.ViewType.AGENDA:
-                mToolbar.setTitle(buildFullDate());
-                secondary = buildDayOfWeek();
+                mToolbar.setTitle(appendShortWeekday(mContext, buildFullDate(), mMilliTime, mTimeZone));
+                secondary = "";
                 break;
             case CalendarController.ViewType.WEEK:
                 mToolbar.setTitle(buildMonthYearDate());
@@ -181,33 +179,21 @@ public class CalendarToolbarHandler {
         mMidnightHandler.postDelayed(mTimeUpdater, runInMillis);
     }
 
-    // Builds a string with the day of the week and the word yesterday/today/tomorrow
-    // before it if applicable.
-    private String buildDayOfWeek() {
-
-        Time t = new Time(mTimeZone);
-        t.set(mMilliTime);
-        long julianDay = Time.getJulianDay(mMilliTime, t.getGmtOffset());
-        String dayOfWeek;
-        mStringBuilder.setLength(0);
-
-        if (julianDay == mTodayJulianDay) {
-            dayOfWeek = mContext.getString(R.string.agenda_today,
-                    DateUtils.formatDateRange(mContext, mFormatter, mMilliTime, mMilliTime,
-                            DateUtils.FORMAT_SHOW_WEEKDAY, mTimeZone).toString());
-        } else if (julianDay == mTodayJulianDay - 1) {
-            dayOfWeek = mContext.getString(R.string.agenda_yesterday,
-                    DateUtils.formatDateRange(mContext, mFormatter, mMilliTime, mMilliTime,
-                            DateUtils.FORMAT_SHOW_WEEKDAY, mTimeZone).toString());
-        } else if (julianDay == mTodayJulianDay + 1) {
-            dayOfWeek = mContext.getString(R.string.agenda_tomorrow,
-                    DateUtils.formatDateRange(mContext, mFormatter, mMilliTime, mMilliTime,
-                            DateUtils.FORMAT_SHOW_WEEKDAY, mTimeZone).toString());
-        } else {
-            dayOfWeek = DateUtils.formatDateRange(mContext, mFormatter, mMilliTime, mMilliTime,
-                    DateUtils.FORMAT_SHOW_WEEKDAY, mTimeZone).toString();
+    /** Use the locale's short weekday without relative-day prefixes (today/yesterday). */
+    public static CharSequence appendShortWeekday(Context context, String date, long millis, String timeZone) {
+        ZoneId zone;
+        try {
+            zone = ZoneId.of(timeZone);
+        } catch (RuntimeException e) {
+            zone = ZoneId.systemDefault();
         }
-        return dayOfWeek;
+        Locale locale = context.getResources().getConfiguration().getLocales().get(0);
+        String weekday = Instant.ofEpochMilli(millis).atZone(zone)
+                .format(java.time.format.DateTimeFormatter.ofPattern("EEE", locale));
+        SpannableString title = new SpannableString(date + " " + weekday);
+        title.setSpan(new RelativeSizeSpan(0.75f), date.length() + 1, title.length(),
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        return title;
     }
 
     // Builds strings with different formats:

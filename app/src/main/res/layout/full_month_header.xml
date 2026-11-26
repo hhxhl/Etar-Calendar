@@ -30,55 +30,55 @@
         android:layout_width="0dip"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:layout_marginEnd="6dip"
-        android:gravity="end"
+        android:gravity="center"
+        android:padding="0dp"
         style="@style/TextAppearance.MonthView_DayLabel" />
 
     <TextView android:id="@+id/d1_label"
         android:layout_width="0dip"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:layout_marginEnd="6dip"
-        android:gravity="end"
+        android:gravity="center"
+        android:padding="0dp"
         style="@style/TextAppearance.MonthView_DayLabel" />
 
     <TextView android:id="@+id/d2_label"
         android:layout_width="0dip"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:layout_marginEnd="6dip"
-        android:gravity="end"
+        android:gravity="center"
+        android:padding="0dp"
         style="@style/TextAppearance.MonthView_DayLabel" />
 
     <TextView android:id="@+id/d3_label"
         android:layout_width="0dip"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:layout_marginEnd="6dip"
-        android:gravity="end"
+        android:gravity="center"
+        android:padding="0dp"
         style="@style/TextAppearance.MonthView_DayLabel" />
 
     <TextView android:id="@+id/d4_label"
         android:layout_width="0dip"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:layout_marginEnd="6dip"
-        android:gravity="end"
+        android:gravity="center"
+        android:padding="0dp"
         style="@style/TextAppearance.MonthView_DayLabel" />
 
     <TextView android:id="@+id/d5_label"
         android:layout_width="0dip"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:layout_marginEnd="6dip"
-        android:gravity="end"
+        android:gravity="center"
+        android:padding="0dp"
         style="@style/TextAppearance.MonthView_DayLabel" />
 
     <TextView android:id="@+id/d6_label"
         android:layout_width="0dip"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:layout_marginEnd="6dip"
-        android:gravity="end"
+        android:gravity="center"
+        android:padding="0dp"
         style="@style/TextAppearance.MonthView_DayLabel" />
 </LinearLayout>
