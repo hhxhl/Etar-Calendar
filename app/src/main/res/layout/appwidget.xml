@@ -14,11 +14,16 @@
      limitations under the License.
 -->
 
-<LinearLayout
+<FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+<LinearLayout
     android:id="@+id/widget_background"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:layout_gravity="top|center_horizontal"
     android:orientation="vertical">
 
     <LinearLayout
@@ -27,14 +32,14 @@
         android:layout_height="48dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="4dp"
+        android:paddingStart="8dp"
         android:paddingEnd="4dp">
 
         <TextView
             android:id="@+id/date"
             android:layout_width="36dp"
             android:layout_height="match_parent"
-            android:gravity="center"
+            android:gravity="start|center_vertical"
             android:includeFontPadding="false"
             android:maxLines="1"
             android:autoSizeTextType="uniform"
@@ -50,10 +55,11 @@
             android:layout_height="match_parent"
             android:gravity="center"
             android:includeFontPadding="false"
-            android:textSize="12sp"
+            android:textSize="16sp"
+            android:textStyle="bold"
             android:autoSizeTextType="uniform"
             android:autoSizeMinTextSize="9sp"
-            android:autoSizeMaxTextSize="12sp"
+            android:autoSizeMaxTextSize="16sp"
             android:autoSizeStepGranularity="1sp"
             android:maxLines="2"
             android:visibility="gone" />
@@ -64,10 +70,11 @@
             android:layout_height="match_parent"
             android:gravity="center"
             android:includeFontPadding="false"
-            android:textSize="12sp"
+            android:textSize="16sp"
+            android:textStyle="bold"
             android:autoSizeTextType="uniform"
             android:autoSizeMinTextSize="8sp"
-            android:autoSizeMaxTextSize="12sp"
+            android:autoSizeMaxTextSize="16sp"
             android:autoSizeStepGranularity="1sp"
             android:maxLines="2"
             android:textColor="@color/appwidget_week" />
@@ -100,8 +107,8 @@
         android:gravity="start"
         android:paddingStart="8dp"
         android:paddingEnd="8dp"
-        android:paddingTop="4dp"
-        android:paddingBottom="2dp"
+        android:paddingTop="3dp"
+        android:paddingBottom="0dp"
         android:textSize="12sp"
         android:maxLines="3"
         android:ellipsize="end"
@@ -112,7 +119,7 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:paddingTop="6dp"
+        android:paddingTop="2dp"
         android:clipToPadding="false"
         android:cacheColorHint="@null"
         android:divider="@null"
@@ -121,3 +128,4 @@
         android:listSelector="@android:color/transparent" />
 
 </LinearLayout>
+</FrameLayout>

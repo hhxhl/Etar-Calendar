@@ -29,6 +29,15 @@ final class WidgetHeaderUtils {
         return ContextCompat.getColor(context, DynamicThemeKt.getWidgetBackgroundStyle(context));
     }
 
+    static int accentColor(Context context) {
+        boolean dark = ColorUtils.calculateLuminance(background(context)) < 0.5;
+        if (Build.VERSION.SDK_INT >= 31) {
+            return ContextCompat.getColor(context, dark ? R.color.etar_primary_dark
+                    : R.color.etar_primary_light);
+        }
+        return ContextCompat.getColor(context, R.color.colorPrimaryDark);
+    }
+
     static int secondaryColor(Context context) {
         return ColorUtils.blendARGB(DynamicThemeKt.getColor(context, "widget_text"),
                 background(context), 0.28f);
@@ -51,10 +60,7 @@ final class WidgetHeaderUtils {
     static CharSequence specialDates(Context context, LocalDate date) {
         boolean dark = ColorUtils.calculateLuminance(background(context)) < 0.5;
         int festivalColor = dark ? 0xffffb78b : 0xffa04419;
-        int termColor = Build.VERSION.SDK_INT >= 31
-                ? ContextCompat.getColor(context, dark ? android.R.color.system_accent1_200
-                        : android.R.color.system_accent1_700)
-                : ContextCompat.getColor(context, R.color.colorPrimaryDark);
+        int termColor = accentColor(context);
         Map<String, Integer> labels = new LinkedHashMap<>();
         for (String name : LunarUtils.festivalLabels(context, date)) {
             labels.put(name, festivalColor);

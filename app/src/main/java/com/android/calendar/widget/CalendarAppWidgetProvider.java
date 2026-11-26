@@ -139,7 +139,11 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
         final String action = intent.getAction();
         if (LOGD)
             Log.d(TAG, "AppWidgetProvider got the intent: " + intent);
-        if (Utils.getWidgetUpdateAction(context).equals(action)) {
+        if (Utils.getWidgetUpdateAction(context).equals(action)
+                || Intent.ACTION_TIME_CHANGED.equals(action)
+                || Intent.ACTION_TIMEZONE_CHANGED.equals(action)
+                || Intent.ACTION_DATE_CHANGED.equals(action)
+                || Intent.ACTION_LOCALE_CHANGED.equals(action)) {
             if (!isWidgetSupported(context)) {
                 return;
             }
@@ -162,6 +166,7 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
         AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         PendingIntent pendingUpdate = getUpdateIntent(context);
         am.cancel(pendingUpdate);
+        am.cancel(getHeaderUpdateIntent(context));
     }
 
     /**
@@ -202,6 +207,7 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
             return;
         }
 
+        if (appWidgetIds == null || appWidgetIds.length == 0) return;
         // Launch over to service so it can perform update
         for (int appWidgetId : appWidgetIds) {
             if (LOGD) Log.d(TAG, "Building widget update...");
@@ -231,14 +237,33 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
             views.setViewVisibility(R.id.widget_lunar_day,
                     lunar.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
             int backgroundColor = DynamicThemeKt.getWidgetBackgroundStyle(context);
-            int headerTextColor = DynamicThemeKt.getColor(context, "widget_text");
+            int headerTextColor = WidgetHeaderUtils.accentColor(context);
             views.setTextColor(R.id.day_of_week, headerTextColor);
             views.setTextColor(R.id.date, headerTextColor);
-            views.setTextColor(R.id.widget_lunar_day, WidgetHeaderUtils.secondaryColor(context));
+            views.setTextColor(R.id.widget_lunar_day, headerTextColor);
             views.setInt(R.id.iv_settings, "setColorFilter", headerTextColor);
             views.setInt(R.id.widget_header_divider, "setBackgroundColor",
                     WidgetHeaderUtils.dividerColor(context));
-            views.setInt(R.id.widget_background, "setBackgroundResource", backgroundColor);
+            int roundedBackground = backgroundColor == R.color.bg_black
+                    ? R.drawable.widget_agenda_bg_black
+                    : backgroundColor == R.color.bg_dark
+                    ? R.drawable.widget_agenda_bg_dark : R.drawable.widget_agenda_bg_light;
+            views.setInt(R.id.widget_background, "setBackgroundResource", roundedBackground);
+            if (android.os.Build.VERSION.SDK_INT >= 31) {
+                android.os.Bundle options = appWidgetManager.getAppWidgetOptions(appWidgetId);
+                boolean landscape = context.getResources().getConfiguration().orientation
+                        == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+                int width = options.getInt(landscape ? AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH
+                        : AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH);
+                int height = options.getInt(landscape ? AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT
+                        : AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT);
+                // Keep the visible surface square for compact, near-square launcher cells.
+                // Deliberately taller or wider layouts keep their available space.
+                boolean compactSquare = width > 0 && width <= 200 && height >= width
+                        && height <= width * 1.4f;
+                views.setViewLayoutHeight(R.id.widget_background, compactSquare ? width : -1,
+                        android.util.TypedValue.COMPLEX_UNIT_DIP);
+            }
 
             CharSequence special = WidgetHeaderUtils.specialDates(context, today);
             views.setTextViewText(R.id.widget_special_dates, special);
@@ -247,7 +272,6 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
 
             // Attach to list of events
             views.setRemoteAdapter(R.id.events_list, updateIntent);
-            appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId, R.id.events_list);
 
 
             // PendingIntents
@@ -263,7 +287,30 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
             views.setPendingIntentTemplate(R.id.events_list, updateEventIntent);
 
             appWidgetManager.updateAppWidget(appWidgetId, views);
+            appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId, R.id.events_list);
         }
+        scheduleHeaderUpdate(context);
+    }
+
+    @Override
+    public void onAppWidgetOptionsChanged(Context context, AppWidgetManager manager,
+            int appWidgetId, android.os.Bundle newOptions) {
+        performUpdate(context, manager, new int[]{appWidgetId}, null);
+    }
+
+    private static PendingIntent getHeaderUpdateIntent(Context context) {
+        Intent intent = new Intent(Utils.getWidgetUpdateAction(context))
+                .setClass(context, CalendarAppWidgetProvider.class);
+        return PendingIntent.getBroadcast(context, 0, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    private static void scheduleHeaderUpdate(Context context) {
+        java.time.ZoneId zone = java.time.ZoneId.of(Utils.getTimeZone(context, null));
+        long midnight = java.time.LocalDate.now(zone).plusDays(1)
+                .atStartOfDay(zone).toInstant().toEpochMilli();
+        AlarmManager alarm = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        alarm.set(AlarmManager.RTC, midnight, getHeaderUpdateIntent(context));
     }
 
     public static boolean isWidgetSupported(Context context) {

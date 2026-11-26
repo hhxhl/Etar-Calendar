@@ -385,6 +385,6 @@
     <string name="reminder_after">在下列时间后用 %1$s 提醒</string>
     <string name="standalone_app_label">日历</string>
     <string name="widget_menu_more_options">更多选项</string>
-    <string name="widget_menu_settings">小组件设置</string>
-    <string name="widget_menu_add_event">添加日程</string>
+    <string name="widget_menu_settings">设置</string>
+    <string name="widget_menu_add_event">日程</string>
 </resources>

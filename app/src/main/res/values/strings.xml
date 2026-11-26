@@ -900,6 +900,6 @@
     <string name="reminder_after">%1$s after</string>
     <string name="reminder_email_suffix">as email</string>
     <string name="widget_menu_more_options">More options</string>
-    <string name="widget_menu_settings">Widget settings</string>
-    <string name="widget_menu_add_event">Add event</string>
+    <string name="widget_menu_settings">Settings</string>
+    <string name="widget_menu_add_event">Event</string>
 </resources>
