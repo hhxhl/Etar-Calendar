@@ -160,7 +160,7 @@ public class CalendarAppWidgetService extends RemoteViewsService {
                     AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID);
 
             mDeclinedColor = mResources.getColor(R.color.appwidget_item_declined_color);
-            mStandardColor = mResources.getColor(R.color.appwidget_item_standard_color);
+            mStandardColor = DynamicThemeKt.getColor(mContext, "widget_text");
             mAllDayColor = mResources.getColor(R.color.appwidget_item_allday_color);
         }
 
@@ -295,6 +295,7 @@ public class CalendarAppWidgetService extends RemoteViewsService {
                         R.layout.appwidget_no_events);
                 final Intent intent = CalendarAppWidgetProvider.getLaunchFillInIntent(mContext, 0,
                         0, 0, false);
+                views.setTextColor(R.id.no_events, DynamicThemeKt.getColor(mContext, "widget_text"));
                 views.setOnClickFillInIntent(R.id.appwidget_no_events, intent);
                 return views;
             }
@@ -305,6 +306,7 @@ public class CalendarAppWidgetService extends RemoteViewsService {
                         R.layout.appwidget_day);
                 DayInfo dayInfo = mModel.mDayInfos.get(rowInfo.mIndex);
                 updateTextView(views, R.id.date, View.VISIBLE, dayInfo.mDayLabel);
+                views.setTextColor(R.id.date, DynamicThemeKt.getColor(mContext, "widget_text"));
                 return views;
             } else {
                 RemoteViews views;
@@ -321,8 +323,8 @@ public class CalendarAppWidgetService extends RemoteViewsService {
 
                 final long now = System.currentTimeMillis();
                 if (!eventInfo.allDay && eventInfo.start <= now && now <= eventInfo.end) {
-                    int past_bg_color = R.color.agenda_past_days_bar_background_color;
-                    views.setInt(R.id.widget_row, "setBackgroundResource", past_bg_color);
+                    int pastColor = DynamicThemeKt.getColor(mContext, "widget_header");
+                    views.setInt(R.id.widget_row, "setBackgroundColor", pastColor);
                 } else {
                     int future_bg_color = DynamicThemeKt.getWidgetBackgroundStyle(mContext);
                     views.setInt(R.id.widget_row, "setBackgroundResource", future_bg_color);

@@ -227,8 +227,12 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
             views.setTextViewText(R.id.date, date);
 
             // Set widget header background based on chosen primary app color
-            int headerColor = DynamicThemeKt.getColorId(DynamicThemeKt.getPrimaryColor(context));
-            views.setInt(R.id.header, "setBackgroundResource", headerColor);
+            int headerColor = DynamicThemeKt.getColor(context, "widget_header");
+            int headerTextColor = DynamicThemeKt.getColor(context, "widget_on_header");
+            views.setInt(R.id.header, "setBackgroundColor", headerColor);
+            views.setTextColor(R.id.day_of_week, headerTextColor);
+            views.setTextColor(R.id.date, headerTextColor);
+            views.setInt(R.id.iv_settings, "setColorFilter", headerTextColor);
 
             // Set widget background color based on chosen app theme
             int backgroundColor = DynamicThemeKt.getWidgetBackgroundStyle(context);

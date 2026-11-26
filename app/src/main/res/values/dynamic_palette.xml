@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="widget_header">#388d7f</color>
+    <color name="widget_header_dark">#388d7f</color>
+    <color name="widget_header_black">#388d7f</color>
+    <color name="widget_on_header">#ffffff</color>
+    <color name="widget_on_header_dark">#ffffff</color>
+    <color name="widget_on_header_black">#ffffff</color>
+    <color name="widget_text">#333333</color>
+    <color name="widget_text_dark">#eeeeee</color>
+    <color name="widget_text_black">#eeeeee</color>
+</resources>

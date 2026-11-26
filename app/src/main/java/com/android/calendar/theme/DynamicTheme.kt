@@ -29,9 +29,13 @@ fun AppCompatActivity.applyTheme() {
 
     val uiModeManager = getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
 
+    // Apply M3 system roles before the explicit pure-black override.
+    theme.applyStyle(R.style.EtarDynamicColors, true)
+
     // Handle black theme/mode
     if (selectedTheme == Theme.SYSTEM && isPureBlackModeEnabled && isSystemInDarkTheme(this) || selectedTheme == Theme.DARK && isPureBlackModeEnabled) {
         theme.applyStyle(R.style.colorBackgroundBlack, true)
+        theme.applyStyle(R.style.EtarPureBlackSurface, true)
     }
 
     // Setup edge to edge

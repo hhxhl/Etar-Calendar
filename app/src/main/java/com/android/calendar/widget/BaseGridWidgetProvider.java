@@ -239,7 +239,8 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
         int firstDayOfWeek = Utils.getFirstDayOfWeekAsCalendar(context);
         String[] dowLabels = Utils.getDayOfWeekLabels(firstDayOfWeek);
 
-        int headerColor = DynamicThemeKt.getColorId(DynamicThemeKt.getPrimaryColor(context));
+        int headerColor = DynamicThemeKt.getColor(context, "widget_header");
+        int headerTextColor = DynamicThemeKt.getColor(context, "widget_on_header");
         int backgroundColor = DynamicThemeKt.getWidgetBackgroundStyle(context);
         int dowTextColor = DynamicThemeKt.getColor(context, "month_day_names_color");
 
@@ -256,7 +257,9 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
 
             RemoteViews views = new RemoteViews(context.getPackageName(), getWidgetLayoutId());
 
-            views.setInt(getHeaderViewId(), "setBackgroundResource", headerColor);
+            views.setInt(getHeaderViewId(), "setBackgroundColor", headerColor);
+            views.setTextColor(getTitleViewId(), headerTextColor);
+            views.setInt(R.id.grid_widget_settings, "setColorFilter", headerTextColor);
             views.setInt(getBackgroundViewId(), "setBackgroundResource", backgroundColor);
 
             views.setTextViewText(getTitleViewId(), title);

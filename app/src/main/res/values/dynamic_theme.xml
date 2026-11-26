@@ -1,0 +1,8 @@
+<resources>
+    <style name="EtarDynamicColors" />
+    <style name="EtarPureBlackSurface">
+        <item name="colorSurface">@color/bg_black</item>
+        <item name="android:colorBackground">@color/bg_black</item>
+        <item name="android:windowBackground">@color/bg_black</item>
+    </style>
+</resources>

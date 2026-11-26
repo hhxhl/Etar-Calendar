@@ -477,7 +477,7 @@ public class MonthWeekEventsView extends SimpleWeekView {
         r.left = computeDayLeftPosition(mTodayIndex) + (mTodayHighlightWidth / 2);
         r.right = computeDayLeftPosition(mTodayIndex + 1)
                 - (int) Math.ceil(mTodayHighlightWidth / 2.0f);
-        p.setColor(mTodayAnimateColor | (mAnimateTodayAlpha << 24));
+        p.setColor((mTodayAnimateColor & 0x00ffffff) | (mAnimateTodayAlpha << 24));
         canvas.drawRect(r, p);
         p.setStyle(Style.FILL);
     }
@@ -562,14 +562,7 @@ public class MonthWeekEventsView extends SimpleWeekView {
             canvas.drawRect(r, p);
         }
         if (mHasToday) {
-            int selectedColor = ContextCompat.getColor(mContext, DynamicThemeKt.getColorId(DynamicThemeKt.getPrimaryColor(mContext)));
-
-            if (Utils.getSharedPreference(mContext, "pref_theme", "light").equals("light")) {
-                p.setColor(selectedColor);
-                p.setAlpha(72);
-            } else {
-                p.setColor(mMonthBGTodayColor);
-            }
+            p.setColor(mMonthBGTodayColor);
             r.left = computeDayLeftPosition(mTodayIndex);
             r.right = computeDayLeftPosition(mTodayIndex + 1);
             canvas.drawRect(r, p);

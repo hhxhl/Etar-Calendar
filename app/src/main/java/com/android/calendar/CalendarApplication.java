@@ -25,12 +25,14 @@ import com.android.calendar.settings.ViewDetailsPreferences;
 
 public class CalendarApplication extends Application {
     private int mCurrentNightMode;
+    private int mPaletteSignature;
 
     @Override
     public void onCreate() {
         super.onCreate();
         mCurrentNightMode = getResources().getConfiguration().uiMode
                 & Configuration.UI_MODE_NIGHT_MASK;
+        mPaletteSignature = paletteSignature();
 
         /*
          * Ensure the default values are set for any receiver, activity,
@@ -56,12 +58,24 @@ public class CalendarApplication extends Application {
         ExtensionsFactory.init(getAssets());
     }
 
+    private int paletteSignature() {
+        if (android.os.Build.VERSION.SDK_INT < 31) return 0;
+        return java.util.Arrays.hashCode(new int[]{
+                getColor(android.R.color.system_accent1_500),
+                getColor(android.R.color.system_accent2_500),
+                getColor(android.R.color.system_neutral1_100),
+                getColor(android.R.color.system_neutral2_700)
+        });
+    }
+
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
         int newNightMode = newConfig.uiMode & Configuration.UI_MODE_NIGHT_MASK;
-        if (newNightMode != mCurrentNightMode) {
+        int palette = paletteSignature();
+        if (newNightMode != mCurrentNightMode || palette != mPaletteSignature) {
             mCurrentNightMode = newNightMode;
+            mPaletteSignature = palette;
             Utils.sendUpdateWidgetIntent(this);
         }
     }
