@@ -524,10 +524,13 @@ public class MonthWeekEventsView extends SimpleWeekView {
         for (int day = 0; day < mNumDays; day++) {
             int index = day + offset;
             // mOddMonth uses zero-based months, so true denotes an even calendar month.
-            int color = mOddMonth[index] ? mMonthBGOtherColor : mMonthBGColor;
+            int color = mOddMonth[index]
+                    ? androidx.core.graphics.ColorUtils.blendARGB(
+                            mMonthBGColor, mMonthNumColor, 0.12f)
+                    : mMonthBGColor;
             if (mFocusDay[index]) {
                 color = androidx.core.graphics.ColorUtils.blendARGB(
-                        mMonthBGFocusMonthColor, mMonthNumTodayColor, 0.10f);
+                        mMonthBGColor, mMonthBGTodayColor | 0xff000000, 0.24f);
             }
             r.left = computeDayLeftPosition(day);
             r.right = computeDayLeftPosition(day + 1);
