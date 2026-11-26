@@ -162,6 +162,9 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
     private static final int MONTH_VIEW_WEEKS = 6;
     /** Month shown by the month view (from its title updates), 0 if unknown */
     private long mMonthViewDisplayedMillis;
+    private long mTodayIconRangeStart;
+    private long mTodayIconRangeEnd;
+    private int mTodayIconRangeView = -1;
     private boolean mPaused = true;
     private boolean mUpdateOnResume = false;
     private boolean mHideControls = false;
@@ -879,6 +882,7 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         // custom drawable that shows the day of the month of today
         LayerDrawable icon = (LayerDrawable) menuItem.getIcon();
         Utils.setTodayIcon(icon, this, mTimeZone);
+        updateTodayIconTint();
 
         // Handle warning for disabling battery optimizations
         boolean doNotCheckBatteryOptimization = Utils.getSharedPreference(getApplicationContext(), GeneralPreferences.KEY_DO_NOT_CHECK_BATTERY_OPTIMIZATION, false);
@@ -1482,6 +1486,13 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
             if (mCurrentView == ViewType.MONTH && event.startTime != null) {
                 mMonthViewDisplayedMillis = event.startTime.toMillis();
             }
+            if (event.startTime != null) {
+                mTodayIconRangeStart = event.startTime.toMillis();
+                mTodayIconRangeEnd = event.endTime != null
+                        ? event.endTime.toMillis() : mTodayIconRangeStart;
+                mTodayIconRangeView = mCurrentView;
+            }
+            updateTodayIconTint();
             setTitleInActionBar(event);
             if (mCalendarToolbarHandler != null) {
                 long titleTime = mCurrentView == ViewType.MONTH && event.startTime != null
@@ -1538,6 +1549,42 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         Time now = new Time(mTimeZone);
         now.setToNow();
         return now;
+    }
+
+    private void updateTodayIconTint() {
+        if (mOptionsMenu == null || mController == null) return;
+        MenuItem item = mOptionsMenu.findItem(R.id.action_today);
+        if (item == null || item.getIcon() == null) return;
+        ZoneId zone = getZoneId();
+        LocalDate today = LocalDate.now(zone);
+        long reference = mTodayIconRangeView == mCurrentView
+                ? mTodayIconRangeStart : mController.getTime();
+        LocalDate first = Instant.ofEpochMilli(reference).atZone(zone).toLocalDate();
+        LocalDate last = first;
+        if (mCurrentView == ViewType.MONTH) {
+            first = first.withDayOfMonth(1).with(
+                    TemporalAdjusters.previousOrSame(getFirstDayOfWeek()));
+            last = first.plusWeeks(MONTH_VIEW_WEEKS).minusDays(1);
+        } else if (mCurrentView == ViewType.WEEK) {
+            first = first.with(TemporalAdjusters.previousOrSame(getFirstDayOfWeek()));
+            last = first.plusDays(6);
+        } else if (mCurrentView == ViewType.AGENDA && mTodayIconRangeView == mCurrentView) {
+            last = Instant.ofEpochMilli(mTodayIconRangeEnd).atZone(zone).toLocalDate();
+        }
+        boolean visible = !today.isBefore(first) && !today.isAfter(last);
+        android.graphics.drawable.Drawable icon = item.getIcon().mutate();
+        if (visible) {
+            icon.setTintList(null);
+        } else {
+            android.util.TypedValue value = new android.util.TypedValue();
+            if (getTheme().resolveAttribute(com.google.android.material.R.attr.colorPrimary,
+                    value, true)) {
+                icon.setTint(value.resourceId != 0
+                        ? androidx.core.content.ContextCompat.getColor(this, value.resourceId)
+                        : value.data);
+            }
+        }
+        item.setIcon(icon);
     }
 
     /** Timezone of the calendar views, falling back to the device one */
