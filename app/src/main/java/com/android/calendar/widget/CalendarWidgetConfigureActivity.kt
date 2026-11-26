@@ -29,6 +29,7 @@ import android.widget.BaseAdapter
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.ListView
+import android.widget.SeekBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -77,6 +78,22 @@ class CalendarWidgetConfigureActivity : AppCompatActivity() {
             return
         }
 
+        val opacitySlider = findViewById<SeekBar>(R.id.widget_opacity_slider)
+        val opacityValue = findViewById<TextView>(R.id.widget_opacity_value)
+        opacitySlider.progress = savedInstanceState?.getInt("widget_opacity")
+            ?: WidgetUtils.getBackgroundOpacity(this, appWidgetId)
+        fun updateOpacityValue(value: Int) {
+            opacityValue.text = java.text.NumberFormat.getPercentInstance().format(value / 100.0)
+        }
+        updateOpacityValue(opacitySlider.progress)
+        opacitySlider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                updateOpacityValue(progress)
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+
         loadCalendars()
 
         val listView = findViewById<ListView>(R.id.calendar_list)
@@ -90,6 +107,11 @@ class CalendarWidgetConfigureActivity : AppCompatActivity() {
         findViewById<Button>(R.id.save_button).setOnClickListener {
             saveAndFinish()
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putInt("widget_opacity", findViewById<SeekBar>(R.id.widget_opacity_slider).progress)
+        super.onSaveInstanceState(outState)
     }
 
     private fun loadCalendars() {
@@ -147,6 +169,8 @@ class CalendarWidgetConfigureActivity : AppCompatActivity() {
     private fun saveAndFinish() {
         val selectedIds = calendarItems.filter { it.isChecked }.map { it.id.toString() }.toSet()
         WidgetUtils.saveWidgetCalendarIds(this, appWidgetId, selectedIds)
+        WidgetUtils.saveBackgroundOpacity(this, appWidgetId,
+            findViewById<SeekBar>(R.id.widget_opacity_slider).progress)
 
         Utils.sendUpdateWidgetIntent(this)
 

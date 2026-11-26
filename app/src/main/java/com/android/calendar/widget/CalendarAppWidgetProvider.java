@@ -263,7 +263,8 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
                     ? R.drawable.widget_agenda_bg_black
                     : backgroundColor == R.color.bg_dark
                     ? R.drawable.widget_agenda_bg_dark : R.drawable.widget_agenda_bg_light;
-            views.setInt(R.id.widget_background, "setBackgroundResource", roundedBackground);
+            WidgetUtils.applyBackgroundOpacity(context, views, R.id.widget_background_image,
+                    appWidgetId, roundedBackground);
             if (android.os.Build.VERSION.SDK_INT >= 31) {
                 android.os.Bundle options = appWidgetManager.getAppWidgetOptions(appWidgetId);
                 boolean landscape = context.getResources().getConfiguration().orientation

@@ -34,6 +34,7 @@ import com.android.calendar.event.EditEventActivity
 object WidgetUtils {
 
     private const val PREF_KEY_PREFIX = "widget_calendars_"
+    private const val OPACITY_KEY_PREFIX = "widget_background_opacity_"
 
     fun getWidgetCalendarIds(context: Context, appWidgetId: Int): Set<String>? {
         if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
@@ -56,7 +57,31 @@ object WidgetUtils {
             return
         }
         val prefs = CalendarUtils.getSharedPreferences(context, Utils.SHARED_PREFS_NAME)
-        prefs.edit { remove(PREF_KEY_PREFIX + appWidgetId) }
+        prefs.edit {
+            remove(PREF_KEY_PREFIX + appWidgetId)
+            remove(OPACITY_KEY_PREFIX + appWidgetId)
+        }
+    }
+
+    @JvmStatic
+    fun getBackgroundOpacity(context: Context, appWidgetId: Int): Int {
+        if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return 100
+        val prefs = CalendarUtils.getSharedPreferences(context, Utils.SHARED_PREFS_NAME)
+        return prefs.getInt(OPACITY_KEY_PREFIX + appWidgetId, 100).coerceIn(0, 100)
+    }
+
+    fun saveBackgroundOpacity(context: Context, appWidgetId: Int, opacity: Int) {
+        if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return
+        val prefs = CalendarUtils.getSharedPreferences(context, Utils.SHARED_PREFS_NAME)
+        prefs.edit { putInt(OPACITY_KEY_PREFIX + appWidgetId, opacity.coerceIn(0, 100)) }
+    }
+
+    @JvmStatic
+    fun applyBackgroundOpacity(context: Context, views: android.widget.RemoteViews,
+                               viewId: Int, appWidgetId: Int, resourceId: Int) {
+        views.setImageViewResource(viewId, resourceId)
+        val alpha = (getBackgroundOpacity(context, appWidgetId) * 255 + 50) / 100
+        views.setInt(viewId, "setImageAlpha", alpha)
     }
 
     @JvmStatic

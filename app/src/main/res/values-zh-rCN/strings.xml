@@ -387,4 +387,5 @@
     <string name="widget_menu_more_options">更多选项</string>
     <string name="widget_menu_settings">设置</string>
     <string name="widget_menu_add_event">日程</string>
+    <string name="widget_background_opacity">背景不透明度</string>
 </resources>

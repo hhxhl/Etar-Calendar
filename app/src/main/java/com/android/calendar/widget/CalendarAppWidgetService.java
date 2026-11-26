@@ -334,8 +334,8 @@ public class CalendarAppWidgetService extends RemoteViewsService {
                     int pastColor = DynamicThemeKt.getColor(mContext, "widget_header");
                     views.setInt(R.id.widget_row, "setBackgroundColor", pastColor);
                 } else {
-                    int future_bg_color = DynamicThemeKt.getWidgetBackgroundStyle(mContext);
-                    views.setInt(R.id.widget_row, "setBackgroundResource", future_bg_color);
+                    // Normal rows inherit the widget surface, including its opacity.
+                    views.setInt(R.id.widget_row, "setBackgroundColor", android.graphics.Color.TRANSPARENT);
                 }
 
                 if (!eventInfo.allDay) {
