@@ -3,6 +3,14 @@ package com.android.calendar;
 import android.content.Context;
 import android.os.Handler;
 import android.text.format.DateUtils;
+import android.text.TextUtils;
+import android.view.View;
+import android.widget.TextView;
+import java.time.LocalDate;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.DayOfWeek;
+import java.time.temporal.TemporalAdjusters;
 import android.view.LayoutInflater;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -30,6 +38,8 @@ public class CalendarToolbarHandler {
     // The current selected event's time, used to calculate the date and day of the week
     // for the buttons.
     private long mMilliTime;
+    private long mVisibleStart = Long.MIN_VALUE;
+    private long mVisibleEnd = Long.MIN_VALUE;
     private String mTimeZone;
     private long mTodayJulianDay;
     private Handler mMidnightHandler = null; // Used to run a time update every midnight
@@ -69,41 +79,92 @@ public class CalendarToolbarHandler {
 
     public void setCurrentMainView(int viewType) {
         mCurrentViewType = viewType;
+        mVisibleStart = mVisibleEnd = Long.MIN_VALUE;
         updateTitle();
     }
 
     // Update the date that is displayed on buttons
     // Used when the user selects a new day/week/month to watch
     public void setTime(long time) {
+        setTime(time, Long.MIN_VALUE, Long.MIN_VALUE);
+    }
+
+    public void setTime(long time, long visibleStart, long visibleEnd) {
         mMilliTime = time;
+        mVisibleStart = visibleStart;
+        mVisibleEnd = visibleEnd;
         updateTitle();
     }
 
+    /** Match the original Gregorian title and keep the weekday/week number below lunar text. */
     private void updateTitle() {
+        String secondary;
         switch (mCurrentViewType) {
             case CalendarController.ViewType.DAY:
-                mToolbar.setSubtitle(buildDayOfWeek());
+            case CalendarController.ViewType.AGENDA:
                 mToolbar.setTitle(buildFullDate());
+                secondary = buildDayOfWeek();
                 break;
             case CalendarController.ViewType.WEEK:
-                if (Utils.getShowWeekNumber(mContext)) {
-                    mToolbar.setSubtitle(buildWeekNum());
-                } else {
-                    mToolbar.setSubtitle("");
-                }
                 mToolbar.setTitle(buildMonthYearDate());
+                secondary = Utils.getShowWeekNumber(mContext) ? buildWeekNum() : "";
                 break;
             case CalendarController.ViewType.MONTH:
-                mToolbar.setSubtitle("");
                 mToolbar.setTitle(buildMonthYearDate());
+                secondary = "";
                 break;
-            case CalendarController.ViewType.AGENDA:
-                mToolbar.setSubtitle(buildDayOfWeek());
-                mToolbar.setTitle(buildFullDate());
+            default:
+                return;
+        }
+        String lunar = buildLunarTitle();
+        String subtitle = lunar.isEmpty() ? secondary
+                : secondary.isEmpty() ? lunar : lunar + "\n" + secondary;
+        mToolbar.setSubtitle(subtitle);
+        // AppCompat creates its subtitle TextView lazily and defaults to single-line.
+        // Keep the native toolbar title, theme, insets and menu handling.
+        for (int i = 0; i < mToolbar.getChildCount(); i++) {
+            View child = mToolbar.getChildAt(i);
+            if (child instanceof TextView && TextUtils.equals(((TextView) child).getText(), subtitle)) {
+                TextView text = (TextView) child;
+                boolean multiline = !lunar.isEmpty() && !secondary.isEmpty();
+                text.setSingleLine(!multiline);
+                text.setMaxLines(multiline ? 2 : 1);
+                text.setEllipsize(TextUtils.TruncateAt.END);
                 break;
+            }
         }
     }
 
+    private String buildLunarTitle() {
+        if (!LocalizationSettings.lunar(mContext)) return "";
+        ZoneId zone;
+        try {
+            zone = ZoneId.of(mTimeZone);
+        } catch (RuntimeException e) {
+            zone = ZoneId.systemDefault();
+        }
+        LocalDate start = Instant.ofEpochMilli(mMilliTime).atZone(zone).toLocalDate();
+        LocalDate end = start;
+        boolean monthOnly = mCurrentViewType == CalendarController.ViewType.MONTH;
+        if (monthOnly) {
+            start = start.withDayOfMonth(1);
+            end = start.withDayOfMonth(start.lengthOfMonth());
+        } else if (mCurrentViewType == CalendarController.ViewType.WEEK) {
+            if (mVisibleStart != Long.MIN_VALUE && mVisibleEnd > mVisibleStart) {
+                start = Instant.ofEpochMilli(mVisibleStart).atZone(zone).toLocalDate();
+                end = Instant.ofEpochMilli(mVisibleEnd).atZone(zone).toLocalDate();
+            } else {
+                int count = Utils.getDaysPerWeek(mContext);
+                if (count == 7) {
+                    int first = Utils.getFirstDayOfWeek(mContext);
+                    start = start.with(TemporalAdjusters.previousOrSame(
+                            first == 0 ? DayOfWeek.SUNDAY : DayOfWeek.of(first)));
+                }
+                end = start.plusDays(count - 1L);
+            }
+        }
+        return LunarUtils.header(mContext, start, end, monthOnly);
+    }
 
     // Sets a thread to run 1 second after midnight and update the current date
     // This is used to display correctly the date of yesterday/today/tomorrow

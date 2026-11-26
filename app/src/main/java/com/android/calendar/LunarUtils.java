@@ -38,6 +38,7 @@ import android.icu.util.TimeZone;
 import android.util.LruCache;
 import android.text.TextUtils;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Locale;
 
@@ -138,6 +139,7 @@ public class LunarUtils {
         String monthLabel = (lunar.get(ChineseCalendar.IS_LEAP_MONTH) == 1 ? "闰" : "")
                 + MONTHS[lunarMonth] + "月";
         LunarInfo info = new LunarInfo();
+        info.monthLabel = monthLabel;
         info._label_long = monthLabel + DAYS[lunarDay - 1];
         info._label_short = lunarDay == 1 ? monthLabel : DAYS[lunarDay - 1];
         info._animal = ANIMALS[Math.floorMod(lunar.get(Calendar.YEAR) - 1, 12)];
@@ -145,6 +147,17 @@ public class LunarUtils {
         info.term = SolarTerms.get(year, month, day);
         sLunarInfos.put(key, info);
         return info;
+    }
+
+    /** Header uses lunar dates only, independent of festival and solar-term settings. */
+    public static String header(Context context, LocalDate start, LocalDate end, boolean monthOnly) {
+        if (!LocalizationSettings.lunar(context)) return "";
+        LunarInfo first = getOrCalculate(start.getYear(), start.getMonthValue() - 1, start.getDayOfMonth());
+        LunarInfo last = getOrCalculate(end.getYear(), end.getMonthValue() - 1, end.getDayOfMonth());
+        if (first == null || last == null) return "";
+        String a = monthOnly ? first.monthLabel : first._label_long;
+        String b = monthOnly ? last.monthLabel : last._label_long;
+        return "农历" + a + (a.equals(b) ? "" : " – " + b);
     }
 
     private static String getKey(int year, int month, int day) {
@@ -237,6 +250,7 @@ public class LunarUtils {
     }
 
     private static class LunarInfo {
+        String monthLabel;
         ArrayList<String> festivals;
         String term;
         public String _label_long;

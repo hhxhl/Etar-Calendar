@@ -1227,7 +1227,23 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
 
         final String msg = Utils.formatDateRange(this, start, end, (int) event.extraLong);
         CharSequence oldDate = mDateRange.getText();
-        mDateRange.setText(msg);
+        if (mIsTabletConfig && LocalizationSettings.lunar(this)) {
+            ZoneId zone = getZoneId();
+            LocalDate first = Instant.ofEpochMilli(start).atZone(zone).toLocalDate();
+            LocalDate last = Instant.ofEpochMilli(end).atZone(zone).toLocalDate();
+            boolean monthOnly = mCurrentView == ViewType.MONTH;
+            if (monthOnly) {
+                first = first.withDayOfMonth(1);
+                last = first.withDayOfMonth(first.lengthOfMonth());
+            }
+            String lunar = LunarUtils.header(this, first, last, monthOnly);
+            if (!lunar.isEmpty()) {
+                android.text.SpannableString label = new android.text.SpannableString(msg + "\n" + lunar);
+                label.setSpan(new android.text.style.RelativeSizeSpan(0.65f), msg.length() + 1,
+                        label.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                mDateRange.setText(label);
+            } else mDateRange.setText(msg);
+        } else mDateRange.setText(msg);
         updateSecondaryTitleFields(event.selectedTime != null ? event.selectedTime.toMillis()
                 : start);
         if (!TextUtils.equals(oldDate, msg)) {
@@ -1473,8 +1489,12 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
                 mMonthViewDisplayedMillis = event.startTime.toMillis();
             }
             setTitleInActionBar(event);
-            if (!mIsTabletConfig) {
-                refreshActionbarTitle(mController.getTime());
+            if (mCalendarToolbarHandler != null) {
+                long titleTime = mCurrentView == ViewType.MONTH && event.startTime != null
+                        ? event.startTime.toMillis() : mController.getTime();
+                long start = event.startTime != null ? event.startTime.toMillis() : titleTime;
+                long end = event.endTime != null ? event.endTime.toMillis() : start;
+                mCalendarToolbarHandler.setTime(titleTime, start, end);
             }
         }
         updateSecondaryTitleFields(displayTime);
