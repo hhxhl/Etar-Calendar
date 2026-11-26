@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="repeat_standard">Standard repeat</string>
+    <string name="repeat_rdate">Specified dates</string>
+    <string name="repeat_lunar_yearly">Every year (lunar)</string>
+    <string name="repeat_rdate_hint">Enter at least two dates (YYYY-MM-DD), one per line. Includes the first occurrence.</string>
+    <string name="repeat_lunar_hint">Enter lunar month,day,leap (0 or 1). Generates 30 occurrences from the selected date.</string>
+    <string name="repeat_invalid_dates">Invalid dates or lunar rule</string>
+</resources>

@@ -75,6 +75,9 @@ public class CalendarEventModel implements Serializable {
     public String mUrl = null;
     public boolean mCountdown = false;
     public String mRrule = null;
+    public String mRdate = null;
+    public String mLunarRule = null;
+    public boolean hasRecurrence() { return !TextUtils.isEmpty(mRrule) || !TextUtils.isEmpty(mRdate); }
     public String mExDate = null;
     public String mOrganizer = null;
     public String mOrganizerDisplayName = null;
@@ -267,6 +270,8 @@ public class CalendarEventModel implements Serializable {
         mUrl = null;
         mCountdown = false;
         mRrule = null;
+        mRdate = null;
+        mLunarRule = null;
         mOrganizer = null;
         mOrganizerDisplayName = null;
         mIsOrganizer = true;
@@ -403,7 +408,8 @@ public class CalendarEventModel implements Serializable {
         }
 
         CalendarEventModel other = (CalendarEventModel) obj;
-        if (mCountdown != other.mCountdown) return false;
+        if (mCountdown != other.mCountdown || !TextUtils.equals(mRdate, other.mRdate)
+                || !TextUtils.equals(mLunarRule, other.mLunarRule)) return false;
         if (!checkOriginalModelFields(other)) {
             return false;
         }
@@ -499,6 +505,8 @@ public class CalendarEventModel implements Serializable {
     }
 
     public boolean isUnchangedExceptCountdown(CalendarEventModel originalModel) {
+        if (originalModel != null && (!TextUtils.equals(mRdate, originalModel.mRdate)
+                || !TextUtils.equals(mLunarRule, originalModel.mLunarRule))) return false;
         if (this == originalModel) {
             return true;
         }

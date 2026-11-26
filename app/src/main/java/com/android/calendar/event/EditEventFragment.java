@@ -197,7 +197,7 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
                     mModel = mRestoreModel;
                 }
                 if (mShowModifyDialogOnLaunch && mModification == Utils.MODIFY_UNINITIALIZED) {
-                    if (!TextUtils.isEmpty(mModel.mRrule)) {
+                    if (mModel.hasRecurrence()) {
                         displayEditWhichDialog();
                     } else {
                         mModification = Utils.MODIFY_ALL;
@@ -472,6 +472,11 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
 
     protected void displayEditWhichDialog() {
         if (mModification == Utils.MODIFY_UNINITIALIZED) {
+            if (!TextUtils.isEmpty(mModel.mRdate)) {
+                mModification = Utils.MODIFY_ALL;
+                mView.setModification(mModification);
+                return;
+            }
             final boolean notSynced = TextUtils.isEmpty(mModel.mSyncId);
             boolean isFirstEventInSeries = mModel.mIsFirstEventInSeries;
             int itemIndex = 0;
@@ -758,7 +763,7 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
 
                     final String selection;
                     final String[] selectionArgs;
-                    final boolean isRecurring = !TextUtils.isEmpty(mModel.mRrule);
+                    final boolean isRecurring = mModel.hasRecurrence();
                     if (isRecurring && Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
                         // recurring event AND api level < 30. disable changing calendars as moving
                         // recurrences is currently only possible for api level 30+

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="repeat_standard">普通重复</string>
+    <string name="repeat_rdate">指定日期重复</string>
+    <string name="repeat_lunar_yearly">每年（农历）</string>
+    <string name="repeat_rdate_hint">输入至少两个日期（YYYY-MM-DD），每行一个，包含首次日期。</string>
+    <string name="repeat_lunar_hint">输入农历月,日,闰月（0或1），从选定日期起生成30次。</string>
+    <string name="repeat_invalid_dates">日期或农历规则无效</string>
+</resources>

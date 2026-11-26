@@ -92,7 +92,7 @@ public final class IcalImporter {
         for (String part : value.split(",", -1)) {
             if (allDay(part, params) != date) throw new IllegalArgumentException("Mixed date types");
             ZonedDateTime time = dateTime(part, date, zone(part, params, fallback));
-            result.add(date ? DATE.format(time) : TIME.format(time.withZoneSameInstant(ZoneOffset.UTC)) + "Z");
+            result.add(TIME.format(time.withZoneSameInstant(ZoneOffset.UTC)) + "Z");
         }
         return result.toString();
     }
@@ -146,7 +146,7 @@ public final class IcalImporter {
             new com.android.calendar.calendarcommon2.EventRecurrence().parse(rule);
             values.put(Events.RRULE, rule);
         }
-        if (rdate != null) values.put(Events.RDATE, rdate);
+        if (rdate != null) values.put(Events.RDATE, com.android.calendar.RDateSupport.includeStart(rdate, startMs));
         if (exdate != null) values.put(Events.EXDATE, exdate);
         if (values.containsKey(Events.RRULE) || rdate != null) {
             values.put(Events.DURATION, date ? "P" + span / DAY + "D" : "P" + span / 1000 + "S");

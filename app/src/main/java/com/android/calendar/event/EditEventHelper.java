@@ -99,7 +99,8 @@ public class EditEventHelper {
             Events.ACCOUNT_NAME, // 25
             Events.ACCOUNT_TYPE, // 26
             Events.EXDATE, // 27
-            Events.ORIGINAL_INSTANCE_TIME // 28
+            Events.ORIGINAL_INSTANCE_TIME, // 28
+            Events.RDATE // 29
     };
     protected static final int EVENT_INDEX_ID = 0;
     protected static final int EVENT_INDEX_TITLE = 1;
@@ -350,6 +351,8 @@ public class EditEventHelper {
         int eventIdIndex = -1;
 
         ContentValues values = getContentValuesFromModel(model);
+        if (!TextUtils.isEmpty(model.mRdate)) values.put(Events.DTSTART,
+                com.android.calendar.RDateSupport.dates(model.mRdate).first());
 
         if (model.mUri != null && originalModel == null) {
             Log.e(TAG, "Existing event but no originalModel provided. Aborting save.");
@@ -375,6 +378,15 @@ public class EditEventHelper {
             ops.add(b.build());
             forceSaveReminders = true;
 
+        } else if (!TextUtils.isEmpty(originalModel.mRdate) || !TextUtils.isEmpty(model.mRdate)) {
+            // RDATE sets are absolute dates, not an RRULE that can be shifted.
+            // The UI only offers whole-series edits for these sets.
+            if (modifyWhich != MODIFY_ALL || originalModel.mCalendarId != model.mCalendarId) return false;
+            if (!TextUtils.isEmpty(model.mRdate)) {
+                long first = com.android.calendar.RDateSupport.dates(model.mRdate).first();
+                values.put(Events.DTSTART, first);
+            }
+            ops.add(ContentProviderOperation.newUpdate(uri).withValues(values).build());
         } else if (originalModel.mCalendarId != model.mCalendarId) {
             // event calendar has changed
             eventIdIndex = ops.size();
@@ -702,9 +714,9 @@ public class EditEventHelper {
         }
 
         boolean moved = originalModel != null && originalModel.mCalendarId != model.mCalendarId;
-        Object cookie = (model.mCountdown || (originalModel != null && originalModel.mCountdown))
+        Object cookie = (model.mCountdown || model.mLunarRule != null || (originalModel != null && (originalModel.mCountdown || originalModel.mLunarRule != null)))
                 ? new com.android.calendar.EventCountdown.SavedEvent(model.mId, eventIdIndex,
-                        model.mCountdown, moved) : null;
+                        model.mCountdown, moved, model.mLunarRule) : null;
         mService.startBatch(mService.getNextToken(), cookie, android.provider.CalendarContract.AUTHORITY, ops,
                 Utils.UNDO_DELAY);
 
@@ -1272,6 +1284,8 @@ public class EditEventHelper {
         }
         String rRule = cursor.getString(EVENT_INDEX_RRULE);
         model.mRrule = rRule;
+        model.mRdate = cursor.getString(cursor.getColumnIndexOrThrow(Events.RDATE));
+        model.mLunarRule = TextUtils.isEmpty(model.mRdate) ? null : com.android.calendar.RDateSupport.lunarRule(context, model.mId);
         model.mExDate = cursor.getString(EVENT_INDEX_EXDATE);
         model.mSyncId = cursor.getString(EVENT_INDEX_SYNC_ID);
         model.mSyncAccountName = cursor.getString(EVENT_INDEX_ACCOUNT_NAME);
@@ -1298,7 +1312,7 @@ public class EditEventHelper {
         model.mAccessLevel = accessLevel;
         model.mEventStatus = cursor.getInt(EVENT_INDEX_EVENT_STATUS);
 
-        boolean hasRRule = !TextUtils.isEmpty(rRule);
+        boolean hasRRule = model.hasRecurrence();
 
         // We expect only one of these, so ignore the other
         if (hasRRule) {
@@ -1467,7 +1481,8 @@ public class EditEventHelper {
         values.put(Events.DTSTART, startMillis);
         values.put(Events.EXDATE, model.mExDate);
         values.put(Events.RRULE, rrule);
-        if (!TextUtils.isEmpty(rrule)) {
+        values.put(Events.RDATE, model.mRdate);
+        if (model.hasRecurrence()) {
             addRecurrenceRule(values, model);
         } else {
             values.put(Events.DURATION, (String) null);

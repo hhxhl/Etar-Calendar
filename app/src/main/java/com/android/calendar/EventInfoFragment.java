@@ -281,7 +281,8 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
         Events.DURATION,             // 22
         Events.ORIGINAL_SYNC_ID,     // 23 do not remove; used in DeleteEventHelper
         Events.AVAILABILITY,         // 24
-        Events.ACCESS_LEVEL          // 25
+        Events.ACCESS_LEVEL,          // 25
+        Events.RDATE                  // 26
     };
     private static final int EVENT_INDEX_ID = 0;
     private static final int EVENT_INDEX_TITLE = 1;
@@ -976,7 +977,7 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
         mEventCursor.moveToFirst();
         mEventId = mEventCursor.getLong(EVENT_INDEX_ID);
         String rRule = mEventCursor.getString(EVENT_INDEX_RRULE);
-        mIsRepeating = !TextUtils.isEmpty(rRule);
+        mIsRepeating = !TextUtils.isEmpty(rRule) || !TextUtils.isEmpty(mEventCursor.getString(26));
         // mHasAlarm will be true if it was saved in the event already, or if
         // we've explicitly been provided reminders (e.g. during rotation).
         mHasAlarm = (mEventCursor.getInt(EVENT_INDEX_HAS_ALARM) == 1)? true :
@@ -1602,6 +1603,10 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
             eventRecurrence.setStartDate(date);
             repeatString = EventRecurrenceFormatter.getRepeatString(mContext, context.getResources(),
                     eventRecurrence, true);
+        }
+        if (!TextUtils.isEmpty(mEventCursor.getString(26))) {
+            repeatString = context.getString(RDateSupport.lunarRule(context, mEventId) != null
+                    ? R.string.repeat_lunar_yearly : R.string.repeat_rdate);
         }
         if (repeatString == null) {
             mWhenRepeat.setVisibility(View.GONE);

@@ -462,7 +462,10 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
         Resources r = mActivity.getResources();
         String repeatString;
         boolean enabled;
-        if (!TextUtils.isEmpty(mRrule)) {
+        if (!TextUtils.isEmpty(mModel.mRdate)) {
+            repeatString = r.getString(mModel.mLunarRule != null ? R.string.repeat_lunar_yearly : R.string.repeat_rdate);
+            enabled = true;
+        } else if (!TextUtils.isEmpty(mRrule)) {
             repeatString = EventRecurrenceFormatter.getRepeatString(mActivity, r,
                     mEventRecurrence, true);
 
@@ -532,6 +535,28 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
     @Override
     public void onClick(View view) {
         if (view == mRruleButton) {
+            if (mAllDayCheckBox.isChecked() && (mModel.mId < 0 || mModification == Utils.MODIFY_ALL)) {
+                new MaterialAlertDialogBuilder(mActivity)
+                        .setItems(new CharSequence[]{mActivity.getText(R.string.repeat_standard),
+                                mActivity.getText(R.string.repeat_rdate), mActivity.getText(R.string.repeat_lunar_yearly)},
+                                (dialog, which) -> {
+                                    if (which == 0) showStandardRepeat();
+                                    else showDateSet(which == 2);
+                                }).show();
+            } else if (TextUtils.isEmpty(mModel.mRdate)) showStandardRepeat();
+            return;
+        }
+
+        // This must be a click on one of the "remove reminder" buttons
+        ConstraintLayout reminderItem = (ConstraintLayout) view.getParent();
+        LinearLayout parent = (LinearLayout) reminderItem.getParent();
+        parent.removeView(reminderItem);
+        mReminderItems.remove(reminderItem);
+        updateRemindersVisibility(mReminderItems.size());
+        EventViewUtils.updateAddReminderButton(mView, mReminderItems, mModel.mCalendarMaxReminders);
+    }
+
+    private void showStandardRepeat() {
             Bundle b = new Bundle();
             b.putLong(RecurrencePickerDialog.BUNDLE_START_TIME_MILLIS,
                     mStartTime.toMillis());
@@ -550,16 +575,39 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
             rpd.setArguments(b);
             rpd.setOnRecurrenceSetListener(EditEventView.this);
             rpd.show(fm, FRAG_TAG_RECUR_PICKER);
-            return;
-        }
+    }
 
-        // This must be a click on one of the "remove reminder" buttons
-        ConstraintLayout reminderItem = (ConstraintLayout) view.getParent();
-        LinearLayout parent = (LinearLayout) reminderItem.getParent();
-        parent.removeView(reminderItem);
-        mReminderItems.remove(reminderItem);
-        updateRemindersVisibility(mReminderItems.size());
-        EventViewUtils.updateAddReminderButton(mView, mReminderItems, mModel.mCalendarMaxReminders);
+    private void showDateSet(boolean lunar) {
+        java.time.LocalDate start = java.time.LocalDate.of(mStartTime.getYear(), mStartTime.getMonth() + 1, mStartTime.getDay());
+        android.widget.EditText input = new android.widget.EditText(mActivity);
+        input.setText(lunar ? (mModel.mLunarRule == null ? com.android.calendar.RDateSupport.ruleFor(start) : mModel.mLunarRule)
+                : (TextUtils.isEmpty(mModel.mRdate) ? start.toString() + "\n" : com.android.calendar.RDateSupport.isoDates(mModel.mRdate)));
+        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        AlertDialog dialog = new MaterialAlertDialogBuilder(mActivity)
+                .setTitle(lunar ? R.string.repeat_lunar_yearly : R.string.repeat_rdate)
+                .setMessage(lunar ? R.string.repeat_lunar_hint : R.string.repeat_rdate_hint)
+                .setView(input).setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(android.R.string.ok, null).create();
+        dialog.setOnShowListener(v -> dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).setOnClickListener(button -> {
+            try {
+                String rule = lunar ? input.getText().toString().trim() : null;
+                java.time.LocalDate from = TextUtils.isEmpty(mModel.mRdate) ? start
+                        : java.time.Instant.ofEpochMilli(com.android.calendar.RDateSupport.dates(mModel.mRdate).first())
+                            .atOffset(java.time.ZoneOffset.UTC).toLocalDate();
+                String dates = lunar ? com.android.calendar.RDateSupport.lunarDates(from, rule)
+                        : com.android.calendar.RDateSupport.parseIsoDates(input.getText().toString());
+                mModel.mRdate = dates;
+                mModel.mLunarRule = rule;
+                mModel.mExDate = null;
+                mRrule = null;
+                populateRepeats();
+                updateView();
+                dialog.dismiss();
+            } catch (RuntimeException ex) {
+                input.setError(mActivity.getText(R.string.repeat_invalid_dates));
+            }
+        }));
+        dialog.show();
     }
 
     @Override
@@ -567,10 +615,13 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
         Log.d(TAG, "Old rrule:" + mRrule);
         Log.d(TAG, "New rrule:" + rrule);
         mRrule = rrule;
+        mModel.mRdate = null;
+        mModel.mLunarRule = null;
         if (mRrule != null) {
             mEventRecurrence.parse(mRrule);
         }
         populateRepeats();
+        updateView();
     }
 
     // This is called if the user cancels the "No calendars" dialog.
@@ -1252,6 +1303,18 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
             mCalendarsSpinner.setEnabled(mode == Utils.MODIFY_ALL);
         }
         setAllDayViewsVisibility(mAllDayCheckBox.isChecked());
+        if (!TextUtils.isEmpty(mModel.mRdate)) {
+            mStartDateButton.setEnabled(false);
+            mEndDateButton.setEnabled(false);
+            mStartTimeButton.setEnabled(false);
+            mEndTimeButton.setEnabled(false);
+            mTimezoneButton.setEnabled(false);
+            mAllDayCheckBox.setEnabled(false);
+            mView.findViewById(R.id.is_all_day_label).setEnabled(false);
+            mCalendarsSpinner.setEnabled(false);
+            // Mixed RRULE/RDATE and timed sets are preserved, not converted by this editor.
+            if (!TextUtils.isEmpty(mRrule) || !mAllDayCheckBox.isChecked()) mRruleButton.setEnabled(false);
+        }
     }
 
     public void setModification(int modifyWhich) {

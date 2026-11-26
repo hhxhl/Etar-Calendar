@@ -275,7 +275,7 @@ public class DeleteEventHelper {
         if (activity.isFinishing() || activity.isDestroyed()) {
             return;
         }
-        if (TextUtils.isEmpty(rRule)) {
+        if (!model.hasRecurrence()) {
             AlertDialog dialog = new MaterialAlertDialogBuilder(mContext)
                     .setMessage(R.string.delete_this_event_title)
                     .setIconAttribute(android.R.attr.alertDialogIcon)
@@ -308,7 +308,7 @@ public class DeleteEventHelper {
                 labelIndex.add(val);
             }
 
-            if (mSyncId == null) {
+            if (mSyncId == null && TextUtils.isEmpty(model.mRdate)) {
                 // remove 'Only this event' item
                 labelArray.remove(0);
                 labelIndex.remove(0);
@@ -321,6 +321,14 @@ public class DeleteEventHelper {
                 // remove 'This and future events' item
                 labelArray.remove(1);
                 labelIndex.remove(1);
+            }
+            if (!TextUtils.isEmpty(model.mRdate) && !TextUtils.isEmpty(model.mRrule)) {
+                // Mixed sets cannot safely be split by the RRULE-only legacy code.
+                for (int i = labelIndex.size() - 1; i >= 0; i--) {
+                    if (labelIndex.get(i) != DELETE_ALL) {
+                        labelIndex.remove(i); labelArray.remove(i);
+                    }
+                }
             }
             if (which != -1) {
                 // transform the which to the index in the array
@@ -369,6 +377,28 @@ public class DeleteEventHelper {
         // See mDeleteNormalDialogListener for more info on this
         boolean isLocal = mModel.mSyncAccountType.equals(CalendarContract.ACCOUNT_TYPE_LOCAL);
         Uri deleteContentUri = isLocal ? CalendarRepository.asLocalCalendarSyncAdapter(mModel.mSyncAccountName, Events.CONTENT_URI) : Events.CONTENT_URI;
+
+        if (!TextUtils.isEmpty(mModel.mRdate) && TextUtils.isEmpty(rRule) && which != DELETE_ALL) {
+            java.util.TreeSet<Long> dates = RDateSupport.dates(mModel.mRdate);
+            java.util.TreeSet<Long> excluded = RDateSupport.dates(mModel.mExDate);
+            if (which == DELETE_SELECTED) excluded.add(mStartMillis);
+            else if (which == DELETE_ALL_FOLLOWING) dates.tailSet(mStartMillis, true).clear();
+            java.util.TreeSet<Long> visible = new java.util.TreeSet<>(dates);
+            visible.removeAll(excluded);
+            Uri uri = ContentUris.withAppendedId(Events.CONTENT_URI, id);
+            if (visible.isEmpty()) {
+                mService.startDelete(mService.getNextToken(), null,
+                        ContentUris.withAppendedId(deleteContentUri, id), null, null, Utils.UNDO_DELAY);
+            } else {
+                ContentValues values = new ContentValues();
+                values.put(Events.RDATE, RDateSupport.encode(dates));
+                values.put(Events.EXDATE, excluded.isEmpty() ? null : RDateSupport.encode(excluded));
+                mService.startUpdate(mService.getNextToken(), null, uri, values, null, null, Utils.UNDO_DELAY);
+            }
+            if (mCallback != null) mCallback.run();
+            if (mExitWhenDone) mParent.finish();
+            return;
+        }
 
         switch (which) {
             case DELETE_SELECTED: {

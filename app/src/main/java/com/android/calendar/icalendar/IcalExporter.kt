@@ -138,11 +138,14 @@ class IcalExporter(private val context: Context) {
                 }
                 if (!rrule.isNullOrEmpty()) event.mProperties[VEvent.RRULE] = rrule
                 if (!rdate.isNullOrEmpty()) {
-                    event.mProperties["RDATE"] = rdate
-                    if (allDay) event.mPropertyParameters["RDATE"] = "VALUE=DATE"
+                    val exported = com.android.calendar.RDateSupport.icsDates(rdate, allDay, dtStart)
+                    if (exported.isNotEmpty()) {
+                        event.mProperties["RDATE"] = exported
+                        if (allDay) event.mPropertyParameters["RDATE"] = "VALUE=DATE"
+                    }
                 }
                 if (!exdate.isNullOrEmpty()) {
-                    event.mProperties["EXDATE"] = exdate
+                    event.mProperties["EXDATE"] = com.android.calendar.RDateSupport.icsDates(exdate, allDay, null)
                     if (allDay) event.mPropertyParameters["EXDATE"] = "VALUE=DATE"
                 }
                 event.mProperties[VEvent.UID] = uid?.takeIf { it.isNotEmpty() }

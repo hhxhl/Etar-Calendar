@@ -88,12 +88,14 @@ public final class EventCountdown {
         private final int insertIndex;
         private final boolean enabled;
         private final boolean moved;
+        private final String lunarRule;
 
-        public SavedEvent(long oldId, int insertIndex, boolean enabled, boolean moved) {
+        public SavedEvent(long oldId, int insertIndex, boolean enabled, boolean moved, String lunarRule) {
             this.oldId = oldId;
             this.insertIndex = insertIndex;
             this.enabled = enabled;
             this.moved = moved;
+            this.lunarRule = lunarRule;
         }
 
         public void complete(Context context, ContentProviderResult[] results) {
@@ -110,6 +112,7 @@ public final class EventCountdown {
             }
             if (id < 0) return;
             set(context, id, enabled);
+            RDateSupport.saveRule(context, id, lunarRule);
             if (moved && oldId != id) set(context, oldId, false);
             refresh(context);
         }
