@@ -1577,7 +1577,7 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
             icon.setTintList(null);
         } else {
             android.util.TypedValue value = new android.util.TypedValue();
-            if (getTheme().resolveAttribute(com.google.android.material.R.attr.colorPrimary,
+            if (getTheme().resolveAttribute(androidx.appcompat.R.attr.colorPrimary,
                     value, true)) {
                 icon.setTint(value.resourceId != 0
                         ? androidx.core.content.ContextCompat.getColor(this, value.resourceId)
