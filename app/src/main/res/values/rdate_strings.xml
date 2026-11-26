@@ -6,4 +6,9 @@
     <string name="repeat_rdate_hint">Enter at least two dates (YYYY-MM-DD), one per line. Includes the first occurrence.</string>
     <string name="repeat_lunar_hint">Enter lunar month,day,leap (0 or 1). Generates 30 occurrences from the selected date.</string>
     <string name="repeat_invalid_dates">Invalid dates or lunar rule</string>
+    <string name="repeat_lunar_month">Lunar month</string>
+    <string name="repeat_lunar_day">Lunar day</string>
+    <string name="repeat_lunar_leap">Prefer leap month</string>
+    <string name="repeat_lunar_policy">30 occurrences. Use the last day in short months; use the normal month when the leap month is absent.</string>
+    <string name="repeat_split_exceptions">Cannot split a series with detached exceptions. Edit the whole series instead.</string>
 </resources>

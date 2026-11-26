@@ -6,4 +6,9 @@
     <string name="repeat_rdate_hint">输入至少两个日期（YYYY-MM-DD），每行一个，包含首次日期。</string>
     <string name="repeat_lunar_hint">输入农历月,日,闰月（0或1），从选定日期起生成30次。</string>
     <string name="repeat_invalid_dates">日期或农历规则无效</string>
+    <string name="repeat_lunar_month">农历月</string>
+    <string name="repeat_lunar_day">农历日</string>
+    <string name="repeat_lunar_leap">闰月优先</string>
+    <string name="repeat_lunar_policy">生成30次；小月取最后一天，无对应闰月时使用普通月份。</string>
+    <string name="repeat_split_exceptions">含有独立修改实例的系列暂不支持拆分，请编辑整个系列。</string>
 </resources>

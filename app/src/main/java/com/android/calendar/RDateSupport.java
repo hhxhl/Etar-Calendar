@@ -106,6 +106,16 @@ public final class RDateSupport {
         if (result.size() != 30) throw new IllegalArgumentException("Cannot generate lunar dates");
         return encode(result);
     }
+    public static boolean hasExceptions(Context context, long eventId) {
+        android.net.Uri uri = android.provider.CalendarContract.Events.CONTENT_URI;
+        try (android.database.Cursor c = context.getContentResolver().query(uri,
+                new String[]{"_id"}, "original_id=? AND deleted=0",
+                new String[]{Long.toString(eventId)}, null)) {
+            return c == null || c.moveToFirst();
+        } catch (RuntimeException ex) {
+            return true;
+        }
+    }
     public static String lunarRule(Context context, long id) {
         return id < 0 ? null : context.getSharedPreferences("lunar_recurrences", Context.MODE_PRIVATE).getString(Long.toString(id), null);
     }

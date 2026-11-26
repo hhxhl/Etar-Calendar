@@ -351,7 +351,7 @@ public class EditEventHelper {
         int eventIdIndex = -1;
 
         ContentValues values = getContentValuesFromModel(model);
-        if (!TextUtils.isEmpty(model.mRdate)) values.put(Events.DTSTART,
+        if (originalModel == null && !TextUtils.isEmpty(model.mRdate)) values.put(Events.DTSTART,
                 com.android.calendar.RDateSupport.dates(model.mRdate).first());
 
         if (model.mUri != null && originalModel == null) {
@@ -379,14 +379,69 @@ public class EditEventHelper {
             forceSaveReminders = true;
 
         } else if (!TextUtils.isEmpty(originalModel.mRdate) || !TextUtils.isEmpty(model.mRdate)) {
-            // RDATE sets are absolute dates, not an RRULE that can be shifted.
-            // The UI only offers whole-series edits for these sets.
-            if (modifyWhich != MODIFY_ALL || originalModel.mCalendarId != model.mCalendarId) return false;
-            if (!TextUtils.isEmpty(model.mRdate)) {
-                long first = com.android.calendar.RDateSupport.dates(model.mRdate).first();
-                values.put(Events.DTSTART, first);
-            }
-            ops.add(ContentProviderOperation.newUpdate(uri).withValues(values).build());
+            // RDATE is absolute. Preserve DTSTART and all recurrence fields for
+            // metadata-only changes, particularly for mixed RRULE/RDATE sets.
+            if (originalModel.mCalendarId != model.mCalendarId) return false;
+            boolean pure = TextUtils.isEmpty(originalModel.mRrule) && !TextUtils.isEmpty(originalModel.mRdate);
+            if (modifyWhich == MODIFY_SELECTED && pure) {
+                values.putNull(Events.RRULE);
+                values.putNull(Events.RDATE);
+                values.putNull(Events.EXDATE);
+                values.putNull(Events.DURATION);
+                values.put(Events.DTSTART, model.mStart);
+                values.put(Events.DTEND, model.mEnd);
+                values.put(Events.ORIGINAL_ID, originalModel.mId);
+                values.put(Events.ORIGINAL_SYNC_ID, originalModel.mSyncId);
+                values.put(Events.ORIGINAL_INSTANCE_TIME, model.mOriginalStart);
+                values.put(Events.ORIGINAL_ALL_DAY, originalModel.mAllDay ? 1 : 0);
+                values.put(Events.STATUS, originalModel.mEventStatus);
+                eventIdIndex = ops.size();
+                ops.add(ContentProviderOperation.newInsert(Events.CONTENT_URI).withValues(values).build());
+                forceSaveReminders = true;
+            } else if (modifyWhich == MODIFY_ALL_FOLLOWING && pure) {
+                long cutoff = model.mOriginalStart;
+                java.util.TreeSet<Long> oldDates = com.android.calendar.RDateSupport.dates(originalModel.mRdate);
+                java.util.TreeSet<Long> past = new java.util.TreeSet<>(oldDates.headSet(cutoff, false));
+                java.util.TreeSet<Long> future = com.android.calendar.RDateSupport.dates(model.mRdate);
+                future.headSet(cutoff, false).clear();
+                if (past.isEmpty() || future.isEmpty() || !TextUtils.isEmpty(model.mRrule)) return false;
+                // Detached instances belong to the original master. Do not orphan them.
+                if (com.android.calendar.RDateSupport.hasExceptions(mContext, originalModel.mId)) {
+                    android.widget.Toast.makeText(mContext, R.string.repeat_split_exceptions, android.widget.Toast.LENGTH_LONG).show();
+                    return false;
+                }
+                java.util.TreeSet<Long> oldEx = com.android.calendar.RDateSupport.dates(originalModel.mExDate);
+                java.util.TreeSet<Long> newEx = com.android.calendar.RDateSupport.dates(model.mExDate);
+                oldEx.retainAll(past);
+                newEx.retainAll(future);
+                if (past.equals(oldEx) || future.equals(newEx)) return false;
+                ContentValues previous = new ContentValues();
+                previous.put(Events.RDATE, com.android.calendar.RDateSupport.encode(past));
+                previous.put(Events.EXDATE, oldEx.isEmpty() ? null : com.android.calendar.RDateSupport.encode(oldEx));
+                ops.add(ContentProviderOperation.newUpdate(uri).withValues(previous).build());
+                values.put(Events.RDATE, com.android.calendar.RDateSupport.encode(future));
+                values.put(Events.EXDATE, newEx.isEmpty() ? null : com.android.calendar.RDateSupport.encode(newEx));
+                values.put(Events.DTSTART, future.first());
+                values.put(Events.STATUS, originalModel.mEventStatus);
+                eventIdIndex = ops.size();
+                ops.add(ContentProviderOperation.newInsert(Events.CONTENT_URI).withValues(values).build());
+                forceSaveReminders = true;
+            } else if (modifyWhich == MODIFY_ALL) {
+                if (TextUtils.equals(originalModel.mRdate, model.mRdate)
+                        && TextUtils.equals(originalModel.mRrule, model.mRrule)) {
+                    values.remove(Events.DTSTART);
+                    values.remove(Events.DTEND);
+                    values.remove(Events.DURATION);
+                    values.remove(Events.EVENT_TIMEZONE);
+                    values.remove(Events.ALL_DAY);
+                    values.remove(Events.RDATE);
+                    values.remove(Events.RRULE);
+                    values.remove(Events.EXDATE);
+                } else if (!TextUtils.isEmpty(model.mRdate)) {
+                    values.put(Events.DTSTART, com.android.calendar.RDateSupport.dates(model.mRdate).first());
+                }
+                ops.add(ContentProviderOperation.newUpdate(uri).withValues(values).build());
+            } else return false;
         } else if (originalModel.mCalendarId != model.mCalendarId) {
             // event calendar has changed
             eventIdIndex = ops.size();
@@ -716,7 +771,7 @@ public class EditEventHelper {
         boolean moved = originalModel != null && originalModel.mCalendarId != model.mCalendarId;
         Object cookie = (model.mCountdown || model.mLunarRule != null || (originalModel != null && (originalModel.mCountdown || originalModel.mLunarRule != null)))
                 ? new com.android.calendar.EventCountdown.SavedEvent(model.mId, eventIdIndex,
-                        model.mCountdown, moved, model.mLunarRule) : null;
+                        model.mCountdown, moved, modifyWhich == MODIFY_SELECTED ? null : model.mLunarRule) : null;
         mService.startBatch(mService.getNextToken(), cookie, android.provider.CalendarContract.AUTHORITY, ops,
                 Utils.UNDO_DELAY);
 

@@ -473,8 +473,22 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
     protected void displayEditWhichDialog() {
         if (mModification == Utils.MODIFY_UNINITIALIZED) {
             if (!TextUtils.isEmpty(mModel.mRdate)) {
-                mModification = Utils.MODIFY_ALL;
-                mView.setModification(mModification);
+                if (!TextUtils.isEmpty(mModel.mRrule)) {
+                    mModification = Utils.MODIFY_ALL;
+                    return;
+                }
+                final boolean first = mModel.mIsFirstEventInSeries;
+                CharSequence[] choices = first
+                        ? new CharSequence[]{mActivity.getText(R.string.modify_event), mActivity.getText(R.string.modify_all)}
+                        : new CharSequence[]{mActivity.getText(R.string.modify_event), mActivity.getText(R.string.modify_all),
+                                mActivity.getText(R.string.modify_all_following)};
+                mModifyDialog = new MaterialAlertDialogBuilder(mActivity)
+                        .setTitle(R.string.edit_event_label)
+                        .setItems(choices, (dialog, which) -> {
+                            mModification = which == 0 ? Utils.MODIFY_SELECTED
+                                    : which == 1 ? Utils.MODIFY_ALL : Utils.MODIFY_ALL_FOLLOWING;
+                            mView.setModification(mModification);
+                        }).setOnCancelListener(dialog -> mActivity.finish()).show();
                 return;
             }
             final boolean notSynced = TextUtils.isEmpty(mModel.mSyncId);

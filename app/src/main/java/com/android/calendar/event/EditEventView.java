@@ -535,12 +535,13 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
     @Override
     public void onClick(View view) {
         if (view == mRruleButton) {
-            if (mAllDayCheckBox.isChecked() && (mModel.mId < 0 || mModification == Utils.MODIFY_ALL)) {
+            if (mAllDayCheckBox.isChecked() && (mModel.mId < 0 || mModification == Utils.MODIFY_ALL || mModification == Utils.MODIFY_ALL_FOLLOWING)) {
                 new MaterialAlertDialogBuilder(mActivity)
                         .setItems(new CharSequence[]{mActivity.getText(R.string.repeat_standard),
                                 mActivity.getText(R.string.repeat_rdate), mActivity.getText(R.string.repeat_lunar_yearly)},
                                 (dialog, which) -> {
-                                    if (which == 0) showStandardRepeat();
+                                    if (which == 0 && mModification != Utils.MODIFY_ALL_FOLLOWING) showStandardRepeat();
+                                    else if (which == 0) return;
                                     else showDateSet(which == 2);
                                 }).show();
             } else if (TextUtils.isEmpty(mModel.mRdate)) showStandardRepeat();
@@ -579,9 +580,17 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
 
     private void showDateSet(boolean lunar) {
         java.time.LocalDate start = java.time.LocalDate.of(mStartTime.getYear(), mStartTime.getMonth() + 1, mStartTime.getDay());
+        if (lunar) {
+            showLunarRule(start);
+            return;
+        }
         android.widget.EditText input = new android.widget.EditText(mActivity);
-        input.setText(lunar ? (mModel.mLunarRule == null ? com.android.calendar.RDateSupport.ruleFor(start) : mModel.mLunarRule)
-                : (TextUtils.isEmpty(mModel.mRdate) ? start.toString() + "\n" : com.android.calendar.RDateSupport.isoDates(mModel.mRdate)));
+        String existing = mModel.mRdate;
+        if (!TextUtils.isEmpty(existing) && mModification == Utils.MODIFY_ALL_FOLLOWING) {
+            existing = com.android.calendar.RDateSupport.encode(
+                    com.android.calendar.RDateSupport.dates(existing).tailSet(mModel.mOriginalStart, true));
+        }
+        input.setText(TextUtils.isEmpty(existing) ? start.toString() + "\n" : com.android.calendar.RDateSupport.isoDates(existing));
         input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         AlertDialog dialog = new MaterialAlertDialogBuilder(mActivity)
                 .setTitle(lunar ? R.string.repeat_lunar_yearly : R.string.repeat_rdate)
@@ -590,18 +599,8 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
                 .setPositiveButton(android.R.string.ok, null).create();
         dialog.setOnShowListener(v -> dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).setOnClickListener(button -> {
             try {
-                String rule = lunar ? input.getText().toString().trim() : null;
-                java.time.LocalDate from = TextUtils.isEmpty(mModel.mRdate) ? start
-                        : java.time.Instant.ofEpochMilli(com.android.calendar.RDateSupport.dates(mModel.mRdate).first())
-                            .atOffset(java.time.ZoneOffset.UTC).toLocalDate();
-                String dates = lunar ? com.android.calendar.RDateSupport.lunarDates(from, rule)
-                        : com.android.calendar.RDateSupport.parseIsoDates(input.getText().toString());
-                mModel.mRdate = dates;
-                mModel.mLunarRule = rule;
-                mModel.mExDate = null;
-                mRrule = null;
-                populateRepeats();
-                updateView();
+                String dates = com.android.calendar.RDateSupport.parseIsoDates(input.getText().toString());
+                applyDateSet(dates, null);
                 dialog.dismiss();
             } catch (RuntimeException ex) {
                 input.setError(mActivity.getText(R.string.repeat_invalid_dates));
@@ -610,11 +609,71 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
         dialog.show();
     }
 
+    private void showLunarRule(java.time.LocalDate start) {
+        String[] current = (mModel.mLunarRule == null
+                ? com.android.calendar.RDateSupport.ruleFor(start) : mModel.mLunarRule).split(",");
+        LinearLayout form = new LinearLayout(mActivity);
+        form.setOrientation(LinearLayout.VERTICAL);
+        int pad = (int) (24 * mActivity.getResources().getDisplayMetrics().density);
+        form.setPadding(pad, 0, pad, 0);
+        android.widget.NumberPicker month = new android.widget.NumberPicker(mActivity);
+        month.setMinValue(1); month.setMaxValue(12);
+        android.widget.NumberPicker day = new android.widget.NumberPicker(mActivity);
+        day.setMinValue(1); day.setMaxValue(30);
+        month.setValue(Integer.parseInt(current[0]));
+        day.setValue(Integer.parseInt(current[1]));
+        android.widget.CheckBox leap = new android.widget.CheckBox(mActivity);
+        leap.setText(R.string.repeat_lunar_leap);
+        leap.setChecked("1".equals(current[2]));
+        LinearLayout row = new LinearLayout(mActivity);
+        LinearLayout monthColumn = new LinearLayout(mActivity);
+        monthColumn.setOrientation(LinearLayout.VERTICAL);
+        android.widget.TextView monthLabel = new android.widget.TextView(mActivity);
+        monthLabel.setText(R.string.repeat_lunar_month);
+        monthColumn.addView(monthLabel); monthColumn.addView(month);
+        LinearLayout dayColumn = new LinearLayout(mActivity);
+        dayColumn.setOrientation(LinearLayout.VERTICAL);
+        android.widget.TextView dayLabel = new android.widget.TextView(mActivity);
+        dayLabel.setText(R.string.repeat_lunar_day);
+        dayColumn.addView(dayLabel); dayColumn.addView(day);
+        row.addView(monthColumn, new LinearLayout.LayoutParams(0, -2, 1f));
+        row.addView(dayColumn, new LinearLayout.LayoutParams(0, -2, 1f));
+        form.addView(row); form.addView(leap);
+        new MaterialAlertDialogBuilder(mActivity).setTitle(R.string.repeat_lunar_yearly)
+                .setMessage(R.string.repeat_lunar_policy).setView(form)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                    String rule = month.getValue() + "," + day.getValue() + "," + (leap.isChecked() ? "1" : "0");
+                    java.time.LocalDate from = start;
+                    if (!TextUtils.isEmpty(mModel.mRdate) && mModification != Utils.MODIFY_ALL_FOLLOWING) {
+                        from = java.time.Instant.ofEpochMilli(com.android.calendar.RDateSupport.dates(mModel.mRdate).first())
+                                .atOffset(java.time.ZoneOffset.UTC).toLocalDate();
+                    }
+                    try {
+                        applyDateSet(com.android.calendar.RDateSupport.lunarDates(from, rule), rule);
+                    } catch (RuntimeException ex) {
+                        android.widget.Toast.makeText(mActivity, R.string.repeat_invalid_dates, android.widget.Toast.LENGTH_LONG).show();
+                    }
+                }).show();
+    }
+
+    private void applyDateSet(String dates, String rule) {
+        mModel.mRdate = dates;
+        mModel.mLunarRule = rule;
+        java.util.TreeSet<Long> excluded = com.android.calendar.RDateSupport.dates(mModel.mExDate);
+        excluded.retainAll(com.android.calendar.RDateSupport.dates(dates));
+        mModel.mExDate = excluded.isEmpty() ? null : com.android.calendar.RDateSupport.encode(excluded);
+        mRrule = null;
+        populateRepeats();
+        updateView();
+    }
+
     @Override
     public void onRecurrenceSet(String rrule) {
         Log.d(TAG, "Old rrule:" + mRrule);
         Log.d(TAG, "New rrule:" + rrule);
         mRrule = rrule;
+        if (!TextUtils.isEmpty(mModel.mRdate)) mModel.mExDate = null;
         mModel.mRdate = null;
         mModel.mLunarRule = null;
         if (mRrule != null) {
@@ -1303,17 +1362,20 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
             mCalendarsSpinner.setEnabled(mode == Utils.MODIFY_ALL);
         }
         setAllDayViewsVisibility(mAllDayCheckBox.isChecked());
-        if (!TextUtils.isEmpty(mModel.mRdate)) {
-            mStartDateButton.setEnabled(false);
-            mEndDateButton.setEnabled(false);
-            mStartTimeButton.setEnabled(false);
-            mEndTimeButton.setEnabled(false);
-            mTimezoneButton.setEnabled(false);
-            mAllDayCheckBox.setEnabled(false);
-            mView.findViewById(R.id.is_all_day_label).setEnabled(false);
+        boolean editable = mode != Utils.MODIFY_UNINITIALIZED && EditEventHelper.canModifyEvent(mModel);
+        boolean dateSet = !TextUtils.isEmpty(mModel.mRdate);
+        boolean editTime = editable && (!dateSet || mode == Utils.MODIFY_SELECTED);
+        mStartDateButton.setEnabled(editTime);
+        mEndDateButton.setEnabled(editTime);
+        mStartTimeButton.setEnabled(editTime);
+        mEndTimeButton.setEnabled(editTime);
+        mTimezoneButton.setEnabled(editTime);
+        mAllDayCheckBox.setEnabled(editTime);
+        mView.findViewById(R.id.is_all_day_label).setEnabled(editTime);
+        if (dateSet) {
             mCalendarsSpinner.setEnabled(false);
-            // Mixed RRULE/RDATE and timed sets are preserved, not converted by this editor.
-            if (!TextUtils.isEmpty(mRrule) || !mAllDayCheckBox.isChecked()) mRruleButton.setEnabled(false);
+            if (mode == Utils.MODIFY_SELECTED || !TextUtils.isEmpty(mRrule) || !mAllDayCheckBox.isChecked())
+                mRruleButton.setEnabled(false);
         }
     }
 
