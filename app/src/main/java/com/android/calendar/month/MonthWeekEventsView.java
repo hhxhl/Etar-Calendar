@@ -638,11 +638,16 @@ public class MonthWeekEventsView extends SimpleWeekView {
                     String lunar = LunarUtils.get(getContext(), date.getYear(),
                             date.getMonthValue() - 1, date.getDayOfMonth(),
                             LunarUtils.FORMAT_LUNAR_SHORT, false, null);
+                    boolean dark = androidx.core.graphics.ColorUtils.calculateLuminance(
+                            mMonthBGColor) < 0.5;
                     if (label.equals(lunar)) {
                         mMonthNumPaint.setColor(androidx.core.graphics.ColorUtils.blendARGB(
-                                oldColor, mMonthNumOtherColor, 0.65f));
+                                oldColor, mMonthBGColor, 0.28f));
+                    } else if (LunarUtils.isFestivalLabel(getContext(), date)) {
+                        mMonthNumPaint.setColor(dark ? 0xffffb78b : 0xffa04419);
                     } else {
-                        mMonthNumPaint.setColor(mMonthNumTodayColor);
+                        mMonthNumPaint.setColor(com.google.android.material.color.MaterialColors.getColor(
+                                getContext(), androidx.appcompat.R.attr.colorPrimary, oldColor));
                     }
                     CharSequence fitted = TextUtils.ellipsize(label, new TextPaint(mMonthNumPaint),
                             Math.max(0, right - left - 2 * mSidePaddingMonthNumber),
