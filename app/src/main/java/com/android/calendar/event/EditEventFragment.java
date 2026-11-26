@@ -702,6 +702,8 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
                     mOriginalModel = new CalendarEventModel();
                     EditEventHelper.setModelFromCursor(mOriginalModel, cursor, activity);
                     EditEventHelper.setModelFromCursor(mModel, cursor, activity);
+                    mModel.mCountdown = com.android.calendar.EventCountdown.enabled(activity, mModel.mId);
+                    mOriginalModel.mCountdown = mModel.mCountdown;
                     cursor.close();
 
                     mOriginalModel.mUri = mUri.toString();

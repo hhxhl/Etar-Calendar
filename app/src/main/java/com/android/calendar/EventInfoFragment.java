@@ -1681,6 +1681,8 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
 
         String displayedDatetime = Utils.getDisplayedDatetime(mStartMillis, mEndMillis,
                 System.currentTimeMillis(), localTimezone, mAllDay, context);
+        String countdown = EventCountdown.label(context, mEventId, mStartMillis, mAllDay);
+        if (!countdown.isEmpty()) displayedDatetime += "\n" + countdown;
 
         String displayedTimezone = null;
         if (!mAllDay) {

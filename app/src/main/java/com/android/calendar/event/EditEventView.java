@@ -147,6 +147,7 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
     TextView mEndTimeHome;
     TextView mEndDateHome;
     SwitchCompat mAllDayCheckBox;
+    SwitchCompat mCountdownSwitch;
     Spinner mCalendarsSpinner;
     Button mRruleButton;
     Spinner mAvailabilitySpinner;
@@ -259,6 +260,7 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
         mEndTimeHome = (TextView) view.findViewById(R.id.end_time_home_tz);
         mEndDateHome = (TextView) view.findViewById(R.id.end_date_home_tz);
         mAllDayCheckBox = view.findViewById(R.id.is_all_day);
+        mCountdownSwitch = view.findViewById(R.id.event_countdown);
         mRruleButton = (Button) view.findViewById(R.id.rrule);
         mAvailabilitySpinner = (Spinner) view.findViewById(R.id.availability);
         mAccessLevelSpinner = (Spinner) view.findViewById(R.id.visibility);
@@ -609,6 +611,7 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
         mModel.mHasAlarm = mReminderItems.size() > 0;
         mModel.mTitle = mTitleTextView.getText().toString();
         mModel.mAllDay = mAllDayCheckBox.isChecked();
+        if (mCountdownSwitch.isEnabled()) mModel.mCountdown = mCountdownSwitch.isChecked();
         mModel.mLocation = mLocationTextView.getText().toString();
         mModel.mDescription = mDescriptionTextView.getText().toString();
         mModel.mUrl = mUrlTextView.getText().toString();
@@ -845,6 +848,7 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
             return;
         }
 
+        mCountdownSwitch.setChecked(model.mCountdown);
         boolean canRespond = EditEventHelper.canRespond(model);
 
         {
@@ -1186,6 +1190,7 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
     }
 
     private void setViewStates(int mode) {
+        mCountdownSwitch.setEnabled(mode == Utils.MODIFY_ALL && EditEventHelper.canModifyEvent(mModel));
         // Extra canModify check just in case
         if (mode == Utils.MODIFY_UNINITIALIZED || !EditEventHelper.canModifyEvent(mModel)) {
             setWhenString();

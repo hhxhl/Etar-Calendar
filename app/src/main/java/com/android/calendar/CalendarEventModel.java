@@ -73,6 +73,7 @@ public class CalendarEventModel implements Serializable {
     public String mLocation = null;
     public String mDescription = null;
     public String mUrl = null;
+    public boolean mCountdown = false;
     public String mRrule = null;
     public String mExDate = null;
     public String mOrganizer = null;
@@ -264,6 +265,7 @@ public class CalendarEventModel implements Serializable {
         mLocation = null;
         mDescription = null;
         mUrl = null;
+        mCountdown = false;
         mRrule = null;
         mOrganizer = null;
         mOrganizerDisplayName = null;
@@ -347,6 +349,7 @@ public class CalendarEventModel implements Serializable {
         result = prime * result + (int) (mCalendarId ^ (mCalendarId >>> 32));
         result = prime * result + ((mDescription == null) ? 0 : mDescription.hashCode());
         result = prime * result + ((mUrl == null) ? 0 : mUrl.hashCode());
+        result = prime * result + (mCountdown ? 1231 : 1237);
         result = prime * result + ((mDuration == null) ? 0 : mDuration.hashCode());
         result = prime * result + (int) (mEnd ^ (mEnd >>> 32));
         result = prime * result + (mGuestsCanInviteOthers ? 1231 : 1237);
@@ -400,6 +403,7 @@ public class CalendarEventModel implements Serializable {
         }
 
         CalendarEventModel other = (CalendarEventModel) obj;
+        if (mCountdown != other.mCountdown) return false;
         if (!checkOriginalModelFields(other)) {
             return false;
         }
@@ -497,6 +501,7 @@ public class CalendarEventModel implements Serializable {
             return false;
         }
 
+        if (mCountdown != originalModel.mCountdown) return false;
         if (!checkOriginalModelFields(originalModel)) {
             return false;
         }

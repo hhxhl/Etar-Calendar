@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="countdown_show">显示倒计时</string>
+    <string name="countdown_today">今天</string>
+    <plurals name="countdown_remaining">
+        <item quantity="other">还有%d天</item>
+    </plurals>
+    <plurals name="countdown_elapsed">
+        <item quantity="other">已过%d天</item>
+    </plurals>
+</resources>

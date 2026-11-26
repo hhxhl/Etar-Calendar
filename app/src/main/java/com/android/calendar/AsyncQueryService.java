@@ -370,6 +370,10 @@ public class AsyncQueryService extends Handler {
                 break;
 
             case Operation.EVENT_ARG_BATCH:
+                if (info.cookie instanceof EventCountdown.SavedEvent) {
+                    ((EventCountdown.SavedEvent) info.cookie).complete(mContext,
+                            (ContentProviderResult[]) info.result);
+                }
                 onBatchComplete(token, info.cookie, (ContentProviderResult[]) info.result);
                 break;
         }

@@ -522,13 +522,26 @@
             app:layout_constraintStart_toEndOf="@+id/rrule_icon"
             app:layout_constraintTop_toTopOf="@+id/rrule_icon" />
 
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/event_countdown"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:layout_marginStart="48dp"
+            android:layout_marginEnd="24dp"
+            android:layout_marginTop="8dp"
+            android:text="@string/countdown_show"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/rrule" />
+
         <View
             android:id="@+id/view4"
             style="@style/EditEventSeparator"
             android:layout_marginTop="20dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/rrule_icon" />
+            app:layout_constraintTop_toBottomOf="@id/event_countdown" />
 
         <!-- REMINDERS -->
         <ImageView

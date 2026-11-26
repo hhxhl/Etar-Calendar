@@ -334,7 +334,9 @@ public class CalendarAppWidgetService extends RemoteViewsService {
                     updateTextView(views, R.id.when, eventInfo.visibWhen, eventInfo.when);
                     updateTextView(views, R.id.where, eventInfo.visibWhere, eventInfo.where);
                 }
-                updateTextView(views, R.id.title, eventInfo.visibTitle, eventInfo.title);
+                String countdown = com.android.calendar.EventCountdown.widgetLabel(mContext, eventInfo.id, eventInfo.start);
+                String displayTitle = countdown.isEmpty() ? eventInfo.title : eventInfo.title + " · " + countdown;
+                updateTextView(views, R.id.title, eventInfo.visibTitle, displayTitle);
 
                 views.setViewVisibility(R.id.agenda_item_color, View.VISIBLE);
 

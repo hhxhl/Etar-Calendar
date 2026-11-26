@@ -696,7 +696,11 @@ public class EditEventHelper {
             }
         }
 
-        mService.startBatch(mService.getNextToken(), null, android.provider.CalendarContract.AUTHORITY, ops,
+        boolean moved = originalModel != null && originalModel.mCalendarId != model.mCalendarId;
+        Object cookie = (model.mCountdown || (originalModel != null && originalModel.mCountdown))
+                ? new com.android.calendar.EventCountdown.SavedEvent(model.mId, eventIdIndex,
+                        model.mCountdown, moved) : null;
+        mService.startBatch(mService.getNextToken(), cookie, android.provider.CalendarContract.AUTHORITY, ops,
                 Utils.UNDO_DELAY);
 
         return true;

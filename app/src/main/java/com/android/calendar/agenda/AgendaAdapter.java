@@ -178,6 +178,11 @@ public class AgendaAdapter extends ResourceCursorAdapter {
         // When
         long begin = cursor.getLong(AgendaWindowAdapter.INDEX_BEGIN);
         long end = cursor.getLong(AgendaWindowAdapter.INDEX_END);
+        TextView countdownView = view.findViewById(R.id.event_countdown_label);
+        String countdown = com.android.calendar.EventCountdown.label(context,
+                cursor.getLong(AgendaWindowAdapter.INDEX_EVENT_ID), begin, allDay);
+        countdownView.setText(countdown);
+        countdownView.setVisibility(countdown.isEmpty() ? View.GONE : View.VISIBLE);
         String eventTz = cursor.getString(AgendaWindowAdapter.INDEX_TIME_ZONE);
         int flags = 0;
         String whenString;
