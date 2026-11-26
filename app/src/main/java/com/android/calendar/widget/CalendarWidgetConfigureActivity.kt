@@ -172,11 +172,20 @@ class CalendarWidgetConfigureActivity : AppCompatActivity() {
         WidgetUtils.saveBackgroundOpacity(this, appWidgetId,
             findViewById<SeekBar>(R.id.widget_opacity_slider).progress)
 
-        Utils.sendUpdateWidgetIntent(this)
-
+        // Push the selected widget's full RemoteViews immediately. Its provider
+        // refreshes the collection after applying the new background.
         val appWidgetManager = AppWidgetManager.getInstance(this)
-        appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId, R.id.events_list)
-        appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId, R.id.grid_view)
+        val provider = when (appWidgetManager.getAppWidgetInfo(appWidgetId)?.provider?.className) {
+            CalendarAppWidgetProvider::class.java.name -> CalendarAppWidgetProvider()
+            MonthAppWidgetProvider::class.java.name -> MonthAppWidgetProvider()
+            WeekAppWidgetProvider::class.java.name -> WeekAppWidgetProvider()
+            else -> null
+        }
+        if (provider != null) {
+            provider.onUpdate(this, appWidgetManager, intArrayOf(appWidgetId))
+        } else {
+            Utils.sendUpdateWidgetIntent(this)
+        }
 
         val resultValue = Intent().apply {
             putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
