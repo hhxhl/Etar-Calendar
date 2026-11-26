@@ -523,6 +523,8 @@ public class MonthWeekEventsView extends SimpleWeekView {
     protected void drawBackground(Canvas canvas) {
         r.top = mDaySeparatorInnerWidth;
         r.bottom = mHeight;
+        java.time.YearMonth currentMonth = java.time.YearMonth.from(
+                LocalizedDay.fromJulian(Time.getJulianDay(mToday.toMillis(), mToday.getGmtOffset())));
         int offset = mShowWeekNum ? 1 : 0;
         for (int day = 0; day < mNumDays; day++) {
             int index = day + offset;
@@ -531,7 +533,8 @@ public class MonthWeekEventsView extends SimpleWeekView {
                     ? androidx.core.graphics.ColorUtils.blendARGB(
                             mMonthBGColor, mMonthNumColor, 0.12f)
                     : mMonthBGColor;
-            if (mFocusDay[index]) {
+            if (currentMonth.equals(java.time.YearMonth.from(
+                    LocalizedDay.fromJulian(mFirstJulianDay + day)))) {
                 color = androidx.core.graphics.ColorUtils.blendARGB(
                         mMonthBGColor, mMonthBGTodayColor | 0xff000000, 0.24f);
             }
