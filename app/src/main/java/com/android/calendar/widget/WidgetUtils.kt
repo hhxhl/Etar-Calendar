@@ -78,10 +78,7 @@ object WidgetUtils {
 
     @JvmStatic
     fun getConfigurePendingIntent(context: Context, appWidgetId: Int): PendingIntent {
-        val configIntent = Intent(context, CalendarWidgetConfigureActivity::class.java).apply {
-            putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
-            data = Uri.parse(toUri(Intent.URI_INTENT_SCHEME))
-        }
+        val configIntent = getConfigureIntent(context, appWidgetId)
         return PendingIntent.getActivity(
             context, appWidgetId, configIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -90,13 +87,34 @@ object WidgetUtils {
 
     @JvmStatic
     fun getAddEventPendingIntent(context: Context): PendingIntent {
-        val addIntent = Intent(Intent.ACTION_VIEW).apply {
-            setClass(context, EditEventActivity::class.java)
-            putExtra(CalendarContract.EXTRA_EVENT_ALL_DAY, false)
-            putExtra(CalendarContract.Events.CALENDAR_ID, -1L)
-        }
+        val addIntent = getAddEventIntent(context)
         return PendingIntent.getActivity(
             context, 0, addIntent, PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
+    fun getConfigureIntent(context: Context, appWidgetId: Int): Intent =
+        Intent(context, CalendarWidgetConfigureActivity::class.java).apply {
+            putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+            data = Uri.parse(toUri(Intent.URI_INTENT_SCHEME))
+        }
+
+    fun getAddEventIntent(context: Context): Intent = Intent(Intent.ACTION_VIEW).apply {
+        setClass(context, EditEventActivity::class.java)
+        putExtra(CalendarContract.EXTRA_EVENT_ALL_DAY, false)
+        putExtra(CalendarContract.Events.CALENDAR_ID, -1L)
+    }
+
+    @JvmStatic
+    fun getMenuPendingIntent(context: Context, appWidgetId: Int): PendingIntent {
+        val intent = Intent(context, WidgetMenuActivity::class.java).apply {
+            putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        // Explicit component and unique widget ID; allow RemoteViews to supply source bounds.
+        return PendingIntent.getActivity(
+            context, appWidgetId, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
         )
     }
 

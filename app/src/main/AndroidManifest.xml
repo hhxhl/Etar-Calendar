@@ -134,6 +134,14 @@
         </activity-alias>
 
         <activity
+            android:name="com.android.calendar.widget.WidgetMenuActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity="${applicationId}.widgetmenu"
+            android:theme="@style/Theme.Etar.WidgetMenu" />
+
+        <activity
             android:name="com.android.calendar.widget.CalendarWidgetConfigureActivity"
             android:exported="true"
             android:label="@string/widget_configure_title">

@@ -260,11 +260,6 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
             views.setInt(getHeaderViewId(), "setBackgroundColor", headerColor);
             views.setTextColor(getTitleViewId(), headerTextColor);
             views.setInt(R.id.grid_widget_settings, "setColorFilter", headerTextColor);
-            views.setInt(R.id.iv_add, "setColorFilter", DynamicThemeKt.getColor(context, "widget_fab_fg"));
-            if (android.os.Build.VERSION.SDK_INT >= 31) {
-                views.setColorStateList(R.id.iv_add, "setBackgroundTintList",
-                        android.content.res.ColorStateList.valueOf(DynamicThemeKt.getColor(context, "widget_fab_bg")));
-            }
             views.setInt(getBackgroundViewId(), "setBackgroundResource", backgroundColor);
 
             views.setTextViewText(getTitleViewId(), title);
@@ -281,9 +276,7 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
             views.setOnClickPendingIntent(getHeaderViewId(),
                     WidgetUtils.getLaunchCalendarPendingIntent(context, appWidgetId, now));
             views.setOnClickPendingIntent(R.id.grid_widget_settings,
-                    WidgetUtils.getConfigurePendingIntent(context, appWidgetId));
-            views.setOnClickPendingIntent(R.id.iv_add,
-                    WidgetUtils.getAddEventPendingIntent(context));
+                    WidgetUtils.getMenuPendingIntent(context, appWidgetId));
 
             appWidgetManager.updateAppWidget(appWidgetId, views);
             appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId, getGridViewId());

@@ -225,6 +225,19 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
                             | DateUtils.FORMAT_NO_YEAR);
             views.setTextViewText(R.id.day_of_week, dayOfWeek);
             views.setTextViewText(R.id.date, date);
+            android.os.Bundle options = appWidgetManager.getAppWidgetOptions(appWidgetId);
+            boolean landscape = context.getResources().getConfiguration().orientation
+                    == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+            int width = options.getInt(landscape
+                    ? AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH
+                    : AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 180);
+            boolean compact = width > 0 && width < 180;
+            views.setViewVisibility(R.id.widget_header_balance,
+                    compact ? android.view.View.GONE : android.view.View.VISIBLE);
+            int gravity = compact ? android.view.Gravity.START | android.view.Gravity.CENTER_VERTICAL
+                    : android.view.Gravity.CENTER;
+            views.setInt(R.id.day_of_week, "setGravity", gravity);
+            views.setInt(R.id.date, "setGravity", gravity);
 
             // Set widget header background based on chosen primary app color
             int headerColor = DynamicThemeKt.getColor(context, "widget_header");
@@ -233,11 +246,6 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
             views.setTextColor(R.id.day_of_week, headerTextColor);
             views.setTextColor(R.id.date, headerTextColor);
             views.setInt(R.id.iv_settings, "setColorFilter", headerTextColor);
-            views.setInt(R.id.iv_add, "setColorFilter", DynamicThemeKt.getColor(context, "widget_fab_fg"));
-            if (android.os.Build.VERSION.SDK_INT >= 31) {
-                views.setColorStateList(R.id.iv_add, "setBackgroundTintList",
-                        android.content.res.ColorStateList.valueOf(DynamicThemeKt.getColor(context, "widget_fab_bg")));
-            }
 
             // Set widget background color based on chosen app theme
             int backgroundColor = DynamicThemeKt.getWidgetBackgroundStyle(context);
@@ -251,10 +259,8 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
             // PendingIntents
             views.setOnClickPendingIntent(R.id.header,
                     WidgetUtils.getLaunchCalendarPendingIntent(context, appWidgetId, millis));
-            views.setOnClickPendingIntent(R.id.iv_add,
-                    WidgetUtils.getAddEventPendingIntent(context));
             views.setOnClickPendingIntent(R.id.iv_settings,
-                    WidgetUtils.getConfigurePendingIntent(context, appWidgetId));
+                    WidgetUtils.getMenuPendingIntent(context, appWidgetId));
 
             // Each list item will call setOnClickExtra() to let the list know
             // which item

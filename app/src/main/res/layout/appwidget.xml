@@ -30,18 +30,24 @@
         android:layout_alignParentTop="true"
         android:gravity="center_vertical|start"
         android:minHeight="48dip"
-        android:paddingStart="8dip"
+        android:paddingStart="2dip"
         android:paddingEnd="2dip">
 
         <ImageView
             android:id="@+id/iv_settings"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
-            android:paddingStart="8dip"
-            android:paddingEnd="8dip"
-            android:src="@drawable/ic_settings" />
+            android:padding="8dp"
+            android:contentDescription="@string/widget_menu_more_options"
+            android:src="@drawable/ic_widget_more" />
+
+        <FrameLayout
+            android:id="@+id/widget_header_balance"
+            android:layout_width="40dp"
+            android:layout_height="1dp"
+            android:layout_alignParentStart="true" />
 
         <TextView
             android:id="@+id/day_of_week"
@@ -49,7 +55,10 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="3dip"
-            android:layout_toStartOf="@+id/iv_settings"
+            android:layout_toStartOf="@id/iv_settings"
+            android:layout_toEndOf="@id/widget_header_balance"
+            android:layout_alignWithParentIfMissing="true"
+            android:gravity="center"
             android:shadowColor="#0dffffff"
             android:shadowRadius="3"
             android:textColor="@color/appwidget_week" />
@@ -60,7 +69,14 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_below="@+id/day_of_week"
-            android:layout_toStartOf="@+id/iv_settings"
+            android:layout_toStartOf="@id/iv_settings"
+            android:layout_toEndOf="@id/widget_header_balance"
+            android:layout_alignWithParentIfMissing="true"
+            android:gravity="center"
+            android:autoSizeTextType="uniform"
+            android:autoSizeMinTextSize="12sp"
+            android:autoSizeMaxTextSize="24sp"
+            android:autoSizeStepGranularity="1sp"
             android:textColor="@color/appwidget_month" />
     </RelativeLayout>
 
@@ -78,16 +94,4 @@
         android:scrollbarThumbVertical="@color/appwidget_scrollbar"
         android:listSelector="@android:color/transparent" />
 
-    <!-- FAB in bottom right -->
-    <ImageView
-        android:id="@+id/iv_add"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentEnd="true"
-        android:layout_marginEnd="12dp"
-        android:layout_marginBottom="12dp"
-        android:padding="8dp"
-        android:background="@drawable/widget_fab_background"
-        android:src="@drawable/ic_add_event" />
 </RelativeLayout>

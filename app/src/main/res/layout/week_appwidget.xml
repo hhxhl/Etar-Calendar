@@ -28,8 +28,12 @@
         android:gravity="center_vertical"
         android:minHeight="40dip"
         android:orientation="horizontal"
-        android:paddingStart="12dip"
-        android:paddingEnd="12dip">
+        android:paddingStart="4dip"
+        android:paddingEnd="4dip">
+
+        <FrameLayout
+            android:layout_width="40dp"
+            android:layout_height="1dp" />
 
         <TextView
             android:id="@+id/grid_widget_title"
@@ -41,13 +45,19 @@
             android:maxLines="1"
             android:textColor="@color/appwidget_month"
             android:textSize="16sp"
+            android:autoSizeTextType="uniform"
+            android:autoSizeMinTextSize="10sp"
+            android:autoSizeMaxTextSize="16sp"
+            android:autoSizeStepGranularity="1sp"
             android:textStyle="bold" />
 
         <ImageView
             android:id="@+id/grid_widget_settings"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:src="@drawable/ic_settings" />
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:padding="8dp"
+            android:contentDescription="@string/widget_menu_more_options"
+            android:src="@drawable/ic_widget_more" />
     </LinearLayout>
 
     <!-- Day-of-week labels row -->
@@ -116,7 +126,7 @@
             android:textSize="11sp" />
     </LinearLayout>
 
-    <!-- Grid of day cells (1 row x 7 days) with FAB -->
+    <!-- Grid of day cells (1 row x 7 days) -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="0dip"
@@ -131,16 +141,5 @@
             android:scrollbars="none"
             android:stretchMode="columnWidth" />
 
-        <ImageView
-            android:id="@+id/iv_add"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_alignParentBottom="true"
-            android:layout_alignParentEnd="true"
-            android:layout_marginEnd="12dp"
-            android:layout_marginBottom="12dp"
-            android:padding="8dp"
-            android:background="@drawable/widget_fab_background"
-            android:src="@drawable/ic_add_event" />
     </RelativeLayout>
 </LinearLayout>
