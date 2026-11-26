@@ -1579,7 +1579,11 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         int color = visible ? normal : com.google.android.material.color.MaterialColors.getColor(
                 this, androidx.appcompat.R.attr.colorPrimary, normal);
         android.graphics.drawable.Drawable frame = icon.findDrawableByLayerId(R.id.today_icon_background);
-        if (frame != null) frame.setTint(color);
+        if (frame != null) {
+            frame.setTint(visible
+                    ? DynamicThemeKt.getColor(this, "month_today_bgcolor")
+                    : color);
+        }
         android.graphics.drawable.Drawable day = icon.findDrawableByLayerId(R.id.today_icon_day);
         if (day instanceof DayOfMonthDrawable) {
             ((DayOfMonthDrawable) day).setTextColor(color);
