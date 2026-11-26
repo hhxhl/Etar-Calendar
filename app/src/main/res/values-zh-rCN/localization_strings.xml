@@ -5,8 +5,7 @@
     <string name="localization_festivals">显示传统节日</string>
     <string name="localization_terms">显示二十四节气</string>
     <string name="localization_holidays">显示法定节假日及调休</string>
-    <string name="localization_update">更新节假日数据</string>
     <string name="localization_import">导入节假日 JSON</string>
-    <string name="localization_updated">已更新 %1$d 个年度</string>
-    <string name="localization_failed">更新或导入失败</string>
+    <string name="localization_updated">已导入 %1$d 个年度的节假日数据</string>
+    <string name="localization_failed">导入失败</string>
 </resources>

@@ -7,7 +7,6 @@ import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.SwitchPreference
 import com.android.calendar.HolidayManager
-import com.android.calendar.HolidayUpdater
 import com.android.calendar.LocalizationSettings
 import com.android.calendar.Utils
 import ws.xsoh.etar.R
@@ -48,14 +47,6 @@ class LocalizationPreferences : PreferenceFragmentCompat() {
                 }
             })
         }
-        preferenceScreen.addPreference(Preference(context).apply {
-            setTitle(R.string.localization_update)
-            setOnPreferenceClickListener {
-                val app = context.applicationContext
-                runTask { HolidayUpdater.update(HolidayManager.getInstance(app)) }
-                true
-            }
-        })
         preferenceScreen.addPreference(Preference(context).apply {
             setTitle(R.string.localization_import)
             setOnPreferenceClickListener {
