@@ -242,8 +242,12 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
             views.setTextColor(R.id.date, headerTextColor);
             views.setTextColor(R.id.widget_lunar_day, headerTextColor);
             views.setInt(R.id.iv_settings, "setColorFilter", headerTextColor);
-            views.setInt(R.id.widget_header_divider, "setBackgroundColor",
-                    WidgetHeaderUtils.dividerColor(context));
+            int dividerColor = WidgetHeaderUtils.dividerColor(context);
+            views.setInt(R.id.widget_header_divider, "setBackgroundColor", dividerColor);
+            views.setInt(R.id.widget_date_lunar_divider, "setBackgroundColor", dividerColor);
+            views.setInt(R.id.widget_lunar_weekday_divider, "setBackgroundColor", dividerColor);
+            views.setViewVisibility(R.id.widget_lunar_weekday_divider,
+                    lunar.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
             int roundedBackground = backgroundColor == R.color.bg_black
                     ? R.drawable.widget_agenda_bg_black
                     : backgroundColor == R.color.bg_dark
