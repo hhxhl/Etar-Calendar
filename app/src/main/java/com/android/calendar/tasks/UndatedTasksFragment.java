@@ -132,9 +132,7 @@ public final class UndatedTasksFragment extends Fragment implements CalendarCont
             done.setChecked(task.done);
             done.setContentDescription(getString(R.string.tasks_complete) + " " + task.title);
             done.setOnCheckedChangeListener((button, checked) -> {
-                store.complete(task.id, checked);
-                TaskAlarmReceiver.dismiss(context, task.id);
-                TaskAlarmReceiver.schedule(context);
+                store.complete(task.id, checked, task.due);
                 refresh();
             });
             row.addView(done);

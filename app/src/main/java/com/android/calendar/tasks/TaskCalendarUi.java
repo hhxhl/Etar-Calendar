@@ -17,7 +17,6 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.List;
 import java.util.WeakHashMap;
 import ws.xsoh.etar.R;
 
@@ -90,20 +89,6 @@ public final class TaskCalendarUi {
             controller.sendEventRelatedEvent(context, type, item.id,
                     item.startMillis, item.endMillis, 0, 0, -1);
         }
-    }
-
-    public static void showItems(Context context, CalendarController controller, List<Event> events) {
-        ArrayList<Event> items = new ArrayList<>(events);
-        items.sort(Comparator.comparingLong((Event item) -> item.startMillis));
-        CharSequence[] labels = new CharSequence[items.size()];
-        for (int i = 0; i < items.size(); i++) {
-            Event item = items.get(i);
-            labels[i] = context.getString(item.taskId > 0 ? R.string.tasks_title
-                    : R.string.tasks_create_event_type) + " · " + item.title;
-        }
-        new MaterialAlertDialogBuilder(context).setTitle(R.string.tasks_choose_item)
-                .setItems(labels, (dialog, which) -> openItem(context, controller, items.get(which)))
-                .show();
     }
 
     /** Project dated tasks into the existing display model; never write them to CalendarProvider. */

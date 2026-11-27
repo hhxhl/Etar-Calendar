@@ -123,6 +123,12 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
     private static final String BUNDLE_KEY_EVENT_ID = "key_event_id";
     private static final String BUNDLE_KEY_RESTORE_VIEW = "key_restore_view";
     private static final int HANDLER_KEY = 0;
+    private boolean taskReceiverRegistered;
+    private final BroadcastReceiver taskChangeReceiver = new BroadcastReceiver() {
+        @Override public void onReceive(Context context, Intent intent) {
+            if (mController != null) eventsChanged();
+        }
+    };
     private static final int PERMISSIONS_REQUEST_WRITE_CALENDAR = 0;
     private static final int PERMISSIONS_REQUEST_POST_NOTIFICATIONS = 1;
 
@@ -546,21 +552,22 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         mFab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mCurrentView == ViewType.REMINDERS) {
-                    Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.main_pane);
-                    if (fragment instanceof com.android.calendar.tasks.UndatedTasksFragment) {
-                        ((com.android.calendar.tasks.UndatedTasksFragment) fragment).createTask();
-                    }
-                    return;
-                }
                 androidx.appcompat.widget.PopupMenu menu =
                         new androidx.appcompat.widget.PopupMenu(AllInOneActivity.this, v);
                 menu.getMenu().add(0, 1, 0, R.string.tasks_create_event_type);
                 menu.getMenu().add(0, 2, 1, R.string.tasks_title);
                 menu.setOnMenuItemClickListener(item -> {
+                    if (mCurrentView == ViewType.REMINDERS && item.getItemId() == 2) {
+                        Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.main_pane);
+                        if (fragment instanceof com.android.calendar.tasks.UndatedTasksFragment) {
+                            ((com.android.calendar.tasks.UndatedTasksFragment) fragment).createTask();
+                        }
+                        return true;
+                    }
                     com.android.calendar.tasks.TaskCalendarUi.Selection selected =
                             com.android.calendar.tasks.TaskCalendarUi.selection(mController);
-                    long millis = mController.getTime();
+                    long millis = mCurrentView == ViewType.REMINDERS
+                            ? System.currentTimeMillis() : mController.getTime();
                     boolean allDay = false;
                     boolean timed = false;
                     if (selected != null) {
@@ -631,6 +638,12 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
     @Override
     protected void onResume() {
         super.onResume();
+        if (!taskReceiverRegistered) {
+            ContextCompat.registerReceiver(this, taskChangeReceiver,
+                    new android.content.IntentFilter(com.android.calendar.tasks.TaskStore.ACTION_TASKS_CHANGED),
+                    ContextCompat.RECEIVER_NOT_EXPORTED);
+            taskReceiverRegistered = true;
+        }
 
         // Check if the upgrade code has ever been run. If not, force a sync just this one time.
         Utils.trySyncAndDisableUpgradeReceiver(this);
@@ -699,6 +712,10 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
     @Override
     protected void onPause() {
         super.onPause();
+        if (taskReceiverRegistered) {
+            unregisterReceiver(taskChangeReceiver);
+            taskReceiverRegistered = false;
+        }
 
         mController.deregisterEventHandler(HANDLER_KEY);
         mPaused = true;

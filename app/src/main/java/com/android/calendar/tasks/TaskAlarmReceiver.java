@@ -40,8 +40,8 @@ public final class TaskAlarmReceiver extends BroadcastReceiver {
         TaskStore store=TaskStore.get(context);
         if(COMPLETE.equals(intent.getAction())){
             long id=intent.getLongExtra("id",0);
-            TaskStore.Task t=store.find(id);
-            if(t!=null && t.due!=null && t.due==intent.getLongExtra("due",Long.MIN_VALUE)){store.complete(id,true);dismiss(context,id);}
+            store.complete(id, true, intent.getLongExtra("due", Long.MIN_VALUE));
+            return; // Successful completion already reschedules the alarm.
         } else if(FIRE.equals(intent.getAction())){
             if(Build.VERSION.SDK_INT<33 || context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)==PackageManager.PERMISSION_GRANTED){
                 NotificationManager nm=(NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
