@@ -98,6 +98,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
     private long calendarId = -1;
     private ZoneId zone;
     private LocalDate firstDay, lastDay, targetDay, publishedDay;
+    private LocalDate loadedFirstDay, loadedLastDay;
     private Long pendingGoToMillis;
     private Anchor pendingAnchor;
     private boolean hasLoaded;
@@ -196,6 +197,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         if (pendingAnchor == null) pendingAnchor = new Anchor(targetDay, -1, -1, -1, 0);
         worker = Executors.newSingleThreadExecutor();
         hasLoaded = false;
+        loadedFirstDay = loadedLastDay = null;
         publishedDay = null;
 
         LinearLayout root = new LinearLayout(context);
@@ -329,7 +331,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
     }
 
     @Override public void onPause() {
-        pendingAnchor = currentAnchor();
+        if (pendingAnchor == null) pendingAnchor = currentAnchor();
         active = false;
         main.removeCallbacks(reload);
         cancelQuery();
@@ -375,7 +377,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
 
     public Bundle saveViewState() {
         Bundle state = new Bundle();
-        Anchor anchor = currentAnchor();
+        Anchor anchor = pendingAnchor != null ? pendingAnchor : currentAnchor();
         ZoneId savedZone = zone == null ? ZoneId.systemDefault() : zone;
         state.putLong("anchor_time", anchor.day.atStartOfDay(savedZone).toInstant().toEpochMilli());
         state.putLong("instance", anchor.instance);
@@ -422,7 +424,8 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
             }
             return;
         }
-        if (hasLoaded && !loading && !day.isBefore(firstDay) && !day.isAfter(lastDay)) {
+        if (hasLoaded && !loading && loadedFirstDay != null && loadedLastDay != null
+                && !day.isBefore(loadedFirstDay) && !day.isAfter(loadedLastDay)) {
             restoreAnchor(anchor);
         } else {
             request(day.minusDays(BLOCK_DAYS), day.plusDays(BLOCK_DAYS), anchor, false);
@@ -449,6 +452,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
             adapter.notifyDataSetChanged();
             binding = false;
             hasLoaded = false;
+            loadedFirstDay = loadedLastDay = null;
         }
         if (rows.isEmpty()) {
             status.setText(R.string.loading);
@@ -466,12 +470,20 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         future = worker.submit(() -> {
             try {
                 List<Row> result = query(context, first, last, selected, hideDeclined, today, signal);
+                if (result.stream().noneMatch(row -> row.event != null)
+                        && result.stream().noneMatch(row -> row.day.equals(anchor.day))) {
+                    // Keep an actual date anchor even when no instances exist in this window.
+                    result.add(new Row(anchor.day, null));
+                    result.sort(Comparator.comparing(row -> row.day));
+                }
                 main.post(() -> {
                     if (!active || list == null || ticket != generation) return;
                     loading = false;
                     firstDay = first;
                     lastDay = last;
                     hasLoaded = true;
+                    loadedFirstDay = first;
+                    loadedLastDay = last;
                     binding = true;
                     rows.clear();
                     rows.addAll(result);
@@ -491,6 +503,11 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
                 main.post(() -> {
                     if (!active || list == null || ticket != generation) return;
                     loading = false;
+                    if (loadedFirstDay != null && loadedLastDay != null) {
+                        firstDay = loadedFirstDay;
+                        lastDay = loadedLastDay;
+                    }
+                    pendingAnchor = null;
                     status.setText(Utils.isCalendarPermissionGranted(requireContext(), false)
                             ? R.string.agenda_load_failed : R.string.calendar_permission_not_granted);
                     status.setVisibility(View.VISIBLE);
@@ -566,6 +583,17 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
             }
         }
         boolean exact = index >= 0;
+        if (index < 0 && rows.stream().noneMatch(row -> row.event != null)) {
+            // No event is available to jump to; do not change the requested date.
+            binding = true;
+            rows.add(new Row(anchor.day, null));
+            rows.sort(Comparator.comparing(row -> row.day));
+            adapter.notifyDataSetChanged();
+            for (int i = 0; i < rows.size(); i++) {
+                if (rows.get(i).day.equals(anchor.day)) { index = i; break; }
+            }
+            binding = false;
+        }
         if (index < 0) index = nearest >= 0 ? nearest : lastHeader;
         if (index >= 0) list.setSelectionFromTop(index, exact ? anchor.offset : 0);
         targetDay = index >= 0 ? rows.get(index).day : anchor.day;
