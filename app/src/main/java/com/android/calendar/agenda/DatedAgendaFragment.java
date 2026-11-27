@@ -22,7 +22,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
-import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.Spinner;
@@ -69,6 +68,13 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
     private CalendarController controller;
     private Spinner filter;
     private ListView list;
+    private final Runnable refreshStateSymbols = new Runnable() {
+        @Override public void run() {
+            if (!isResumed() || list == null) return;
+            list.invalidateViews();
+            list.postDelayed(this, 60_000 - System.currentTimeMillis() % 60_000);
+        }
+    };
     private TextView status, searchRange;
     // Null means ordinary agenda; an empty string means search is waiting for a query.
     private String searchQuery;
@@ -296,6 +302,10 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
 
     @Override public void onResume() {
         super.onResume();
+        if (list != null) {
+            list.removeCallbacks(refreshStateSymbols);
+            list.postDelayed(refreshStateSymbols, 60_000 - System.currentTimeMillis() % 60_000);
+        }
         active = true;
         ZoneId latestZone = ZoneId.of(Utils.getTimeZone(requireContext(), null));
         if (!latestZone.equals(zone)) zone = latestZone;
@@ -305,6 +315,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
     }
 
     @Override public void onPause() {
+        if (list != null) list.removeCallbacks(refreshStateSymbols);
         if (pendingAnchor == null) pendingAnchor = currentAnchor();
         active = false;
         main.removeCallbacks(reload);
