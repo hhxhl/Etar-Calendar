@@ -2,6 +2,10 @@ package com.android.calendar.tasks;
 
 import android.content.Context;
 import android.graphics.Paint;
+import android.graphics.Typeface;
+import android.graphics.drawable.InsetDrawable;
+import android.text.TextUtils;
+import android.widget.ImageView;
 import android.os.Bundle;
 import android.text.format.DateUtils;
 import android.view.Gravity;
@@ -274,6 +278,90 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
     }
     @Override public void eventsChanged(){refresh(true);}
 
+    /** Reuse the agenda's spacing, text styles and theme resources without
+     * tying reminder rows to CalendarProvider or its cursor adapter. */
+    private final class ReminderRowView {
+        final LinearLayout root;
+        final CheckBox done;
+        final TextView title;
+        final TextView subtitle;
+        final ImageView bell;
+
+        ReminderRowView(Context context) {
+            root = new LinearLayout(context);
+            root.setOrientation(LinearLayout.VERTICAL);
+            root.setMinimumHeight(dp(64));
+
+            View divider = new View(context);
+            divider.setBackgroundResource(R.color.agenda_list_separator_color);
+            root.addView(divider, new LinearLayout.LayoutParams(-1, 1));
+
+            LinearLayout item = new LinearLayout(context);
+            item.setGravity(Gravity.CENTER_VERTICAL);
+            item.setMinimumHeight(dp(64) - 1);
+            item.setPadding(0, 0, dp(16), 0);
+            root.addView(item, new LinearLayout.LayoutParams(-1, -2));
+
+            // The agenda's color chip occupies 16 + 24 + 8 = 48dp.
+            // Match its text start while retaining a 48dp checkbox touch target.
+            done = ReminderCompletion.create(context);
+            done.setButtonDrawable(new InsetDrawable(done.getButtonDrawable(), dp(16), 0, dp(8), 0));
+            done.setGravity(Gravity.CENTER_VERTICAL);
+            item.addView(done, new LinearLayout.LayoutParams(dp(48), dp(48)));
+
+            LinearLayout details = new LinearLayout(context);
+            details.setOrientation(LinearLayout.VERTICAL);
+            details.setPadding(0, dp(8), 0, dp(8));
+            title = new TextView(context);
+            title.setTextSize(18);
+            title.setSingleLine(true);
+            title.setEllipsize(TextUtils.TruncateAt.END);
+            details.addView(title);
+            subtitle = new TextView(context);
+            subtitle.setTextSize(14);
+            subtitle.setSingleLine(true);
+            subtitle.setEllipsize(TextUtils.TruncateAt.END);
+            details.addView(subtitle);
+            item.addView(details, new LinearLayout.LayoutParams(0, -2, 1));
+
+            bell = new ImageView(context);
+            bell.setImageResource(R.drawable.ic_reminder_outline);
+            bell.setContentDescription(getString(R.string.tasks_notify));
+            LinearLayout.LayoutParams bellParams = new LinearLayout.LayoutParams(dp(24), dp(24));
+            bellParams.setMarginStart(dp(8));
+            item.addView(bell, bellParams);
+            root.setTag(this);
+        }
+
+        void bind(Row row, Context context) {
+            TaskStore.Task task = row.task;
+            int standardColor = DynamicThemeKt.getColor(context, "agenda_item_standard_color");
+            int secondaryColor = DynamicThemeKt.getColor(context, "agenda_item_where_text_color");
+            root.setBackgroundResource(DynamicThemeKt.getDrawableId(context,
+                    task.done ? "agenda_item_bg_secondary" : "agenda_item_bg_primary"));
+            // Detach the previous row's listener before rebinding a recycled checkbox.
+            done.setOnCheckedChangeListener(null);
+            done.setChecked(task.done);
+            done.setContentDescription(getString(R.string.tasks_complete) + " " + task.title);
+            done.setOnCheckedChangeListener((button, checked) -> store.complete(task.id, checked, task.due));
+            title.setText(task.title);
+            title.setTextColor(standardColor);
+            title.setTypeface(task.done ? Typeface.DEFAULT : Typeface.DEFAULT_BOLD);
+            title.setPaintFlags(task.done ? title.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG
+                    : title.getPaintFlags() & ~Paint.STRIKE_THRU_TEXT_FLAG);
+            String when = task.allDay ? getString(R.string.reminders_all_day)
+                    : Utils.formatDateRange(context, task.due, task.due, DateUtils.FORMAT_SHOW_TIME);
+            boolean overdue = !task.done && (task.allDay ? row.day.isBefore(LocalDate.now(zone()))
+                    : task.due < System.currentTimeMillis());
+            subtitle.setText(overdue ? when + " · " + getString(R.string.reminders_overdue) : when);
+            subtitle.setTextColor(overdue ? com.google.android.material.color.MaterialColors.getColor(
+                    context, androidx.appcompat.R.attr.colorError, secondaryColor) : secondaryColor);
+            bell.setVisibility(task.alarm ? View.VISIBLE : View.GONE);
+            bell.setColorFilter(secondaryColor);
+            root.setOnClickListener(v -> TaskCalendarUi.openTask(context, task.id));
+        }
+    }
+
     private final class ReminderAdapter extends BaseAdapter {
         @Override public int getCount(){return rows.size();}
         @Override public Object getItem(int position){return rows.get(position);}
@@ -292,20 +380,24 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
             Row row=rows.get(position);
             Context context=parent.getContext();
             if(row.completedCount==-2){
-                TextView empty=new TextView(context);
+                TextView empty=convertView instanceof TextView ? (TextView)convertView : new TextView(context);
                 empty.setPadding(dp(16),dp(20),dp(16),dp(20));
+                empty.setTextColor(DynamicThemeKt.getColor(context,"agenda_item_where_text_color"));
+                empty.setBackgroundResource(DynamicThemeKt.getDrawableId(context,"agenda_item_bg_primary"));
                 empty.setText(R.string.reminders_empty);
                 return empty;
             }
             if(row.completedCount>=0){
-                TextView heading=new TextView(context);
+                TextView heading=convertView instanceof TextView ? (TextView)convertView : new TextView(context);
                 heading.setPadding(dp(16),dp(14),dp(16),dp(14));
+                heading.setTextColor(DynamicThemeKt.getColor(context,"agenda_item_standard_color"));
+                heading.setBackgroundResource(DynamicThemeKt.getDrawableId(context,"agenda_item_bg_secondary"));
                 heading.setText((showCompleted?"▾ ":"▸ ")+getString(R.string.reminders_completed,row.completedCount));
                 heading.setOnClickListener(v->{showCompleted=!showCompleted;refresh(true);});
                 return heading;
             }
             if(row.task==null){
-                View header=getLayoutInflater().inflate(R.layout.agenda_day,parent,false);
+                View header=convertView != null ? convertView : getLayoutInflater().inflate(R.layout.agenda_day,parent,false);
                 long millis=row.day.atStartOfDay(zone()).toInstant().toEpochMilli();
                 int julian=(int)(row.day.toEpochDay()+2440588L);
                 int today=(int)(LocalDate.now(zone()).toEpochDay()+2440588L);
@@ -315,42 +407,10 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
                         julian>today?"agenda_item_bg_primary":"agenda_item_bg_secondary"));
                 return header;
             }
-            TaskStore.Task task=row.task;
-            LinearLayout item=new LinearLayout(context);
-            item.setGravity(Gravity.CENTER_VERTICAL);
-            item.setPadding(dp(8),0,dp(16),0);
-            item.setMinimumHeight(dp(64));
-            item.setBackgroundResource(android.R.color.transparent);
-            CheckBox done=ReminderCompletion.create(context);
-            done.setChecked(task.done);
-            done.setContentDescription(getString(R.string.tasks_complete)+" "+task.title);
-            done.setOnCheckedChangeListener((button,checked)->store.complete(task.id,checked,task.due));
-            item.addView(done);
-            LinearLayout details=new LinearLayout(context);
-            details.setOrientation(LinearLayout.VERTICAL);
-            details.setPadding(dp(8),dp(8),dp(8),dp(8));
-            TextView title=new TextView(context);
-            title.setText(task.title);
-            title.setTextSize(18);
-            title.setTypeface(title.getTypeface(),android.graphics.Typeface.BOLD);
-            if(task.done)title.setPaintFlags(title.getPaintFlags()|Paint.STRIKE_THRU_TEXT_FLAG);
-            details.addView(title);
-            TextView subtitle=new TextView(context);
-            subtitle.setTextSize(14);
-            String when=task.allDay?getString(R.string.reminders_all_day):Utils.formatDateRange(context,task.due,task.due,DateUtils.FORMAT_SHOW_TIME);
-            boolean overdue=!task.done && (task.allDay?row.day.isBefore(LocalDate.now(zone())):task.due<System.currentTimeMillis());
-            subtitle.setText(overdue?when+" · "+getString(R.string.reminders_overdue):when);
-            if(overdue)subtitle.setTextColor(com.google.android.material.color.MaterialColors.getColor(context,androidx.appcompat.R.attr.colorError,subtitle.getCurrentTextColor()));
-            details.addView(subtitle);
-            item.addView(details,new LinearLayout.LayoutParams(0,-2,1));
-            if(task.alarm){
-                android.widget.ImageView bell=new android.widget.ImageView(context);
-                bell.setImageResource(R.drawable.ic_reminder_outline);
-                bell.setContentDescription(getString(R.string.tasks_notify));
-                item.addView(bell,new LinearLayout.LayoutParams(dp(24),dp(24)));
-            }
-            details.setOnClickListener(v->TaskCalendarUi.openTask(context,task.id));
-            return item;
+            ReminderRowView holder=convertView != null && convertView.getTag() instanceof ReminderRowView
+                    ? (ReminderRowView)convertView.getTag() : new ReminderRowView(context);
+            holder.bind(row,context);
+            return holder.root;
         }
     }
 }
