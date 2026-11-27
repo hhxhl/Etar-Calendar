@@ -3,7 +3,6 @@ package com.android.calendar.tasks;
 import android.content.Context;
 import android.widget.ImageView;
 import android.os.Bundle;
-import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -260,15 +259,8 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
             TaskStore.Task task = row.task;
             int secondaryColor = TaskListUi.bindRow(root, done, title, task, store, null);
             com.android.calendar.ItemAppearance.setTextColor(secondaryColor, subtitle, countdown);
-            String when = task.allDay ? getString(R.string.reminders_all_day)
-                    : Utils.formatDateRange(context, task.due, task.due, DateUtils.FORMAT_SHOW_TIME);
-            boolean overdue = !task.done && (task.allDay ? row.day.isBefore(LocalDate.now(zone()))
-                    : task.due < System.currentTimeMillis());
-            subtitle.setText(overdue ? when + " · " + getString(R.string.reminders_overdue) : when);
-            String label = task.countdown && !task.done && task.due != null
-                    ? com.android.calendar.EventCountdown.dateLabel(context, task.due, task.allDay) : "";
-            countdown.setText(label);
-            countdown.setVisibility(label.isEmpty() ? View.GONE : View.VISIBLE);
+            subtitle.setText(TaskListUi.dueLabel(context, task, zone(), System.currentTimeMillis()));
+            DatedListUi.bindOptionalText(countdown, TaskListUi.countdownLabel(context, task));
             bell.setVisibility(task.alarm ? View.VISIBLE : View.GONE);
             bell.setColorFilter(secondaryColor);
         }

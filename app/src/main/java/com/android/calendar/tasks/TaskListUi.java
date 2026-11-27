@@ -1,16 +1,18 @@
 package com.android.calendar.tasks;
 
 import android.content.Context;
-import android.graphics.Paint;
-import android.graphics.Typeface;
 import android.view.Gravity;
 import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.Spinner;
 import android.widget.TextView;
 import com.android.calendar.ItemStateSymbols;
+import com.android.calendar.ItemAppearance;
+import com.android.calendar.EventCountdown;
+import android.text.format.DateUtils;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.LocalDate;
 import com.android.calendar.DatedListUi;
 import com.android.calendar.Utils;
 import java.time.ZoneId;
@@ -20,49 +22,21 @@ import java.util.function.LongConsumer;
 import ws.xsoh.etar.R;
 
 /** Common list filter and row binding for tasks and reminders. */
-final class TaskListUi {
+public final class TaskListUi {
     private TaskListUi() {}
 
     static long bindFilter(Spinner filter, List<TaskStore.TaskList> lists, int allLabel,
             long selected, LongConsumer onSelected) {
         Context context = filter.getContext();
-        ArrayList<String> names = new ArrayList<>();
-        names.add(context.getString(allLabel));
-        int position = 0;
-        for (int i = 0; i < lists.size(); i++) {
-            TaskStore.TaskList list = lists.get(i);
-            names.add(list.name.isEmpty() ? context.getString(R.string.tasks_default_list) : list.name);
-            if (list.id == selected) position = i + 1;
-        }
-        // Keep the existing adapter if the visible sources have not changed.
+        List<String> names = new ArrayList<>();
         List<Long> ids = new ArrayList<>();
-        for (TaskStore.TaskList item : lists) ids.add(item.id);
-        boolean unchanged = ids.equals(filter.getTag()) && filter.getAdapter() != null
-                && filter.getAdapter().getCount() == names.size();
-        if (unchanged) {
-            for (int i = 0; i < names.size(); i++) {
-                if (!names.get(i).equals(filter.getAdapter().getItem(i))) {
-                    unchanged = false;
-                    break;
-                }
-            }
+        names.add(context.getString(allLabel));
+        ids.add(0L);
+        for (TaskStore.TaskList list : lists) {
+            names.add(list.name.isEmpty() ? context.getString(R.string.tasks_default_list) : list.name);
+            ids.add(list.id);
         }
-        filter.setOnItemSelectedListener(null);
-        if (!unchanged) {
-            ArrayAdapter<String> labels = new ArrayAdapter<>(context, android.R.layout.simple_spinner_item, names);
-            labels.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-            filter.setAdapter(labels);
-            filter.setTag(ids);
-        }
-        if (filter.getSelectedItemPosition() != position) filter.setSelection(position);
-        filter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override public void onNothingSelected(AdapterView<?> parent) {}
-            @Override public void onItemSelected(AdapterView<?> parent, View view, int p, long id) {
-                if (p >= 0 && p <= lists.size() && p == filter.getSelectedItemPosition())
-                    onSelected.accept(p == 0 ? 0 : lists.get(p - 1).id);
-            }
-        });
-        return position == 0 ? 0 : lists.get(position - 1).id;
+        return DatedListUi.bindFilter(filter, ids, names, selected, onSelected);
     }
 
     static CheckBox completion(Context context) {
@@ -75,30 +49,51 @@ final class TaskListUi {
         return box;
     }
 
-    private static String stateSymbol(Context context, TaskStore.Task task, boolean checked) {
+    private static String stateSymbol(TaskStore.Task task, boolean checked, ZoneId zone, long now) {
         return task.due == null ? ItemStateSymbols.task(checked)
-                : ItemStateSymbols.reminder(checked, task.due, task.allDay,
-                    ZoneId.of(Utils.getTimeZone(context, null)), System.currentTimeMillis());
+                : ItemStateSymbols.reminder(checked, task.due, task.allDay, zone, now);
+    }
+
+    /** Read-only task presentation, shared by the task lists and global search. */
+    public static int bindPresentation(View root, TextView marker, TextView title, TaskStore.Task task,
+            ZoneId zone, long now, TextView... details) {
+        int color = ItemAppearance.bindRow(root,
+                TaskCalendarUi.displayColor(root.getContext(), task, false), marker, title);
+        ItemAppearance.setTextColor(color, details);
+        marker.setText(stateSymbol(task, task.done, zone, now));
+        ItemAppearance.bindTitle(title, task.title, !task.done, task.done);
+        return color;
+    }
+
+    public static String dueLabel(Context context, TaskStore.Task task, ZoneId zone, long now) {
+        if (task.due == null) return "";
+        String time = task.allDay ? context.getString(R.string.reminders_all_day)
+                : Utils.formatDateRange(context, task.due, task.due, DateUtils.FORMAT_SHOW_TIME);
+        boolean overdue = !task.done && (task.allDay
+                ? Instant.ofEpochMilli(task.due).atZone(ZoneOffset.UTC).toLocalDate()
+                    .isBefore(Instant.ofEpochMilli(now).atZone(zone).toLocalDate())
+                : task.due < now);
+        return overdue ? time + " · " + context.getString(R.string.reminders_overdue) : time;
+    }
+
+    public static String countdownLabel(Context context, TaskStore.Task task) {
+        return task.due != null && task.countdown && !task.done
+                ? EventCountdown.dateLabel(context, task.due, task.allDay) : "";
     }
 
     static int bindRow(View root, CheckBox done, TextView title, TaskStore.Task task,
             TaskStore store, Runnable afterComplete) {
         Context context = root.getContext();
-        int color = com.android.calendar.ItemAppearance.bindRow(root,
-                TaskCalendarUi.displayColor(context, task, false), done, title);
+        ZoneId zone = ZoneId.of(Utils.getTimeZone(context, null));
         done.setOnCheckedChangeListener(null);
         done.setChecked(task.done);
-        done.setText(stateSymbol(context, task, task.done));
+        int color = bindPresentation(root, done, title, task, zone, System.currentTimeMillis());
         done.setContentDescription(context.getString(R.string.tasks_complete) + " " + task.title);
         done.setOnCheckedChangeListener((button, checked) -> {
-            done.setText(stateSymbol(context, task, checked));
+            done.setText(stateSymbol(task, checked, zone, System.currentTimeMillis()));
             store.complete(task.id, checked, task.due);
             if (afterComplete != null) afterComplete.run();
         });
-        title.setText(task.title);
-        title.setTypeface(task.done ? Typeface.DEFAULT : Typeface.DEFAULT_BOLD);
-        title.setPaintFlags(task.done ? title.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG
-                : title.getPaintFlags() & ~Paint.STRIKE_THRU_TEXT_FLAG);
         root.setOnClickListener(v -> TaskCalendarUi.openTask(context, task.id));
         return color;
     }

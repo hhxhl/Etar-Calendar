@@ -2,8 +2,6 @@ package com.android.calendar.agenda;
 
 import android.content.Context;
 import android.database.Cursor;
-import android.graphics.Paint;
-import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.CancellationSignal;
 import android.os.Handler;
@@ -20,7 +18,6 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
 import android.widget.LinearLayout;
 import android.widget.ListView;
@@ -43,7 +40,8 @@ import com.android.calendar.event.EditEventActivity;
 import com.android.calendar.settings.GeneralPreferences;
 import com.android.calendar.tasks.TaskStore;
 import com.android.calendar.tasks.TaskCalendarUi;
-import java.time.ZoneOffset;
+import com.android.calendar.tasks.TaskListUi;
+import com.android.calendar.ItemAppearance;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -239,18 +237,6 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         list = DatedListUi.createList(context, adapter);
         root.addView(list, new LinearLayout.LayoutParams(-1, 0, 1));
         reloadCalendars();
-        filter.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
-            @Override public void onNothingSelected(android.widget.AdapterView<?> parent) {}
-            @Override public void onItemSelected(android.widget.AdapterView<?> parent, View view, int pos, long id) {
-                if (binding || filter == null || filter.getSelectedItemPosition() != pos
-                        || pos < 0 || pos >= calendarIds.size()) return;
-                long selected = calendarIds.get(pos);
-                if (calendarId == selected) return;
-                calendarId = selected;
-                Anchor anchor = currentAnchor();
-                request(firstDay, lastDay, anchor, true);
-            }
-        });
         list.setOnItemClickListener((parent, view, position, id) -> {
             if (position >= rows.size()) return;
             Row row = rows.get(position);
@@ -309,11 +295,11 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
                 }
             }
             if (!calendarIds.contains(calendarId)) calendarId = -1;
-            ArrayAdapter<String> labels = new ArrayAdapter<>(requireContext(),
-                    android.R.layout.simple_spinner_item, names);
-            labels.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-            filter.setAdapter(labels);
-            filter.setSelection(Math.max(0, calendarIds.indexOf(calendarId)));
+            calendarId = DatedListUi.bindFilter(filter, calendarIds, names, calendarId, selected -> {
+                if (binding || filter == null || calendarId == selected) return;
+                calendarId = selected;
+                request(firstDay, lastDay, currentAnchor(), true);
+            });
         } finally {
             binding = false;
         }
@@ -674,11 +660,9 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
             com.android.calendar.ItemAppearance.bindRow(root,
                     Utils.getDisplayColorFromColor(context, entry.color),
                     title, countdown, when, where, chip);
-            title.setTypeface(past ? Typeface.DEFAULT : Typeface.DEFAULT_BOLD);
-            title.setPaintFlags(entry.status == Events.STATUS_CANCELED
-                    ? title.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG
-                    : title.getPaintFlags() & ~Paint.STRIKE_THRU_TEXT_FLAG);
-            title.setText(TextUtils.isEmpty(entry.title) ? context.getString(R.string.no_title_label) : entry.title);
+            ItemAppearance.bindTitle(title,
+                    TextUtils.isEmpty(entry.title) ? context.getString(R.string.no_title_label) : entry.title,
+                    !past, entry.status == Events.STATUS_CANCELED);
 
             chip.setText(ItemStateSymbols.event(entry.begin, entry.end, entry.allDay,
                     zone, System.currentTimeMillis()));
@@ -694,39 +678,17 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
                         : displayZone.getDisplayName(false, TimeZone.SHORT)) + ")";
             }
             when.setText(time);
-            where.setText(entry.location);
-            where.setVisibility(TextUtils.isEmpty(entry.location) ? View.GONE : View.VISIBLE);
-            String label = EventCountdown.label(context, entry.id, entry.begin, entry.allDay);
-            countdown.setText(label);
-            countdown.setVisibility(label.isEmpty() ? View.GONE : View.VISIBLE);
+            DatedListUi.bindOptionalText(where, entry.location);
+            DatedListUi.bindOptionalText(countdown,
+                    EventCountdown.label(context, entry.id, entry.begin, entry.allDay));
         }
 
         private void bindTask(TaskStore.Task task, Context context) {
-            com.android.calendar.ItemAppearance.bindRow(root,
-                    TaskCalendarUi.displayColor(context, task, false),
-                    title, countdown, when, where, chip);
-            title.setText(task.title);
-            title.setTypeface(task.done ? Typeface.DEFAULT : Typeface.DEFAULT_BOLD);
-            title.setPaintFlags(task.done ? title.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG
-                    : title.getPaintFlags() & ~Paint.STRIKE_THRU_TEXT_FLAG);
             long now = System.currentTimeMillis();
-            chip.setText(task.due == null ? ItemStateSymbols.task(task.done)
-                    : ItemStateSymbols.reminder(task.done, task.due, task.allDay, zone, now));
-            when.setVisibility(task.due == null ? View.GONE : View.VISIBLE);
-            if (task.due != null) {
-                String time = task.allDay ? context.getString(R.string.reminders_all_day)
-                        : Utils.formatDateRange(context, task.due, task.due, DateUtils.FORMAT_SHOW_TIME);
-                boolean overdue = !task.done && (task.allDay
-                        ? Instant.ofEpochMilli(task.due).atZone(ZoneOffset.UTC).toLocalDate().isBefore(LocalDate.now(zone))
-                        : task.due < now);
-                when.setText(overdue ? time + " · " + context.getString(R.string.reminders_overdue) : time);
-            }
-            where.setText(task.notes);
-            where.setVisibility(TextUtils.isEmpty(task.notes) ? View.GONE : View.VISIBLE);
-            String label = task.due != null && task.countdown && !task.done
-                    ? EventCountdown.dateLabel(context, task.due, task.allDay) : "";
-            countdown.setText(label);
-            countdown.setVisibility(label.isEmpty() ? View.GONE : View.VISIBLE);
+            TaskListUi.bindPresentation(root, chip, title, task, zone, now, countdown, when, where);
+            DatedListUi.bindOptionalText(when, TaskListUi.dueLabel(context, task, zone, now));
+            DatedListUi.bindOptionalText(where, task.notes);
+            DatedListUi.bindOptionalText(countdown, TaskListUi.countdownLabel(context, task));
         }
     }
 

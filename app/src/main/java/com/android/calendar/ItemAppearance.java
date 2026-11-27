@@ -5,6 +5,7 @@ import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import ws.xsoh.etar.R;
 import android.view.View;
@@ -86,6 +87,13 @@ public final class ItemAppearance {
         apply(root, color);
         setTextColor(color, labels);
         return color;
+    }
+
+    public static void bindTitle(TextView title, CharSequence text, boolean bold, boolean strike) {
+        title.setText(text);
+        title.setTypeface(bold ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
+        title.setPaintFlags(strike ? title.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG
+                : title.getPaintFlags() & ~Paint.STRIKE_THRU_TEXT_FLAG);
     }
 
     public static void setTextColor(int foreground, TextView... labels) {

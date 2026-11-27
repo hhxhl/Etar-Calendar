@@ -10,6 +10,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AbsListView;
 import android.widget.BaseAdapter;
+import android.widget.ArrayAdapter;
+import android.widget.AdapterView;
+import android.widget.Spinner;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -18,6 +21,8 @@ import com.android.calendar.theme.DynamicThemeKt;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.function.LongConsumer;
 import java.util.function.Function;
 import java.util.function.IntConsumer;
 import java.util.function.Predicate;
@@ -50,6 +55,46 @@ public final class DatedListUi {
         view.setBackgroundResource(DynamicThemeKt.getDrawableId(context,
                 section ? "agenda_item_bg_secondary" : "agenda_item_bg_primary"));
         return view;
+    }
+
+    /** Bind a stable source selector without rebuilding an unchanged adapter. */
+    public static long bindFilter(Spinner filter, List<Long> ids, List<String> names,
+            long selected, LongConsumer onSelected) {
+        if (ids.isEmpty() || ids.size() != names.size()) throw new IllegalArgumentException("Invalid sources");
+        List<Long> snapshot = new ArrayList<>(ids);
+        int position = Math.max(0, snapshot.indexOf(selected));
+        boolean unchanged = snapshot.equals(filter.getTag()) && filter.getAdapter() != null
+                && filter.getAdapter().getCount() == names.size();
+        if (unchanged) {
+            for (int i = 0; i < names.size(); i++) {
+                if (!names.get(i).equals(filter.getAdapter().getItem(i))) {
+                    unchanged = false;
+                    break;
+                }
+            }
+        }
+        filter.setOnItemSelectedListener(null);
+        if (!unchanged) {
+            ArrayAdapter<String> labels = new ArrayAdapter<>(filter.getContext(),
+                    android.R.layout.simple_spinner_item, new ArrayList<>(names));
+            labels.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            filter.setAdapter(labels);
+            filter.setTag(snapshot);
+        }
+        if (filter.getSelectedItemPosition() != position) filter.setSelection(position);
+        filter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override public void onNothingSelected(AdapterView<?> parent) {}
+            @Override public void onItemSelected(AdapterView<?> parent, View view, int p, long id) {
+                if (p >= 0 && p < snapshot.size() && p == filter.getSelectedItemPosition())
+                    onSelected.accept(snapshot.get(p));
+            }
+        });
+        return snapshot.get(position);
+    }
+
+    public static void bindOptionalText(TextView view, CharSequence text) {
+        view.setText(text);
+        view.setVisibility(TextUtils.isEmpty(text) ? View.GONE : View.VISIBLE);
     }
 
     public static ListView createList(Context context, BaseAdapter adapter) {

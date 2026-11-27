@@ -37,6 +37,10 @@ public final class LocalizedDay {
         return "休".equals(marker) ? 0xffd84343 : 0xff39865a;
     }
 
+    public static int festivalColor(int surfaceColor) {
+        return ColorUtils.calculateLuminance(surfaceColor) < 0.5 ? 0xffffb78b : 0xffa04419;
+    }
+
     /** Keep the date centered and shrink the holiday marker only when required. */
     public static void drawMarker(Canvas canvas, Paint source, String marker,
             float right, float center, float dateWidth, float padding, float baseline, float size) {
@@ -58,7 +62,7 @@ public final class LocalizedDay {
                 date.getDayOfMonth(), LunarUtils.FORMAT_LUNAR_SHORT, false, null);
         if (label.equals(lunar)) return ColorUtils.blendARGB(dateColor, surfaceColor, 0.28f);
         if (LunarUtils.isFestivalLabel(context, date))
-            return ColorUtils.calculateLuminance(surfaceColor) < 0.5 ? 0xffffb78b : 0xffa04419;
+            return festivalColor(surfaceColor);
         return MaterialColors.getColor(context, androidx.appcompat.R.attr.colorPrimary, dateColor);
     }
 

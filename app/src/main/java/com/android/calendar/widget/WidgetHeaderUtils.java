@@ -8,6 +8,7 @@ import androidx.core.graphics.ColorUtils;
 
 import com.android.calendar.LocalizationSettings;
 import com.android.calendar.LunarUtils;
+import com.android.calendar.LocalizedDay;
 import com.android.calendar.theme.DynamicThemeKt;
 
 import java.time.LocalDate;
@@ -52,12 +53,11 @@ final class WidgetHeaderUtils {
     }
 
     static int festivalColor(Context context) {
-        return ColorUtils.calculateLuminance(background(context)) < 0.5
-                ? 0xffffb78b : 0xffa04419;
+        return LocalizedDay.festivalColor(background(context));
     }
 
     static int markerColor(String marker) {
-        return "休".equals(marker) ? 0xffd84343 : 0xff39865a;
+        return LocalizedDay.markerColor(marker);
     }
 
     static final class SpecialDates {
