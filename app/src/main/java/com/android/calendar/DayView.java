@@ -396,8 +396,6 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
     private static int HOURS_RIGHT_MARGIN = 4;
     private static int HOURS_MARGIN = HOURS_LEFT_MARGIN + HOURS_RIGHT_MARGIN;
 
-    private static int CURRENT_TIME_LINE_SIDE_BUFFER = 4;
-    private static int CURRENT_TIME_LINE_TOP_OFFSET = 2;
 
     /* package */ static final int MINUTES_PER_HOUR = 60;
     /* package */ static final int MINUTES_PER_DAY = MINUTES_PER_HOUR * 24;
@@ -570,8 +568,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
     private Event mPrevSelectedEvent;
     private final Rect mPrevBox = new Rect();
     protected final Resources mResources;
-    protected final Drawable mCurrentTimeLine;
-    protected final Drawable mCurrentTimeAnimateLine;
+    private final TodayIndicator mTodayIndicator;
     protected final Drawable mExpandAlldayDrawable;
     protected final Drawable mCollapseAlldayDrawable;
     private final DeleteEventHelper mDeleteEventHelper;
@@ -705,9 +702,6 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
                 MIN_CELL_WIDTH_FOR_TEXT *= mScale;
                 MAX_UNEXPANDED_ALLDAY_HEIGHT *= mScale;
 
-                CURRENT_TIME_LINE_SIDE_BUFFER *= mScale;
-                CURRENT_TIME_LINE_TOP_OFFSET *= mScale;
-
                 MIN_Y_SPAN *= mScale;
                 MAX_CELL_HEIGHT *= mScale;
                 DEFAULT_CELL_HEIGHT *= mScale;
@@ -747,8 +741,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
             DAY_HEADER_HEIGHT = (int) (DAY_HEADER_HEIGHT + DAY_HEADER_FONT_SIZE + 2);
         }
 
-        mCurrentTimeLine = ResourcesCompat.getDrawable(mResources, R.drawable.timeline_indicator_holo_light, null);
-        mCurrentTimeAnimateLine = ResourcesCompat.getDrawable(mResources, R.drawable.timeline_indicator_activated_holo_light, null);
+        mTodayIndicator = new TodayIndicator(context);
         mExpandAlldayDrawable = ResourcesCompat.getDrawable(mResources, R.drawable.ic_expand_holo_light, null);
         mCollapseAlldayDrawable = ResourcesCompat.getDrawable(mResources, R.drawable.ic_collapse_holo_light, null);
 
@@ -2395,21 +2388,9 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         p.setTypeface(null);
     }
 
-    private void drawCurrentTimeLine(Rect r, final int day, final int top, Canvas canvas,
-            Paint p) {
-        r.left = computeDayLeftPosition(day) - CURRENT_TIME_LINE_SIDE_BUFFER + 1;
-        r.right = computeDayLeftPosition(day + 1) + CURRENT_TIME_LINE_SIDE_BUFFER + 1;
-
-        r.top = top - CURRENT_TIME_LINE_TOP_OFFSET;
-        r.bottom = r.top + mCurrentTimeLine.getIntrinsicHeight();
-
-        mCurrentTimeLine.setBounds(r);
-        mCurrentTimeLine.draw(canvas);
-        if (mAnimateToday) {
-            mCurrentTimeAnimateLine.setBounds(r);
-            mCurrentTimeAnimateLine.setAlpha(mAnimateTodayAlpha);
-            mCurrentTimeAnimateLine.draw(canvas);
-        }
+    private void drawCurrentTimeLine(final int day, final int top, Canvas canvas) {
+        mTodayIndicator.draw(canvas, computeDayLeftPosition(day) + 1,
+                computeDayLeftPosition(day + 1), top, mAnimateToday ? mAnimateTodayAlpha : 0);
     }
 
     private void doDraw(Canvas canvas) {
@@ -2437,7 +2418,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
 
                 // And the current time shows up somewhere on the screen
                 if (lineY >= mViewStartY && lineY < mViewStartY + mViewHeight - 2) {
-                    drawCurrentTimeLine(r, day, lineY, canvas, p);
+                    drawCurrentTimeLine(day, lineY, canvas);
                 }
             }
         }

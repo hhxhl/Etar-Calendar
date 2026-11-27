@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="today_indicator">#FF0000</color>
+    <dimen name="today_indicator_height">2dp</dimen>
+</resources>

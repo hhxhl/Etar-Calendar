@@ -30,7 +30,6 @@ import android.graphics.RectF;
 import android.graphics.Paint.Align;
 import android.graphics.Paint.Style;
 import android.graphics.Typeface;
-import android.graphics.drawable.Drawable;
 import android.provider.CalendarContract.Attendees;
 import android.provider.CalendarContract.Events;
 import android.text.DynamicLayout;
@@ -44,12 +43,11 @@ import android.view.MotionEvent;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityManager;
 
-import androidx.core.content.ContextCompat;
-
 import com.android.calendar.Event;
 import com.android.calendar.LocalizedDay;
 import java.time.LocalDate;
 import com.android.calendar.Utils;
+import com.android.calendar.TodayIndicator;
 import com.android.calendar.settings.ViewDetailsPreferences;
 import com.android.calendar.calendarcommon2.Time;
 import com.android.calendar.theme.DynamicThemeKt;
@@ -124,13 +122,13 @@ public class MonthWeekEventsView extends SimpleWeekView {
     private static int mEventLinePadding = 2;
     private static int mEventRightPadding = 4;
     private static int mEventBottomPadding = 1;
-    private static int mTodayHighlightWidth = 2;
     private static int mSpacingWeekNumber = 0;
     private static int mBorderSpace;
     private static int mStrokeWidthAdj;
     private static boolean mInitialized = false;
     private static boolean mShowDetailsInMonth;
     private final Context mContext;
+    private final TodayIndicator mTodayIndicator;
     private final TodayAnimatorListener mAnimatorListener = new TodayAnimatorListener();
     protected Time mToday = new Time();
     protected boolean mHasToday = false;
@@ -150,7 +148,6 @@ public class MonthWeekEventsView extends SimpleWeekView {
     protected Paint mDNAAllDayPaint;
     protected Paint mDNATimePaint;
     protected Paint mEventSquarePaint;
-    protected Drawable mTodayDrawable;
     protected int mMonthNumHeight;
     protected int mMonthNumAscentHeight;
     protected int mEventHeight;
@@ -165,7 +162,6 @@ public class MonthWeekEventsView extends SimpleWeekView {
     protected int mMonthBGFocusMonthColor;
     protected int mMonthNumColor;
     protected int mMonthNumOtherColor;
-    protected int mMonthNumTodayColor;
     protected int mMonthEventColor;
     protected int mMonthDeclinedEventColor;
     protected int mMonthDeclinedExtrasColor;
@@ -176,7 +172,6 @@ public class MonthWeekEventsView extends SimpleWeekView {
     protected int mMonthBusyBitsBusyTimeColor;
     protected int mMonthBusyBitsConflictTimeColor;
     protected int mDaySeparatorInnerColor;
-    protected int mTodayAnimateColor;
     HashMap<Integer, Utils.DNAStrand> mDna = null;
     private int mClickedDayIndex = -1;
     private int mClickedDayColor;
@@ -191,6 +186,7 @@ public class MonthWeekEventsView extends SimpleWeekView {
     public MonthWeekEventsView(Context context) {
         super(context);
         this.mContext = context;
+        mTodayIndicator = new TodayIndicator(context);
     }
 
     // Sets the list of events for this week. Takes a sorted list of arrays
@@ -259,7 +255,6 @@ public class MonthWeekEventsView extends SimpleWeekView {
         mMonthWeekNumColor = DynamicThemeKt.getColor(context, "month_week_num_color");
         mMonthNumColor = DynamicThemeKt.getColor(context, "month_day_number");
         mMonthNumOtherColor = DynamicThemeKt.getColor(context, "month_day_number_other");
-        mMonthNumTodayColor = DynamicThemeKt.getColor(context, "month_today_number");
         mMonthEventColor = DynamicThemeKt.getColor(context, "month_event_color");
         mMonthDeclinedEventColor = DynamicThemeKt.getColor(context, "agenda_item_declined_color");
         mMonthDeclinedExtrasColor = DynamicThemeKt.getColor(context, "agenda_item_where_declined_text_color");
@@ -271,7 +266,6 @@ public class MonthWeekEventsView extends SimpleWeekView {
         mMonthBGOtherColor = DynamicThemeKt.getColor(context, "month_other_bgcolor");
         mMonthBGColor = DynamicThemeKt.getColor(context, "month_bgcolor");
         mDaySeparatorInnerColor = DynamicThemeKt.getColor(context, "month_grid_lines");
-        mTodayAnimateColor = DynamicThemeKt.getColor(context, "today_highlight_color");
         mClickedDayColor = DynamicThemeKt.getColor(context, "day_clicked_background_color");
     }
 
@@ -317,7 +311,6 @@ public class MonthWeekEventsView extends SimpleWeekView {
                 mDnaSidePadding *= mScale;
                 mDefaultEdgeSpacing *= mScale;
                 mDnaAllDayWidth *= mScale;
-                mTodayHighlightWidth *= mScale;
             }
             mBorderSpace = mEventSquareBorder + 1;      // want a 1-pixel gap inside border
             mStrokeWidthAdj = mEventSquareBorder / 2;   // adjust bounds for stroke width
@@ -480,9 +473,6 @@ public class MonthWeekEventsView extends SimpleWeekView {
         drawBackground(canvas);
         drawWeekNums(canvas);
         drawDaySeparators(canvas);
-        if (mHasToday && mAnimateToday) {
-            drawToday(canvas);
-        }
         if (mShowDetailsInMonth) {
             drawEvents(canvas);
             if (mHasToday) postInvalidateDelayed(60_000 - System.currentTimeMillis() % 60_000);
@@ -493,19 +483,15 @@ public class MonthWeekEventsView extends SimpleWeekView {
             drawDNA(canvas);
         }
         drawClick(canvas);
+        if (mHasToday) {
+            drawToday(canvas);
+        }
     }
 
     protected void drawToday(Canvas canvas) {
-        r.top = mDaySeparatorInnerWidth + (mTodayHighlightWidth / 2);
-        r.bottom = mHeight - (int) Math.ceil(mTodayHighlightWidth / 2.0f);
-        p.setStyle(Style.STROKE);
-        p.setStrokeWidth(mTodayHighlightWidth);
-        r.left = computeDayLeftPosition(mTodayIndex) + (mTodayHighlightWidth / 2);
-        r.right = computeDayLeftPosition(mTodayIndex + 1)
-                - (int) Math.ceil(mTodayHighlightWidth / 2.0f);
-        p.setColor((mTodayAnimateColor & 0x00ffffff) | (mAnimateTodayAlpha << 24));
-        canvas.drawRect(r, p);
-        p.setStyle(Style.FILL);
+        mTodayIndicator.draw(canvas, computeDayLeftPosition(mTodayIndex) + mDaySeparatorInnerWidth,
+                computeDayLeftPosition(mTodayIndex + 1) - mDaySeparatorInnerWidth,
+                mDaySeparatorInnerWidth, mAnimateToday ? mAnimateTodayAlpha : 0);
     }
 
     // TODO move into SimpleWeekView
@@ -568,13 +554,6 @@ public class MonthWeekEventsView extends SimpleWeekView {
             p.setColor(color);
             canvas.drawRect(r, p);
         }
-        if (mHasToday) {
-            p.setColor(mMonthBGTodayColor);
-            r.left = computeDayLeftPosition(mTodayIndex);
-            r.right = computeDayLeftPosition(mTodayIndex + 1);
-            canvas.drawRect(r, p);
-        }
-
         // Keep the selected date highlighted after the touch animation ends.
         // Draw beneath date labels and events, preserving their original colors.
         if (mHasSelectedDay) {
@@ -628,33 +607,16 @@ public class MonthWeekEventsView extends SimpleWeekView {
 
         y = mMonthNumAscentHeight + mTopPaddingMonthNumber;
 
-        boolean isFocusMonth = mFocusDay[i];
-        boolean isBold = false;
-        mMonthNumPaint.setColor(isFocusMonth ? mMonthNumColor : mMonthNumOtherColor);
-
-
         for (; i < numCount; i++) {
-            if (mHasToday && todayIndex == i) {
-                mMonthNumPaint.setColor(mMonthNumTodayColor);
-                mMonthNumPaint.setFakeBoldText(isBold = true);
-                if (i + 1 < numCount) {
-                    // Make sure the color will be set back on the next
-                    // iteration
-                    isFocusMonth = !mFocusDay[i + 1];
-                }
-            } else if (mFocusDay[i] != isFocusMonth) {
-                isFocusMonth = mFocusDay[i];
-                mMonthNumPaint.setColor(isFocusMonth ? mMonthNumColor : mMonthNumOtherColor);
-            }
+            mMonthNumPaint.setColor(mFocusDay[i] ? mMonthNumColor : mMonthNumOtherColor);
+            mMonthNumPaint.setFakeBoldText(mHasToday && todayIndex == i);
             int left = computeDayLeftPosition(i - offset - 1);
             int right = computeDayLeftPosition(i - offset);
             float center = (left + right) / 2f;
             mMonthNumPaint.setTextAlign(Align.CENTER);
             float dateWidth = mMonthNumPaint.measureText(mDayNumbers[i]);
             canvas.drawText(mDayNumbers[i], center, y, mMonthNumPaint);
-            if (isBold) {
-                mMonthNumPaint.setFakeBoldText(isBold = false);
-            }
+            mMonthNumPaint.setFakeBoldText(false);
 
             if (LocalizedDay.enabled(getContext())) {
                 LocalDate date = LocalizedDay.fromJulian(mFirstJulianDay + i - (mShowWeekNum ? 1 : 0));
