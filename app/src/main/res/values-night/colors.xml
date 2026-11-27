@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
-    <color name="colorSecondaryContainer">#388d7f</color>
-
+    <color name="colorAccent">@color/etar_primary_dark</color>
+    <color name="colorPrimary">@color/etar_primary_dark</color>
+    <color name="colorPrimaryDark">@color/etar_primary_dark</color>
+    <color name="colorSecondaryContainer">@color/etar_secondary_container_dark</color>
 </resources>

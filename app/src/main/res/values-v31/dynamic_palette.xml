@@ -230,15 +230,6 @@
     <color name="month_selected_week_bgcolor_black">@color/etar_secondary_container_dark</color>
     <color name="bg_dark">@color/etar_surface_dark</color>
     <color name="grid_line_dark">@color/etar_outline_variant_dark</color>
-    <color name="widget_header">@color/etar_primary_container_light</color>
-    <color name="widget_header_dark">@color/etar_primary_container_dark</color>
-    <color name="widget_header_black">@color/etar_primary_container_dark</color>
-    <color name="widget_on_header">@color/etar_on_primary_container_light</color>
-    <color name="widget_on_header_dark">@color/etar_on_primary_container_dark</color>
-    <color name="widget_on_header_black">@color/etar_on_primary_container_dark</color>
-    <color name="widget_text">@color/etar_on_surface_light</color>
-    <color name="widget_text_dark">@color/etar_on_surface_dark</color>
-    <color name="widget_text_black">@color/etar_on_surface_dark</color>
     <color name="appwidget_date">@color/etar_on_surface_light</color>
     <color name="appwidget_no_events">@color/etar_on_surface_light</color>
     <color name="appwidget_title">@color/etar_on_surface_light</color>
@@ -299,7 +290,6 @@
     <color name="day_clicked_background_color_light">@color/etar_primary_light</color>
     <color name="today_highlight_color_light">@color/etar_primary_light</color>
     <color name="day_event_clicked_background_color_light">@color/etar_primary_light</color>
-    <color name="month_widget_today_bg_light">@color/etar_primary_light</color>
     <color name="month_widget_today_text_light">@color/etar_on_primary_light</color>
     <color name="month_today_bgcolor_light">@color/etar_primary_container_light</color>
     <color name="calendar_grid_area_selected_light">@color/etar_primary_container_light</color>
@@ -311,12 +301,6 @@
     <color name="widget_text_light">@color/etar_on_surface_light</color>
     <color name="month_focus_month_bgcolor_black">@color/bg_black</color>
     <color name="month_other_bgcolor_black">@color/bg_black</color>
-    <color name="widget_fab_bg">@color/etar_primary_light</color>
     <color name="widget_fab_bg_light">@color/etar_primary_light</color>
-    <color name="widget_fab_bg_dark">@color/etar_primary_dark</color>
-    <color name="widget_fab_bg_black">@color/etar_primary_dark</color>
-    <color name="widget_fab_fg">@color/etar_on_primary_light</color>
     <color name="widget_fab_fg_light">@color/etar_on_primary_light</color>
-    <color name="widget_fab_fg_dark">@color/etar_on_primary_dark</color>
-    <color name="widget_fab_fg_black">@color/etar_on_primary_dark</color>
 </resources>

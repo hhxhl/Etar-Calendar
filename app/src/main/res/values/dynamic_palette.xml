@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="widget_header">#388d7f</color>
-    <color name="widget_header_dark">#388d7f</color>
-    <color name="widget_header_black">#388d7f</color>
-    <color name="widget_on_header">#ffffff</color>
-    <color name="widget_on_header_dark">#ffffff</color>
-    <color name="widget_on_header_black">#ffffff</color>
-    <color name="widget_text">#333333</color>
-    <color name="widget_text_dark">#eeeeee</color>
-    <color name="widget_text_black">#eeeeee</color>
-    <color name="widget_fab_bg">@color/colorAccent</color>
-    <color name="widget_fab_bg_dark">@color/colorAccent</color>
-    <color name="widget_fab_bg_black">@color/colorAccent</color>
-    <color name="widget_fab_fg">#ffffff</color>
-    <color name="widget_fab_fg_dark">#ffffff</color>
-    <color name="widget_fab_fg_black">#ffffff</color>
-    <color name="month_widget_today_bg_light">@color/month_widget_today_bg</color>
+    <color name="widget_header">@color/etar_primary_container_light</color>
+    <color name="widget_header_dark">@color/etar_primary_container_dark</color>
+    <color name="widget_header_black">@color/etar_primary_container_dark</color>
+    <color name="widget_on_header">@color/etar_on_primary_container_light</color>
+    <color name="widget_on_header_dark">@color/etar_on_primary_container_dark</color>
+    <color name="widget_on_header_black">@color/etar_on_primary_container_dark</color>
+    <color name="widget_text">@color/etar_on_surface_light</color>
+    <color name="widget_text_dark">@color/etar_on_surface_dark</color>
+    <color name="widget_text_black">@color/etar_on_surface_dark</color>
+    <color name="widget_fab_bg">@color/etar_primary_light</color>
+    <color name="widget_fab_bg_dark">@color/etar_primary_dark</color>
+    <color name="widget_fab_bg_black">@color/etar_primary_dark</color>
+    <color name="widget_fab_fg">@color/etar_on_primary_light</color>
+    <color name="widget_fab_fg_dark">@color/etar_on_primary_dark</color>
+    <color name="widget_fab_fg_black">@color/etar_on_primary_dark</color>
+    <color name="month_widget_today_bg_light">@color/etar_primary_light</color>
 </resources>
