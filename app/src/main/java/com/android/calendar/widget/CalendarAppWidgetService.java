@@ -327,19 +327,15 @@ public class CalendarAppWidgetService extends RemoteViewsService {
                     views = new RemoteViews(mContext.getPackageName(), R.layout.widget_item);
                 }
                 int displayColor = Utils.getDisplayColorFromColor(mContext, eventInfo.color);
-                boolean declined = eventInfo.selfAttendeeStatus == Attendees.ATTENDEE_STATUS_DECLINED;
                 com.android.calendar.ItemAppearance.widgetBackground(mContext, views, R.id.widget_item_surface, displayColor);
                 com.android.calendar.ItemAppearance.widgetBar(mContext, views, R.id.agenda_item_color, displayColor);
                 com.android.calendar.ItemAppearance.widgetText(mContext, views, R.id.title, displayColor);
-                views.setFloat(R.id.title, "setAlpha", declined ? 0.4f : 1f);
 
                 if (!eventInfo.allDay) {
                     updateTextView(views, R.id.when, eventInfo.visibWhen, eventInfo.when);
                     updateTextView(views, R.id.where, eventInfo.visibWhere, eventInfo.where);
                     com.android.calendar.ItemAppearance.widgetText(mContext, views, R.id.when, displayColor);
                     com.android.calendar.ItemAppearance.widgetText(mContext, views, R.id.where, displayColor);
-                    views.setFloat(R.id.when, "setAlpha", declined ? 0.4f : 1f);
-                    views.setFloat(R.id.where, "setAlpha", declined ? 0.4f : 1f);
                 }
                 String countdown = eventInfo.id < -1 ? "" : com.android.calendar.EventCountdown.widgetLabel(mContext, eventInfo.id, eventInfo.start);
                 String displayTitle = countdown.isEmpty() ? eventInfo.title : eventInfo.title + " · " + countdown;

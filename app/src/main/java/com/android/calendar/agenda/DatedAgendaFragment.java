@@ -607,7 +607,6 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
             int color = com.android.calendar.ItemAppearance.foreground(context,
                     Utils.getDisplayColorFromColor(context, entry.color));
             com.android.calendar.ItemAppearance.apply(root, color);
-            boolean declined = entry.response == Attendees.ATTENDEE_STATUS_DECLINED;
             int titleColor = color;
             int textColor = color;
             title.setTextColor(titleColor);
@@ -623,7 +622,6 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
             chip.setText(ItemStateSymbols.event(entry.begin, entry.end, entry.allDay,
                     zone, System.currentTimeMillis()));
             chip.setTextColor(color);
-            chip.setAlpha(declined ? 0.4f : 1f);
 
             String tz = entry.allDay ? "UTC" : zone.getId();
             int flags = entry.allDay ? 0 : DateUtils.FORMAT_SHOW_TIME;

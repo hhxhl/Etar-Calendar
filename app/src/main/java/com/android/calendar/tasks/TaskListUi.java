@@ -10,7 +10,6 @@ import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.Spinner;
 import android.widget.TextView;
-import com.android.calendar.theme.DynamicThemeKt;
 import com.android.calendar.ItemStateSymbols;
 import com.android.calendar.Utils;
 import java.time.ZoneId;

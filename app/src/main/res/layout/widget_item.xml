@@ -27,7 +27,8 @@
         android:layout_marginStart="1dp"
         android:layout_marginEnd="1dp"
         android:scaleType="fitXY"
-        android:src="@drawable/item_rounded_surface" />
+        android:src="@drawable/item_rounded_surface"
+        android:tint="#00FFFFFF" />
 
     <FrameLayout
         android:id="@+id/widget_row"

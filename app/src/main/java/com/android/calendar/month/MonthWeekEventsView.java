@@ -1613,7 +1613,6 @@ public class MonthWeekEventsView extends SimpleWeekView {
         protected Paint getTextPaint() {
             TextPaint paint = new TextPaint(mEventPaint);
             paint.setColor(getRectangleColor());
-            if (isDeclined()) paint.setAlpha(102);
             paint.setStrikeThruText(isCanceled());
             return paint;
         }
@@ -1648,7 +1647,6 @@ public class MonthWeekEventsView extends SimpleWeekView {
         protected Paint getTimesPaint() {
             TextPaint paint = new TextPaint(mEventExtrasPaint);
             paint.setColor(getRectangleColor());
-            if (isDeclined()) paint.setAlpha(102);
             return paint;
         }
 

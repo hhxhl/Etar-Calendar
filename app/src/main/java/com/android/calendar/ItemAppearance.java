@@ -8,7 +8,6 @@ import android.view.View;
 import android.widget.RemoteViews;
 import androidx.core.graphics.ColorUtils;
 import com.android.calendar.theme.DynamicThemeKt;
-import ws.xsoh.etar.R;
 
 /** Shared source-color presentation for calendar rows, grid items and widgets. */
 public final class ItemAppearance {
@@ -51,7 +50,6 @@ public final class ItemAppearance {
     }
 
     public static void widgetBackground(Context context, RemoteViews views, int backgroundId, int displayColor) {
-        views.setImageViewResource(backgroundId, R.drawable.item_rounded_surface);
         if (com.android.calendar.widget.WidgetUtils.usesLiveTheme(context)) {
             views.setColorStateList(backgroundId, "setImageTintList",
                     ColorStateList.valueOf(background(foreground(displayColor, false))),

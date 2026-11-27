@@ -30,6 +30,7 @@ import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.database.Cursor;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Paint.Align;
 import android.graphics.Paint.Style;
@@ -2835,8 +2836,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
             layouts[i] = layout;
         }
         layout.getPaint().setColor(ItemAppearance.foreground(mContext, event.color));
-        layout.getPaint().setAlpha(event.selfAttendeeStatus == Attendees.ATTENDEE_STATUS_DECLINED
-                ? Math.round(mEventsAlpha * 0.4f) : mEventsAlpha);
+        layout.getPaint().setAlpha(mEventsAlpha);
         return layout;
     }
 
@@ -3470,8 +3470,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         p.setAntiAlias(true);
         p.setStyle(Style.FILL);
         p.setColor(ItemAppearance.background(color));
-        p.setAlpha(Math.round(Color.alpha(p.getColor()) * mEventsAlpha / 255f
-                * (event.selfAttendeeStatus == Attendees.ATTENDEE_STATUS_DECLINED ? 0.4f : 1f)));
+        p.setAlpha(Math.round(Color.alpha(p.getColor()) * mEventsAlpha / 255f));
         float radius = ItemAppearance.radius(mContext);
         canvas.save();
         if (canvas.clipRect(visibleLeft, visibleTop, visibleRight, visibleBot)) {

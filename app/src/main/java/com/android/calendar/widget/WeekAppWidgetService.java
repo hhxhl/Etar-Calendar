@@ -213,8 +213,6 @@ public class WeekAppWidgetService extends RemoteViewsService {
             boolean showOverflow = totalEvents > mMaxEventsWithoutOverflow;
             int visibleLimit = showOverflow ? mMaxEventsWithOverflow : mMaxEventsWithoutOverflow;
             int visibleCount = Math.min(totalEvents, visibleLimit);
-            int dayTextColor = DynamicThemeKt.getColor(mContext, "month_day_number");
-            int eventTextColor = DynamicThemeKt.getColor(mContext, "calendar_event_text_color");
 
             for (int i = 0; i < rowIds.length; i++) {
                 if (i < visibleCount) {
