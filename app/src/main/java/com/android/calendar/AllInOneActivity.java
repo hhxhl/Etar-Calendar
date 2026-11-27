@@ -63,7 +63,8 @@ import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.widget.AppCompatImageButton;
+import com.android.calendar.navigation.ViewNavigation;
+import static com.android.calendar.navigation.ViewNavigation.isTaskView;
 import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
@@ -989,68 +990,13 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
 
     private static final int REQUEST_CODE_IMPORT = 101;
 
-    private static boolean isTaskView(int viewType) {
-        return viewType == ViewType.REMINDERS || viewType == ViewType.TASKS;
-    }
-
     private void updateReminderMenuVisibility() {
-        if (mOptionsMenu == null) return;
-        boolean calendar = !isTaskView(mCurrentView);
-        MenuItem goTo = mOptionsMenu.findItem(R.id.action_goto);
-        if (goTo != null) goTo.setVisible(mCurrentView != ViewType.TASKS);
-        for (int id : new int[]{R.id.action_search, R.id.action_import}) {
-            MenuItem item = mOptionsMenu.findItem(id);
-            if (item != null) item.setVisible(calendar);
-        }
-    }
-
-    private MenuItem navigationItemForView(int viewType) {
-        for (int i = 0; i < NAVIGATION_VIEWS.length; i++) {
-            if (NAVIGATION_VIEWS[i] == viewType) {
-                return mNavigationView.getMenu().findItem(NAVIGATION_ITEMS[i]);
-            }
-        }
-        return null;
-    }
-
-    private android.graphics.drawable.Drawable viewNavigationIcon(MenuItem item) {
-        android.graphics.drawable.Drawable icon = item.getIcon();
-        if (icon == null) return null;
-        android.graphics.drawable.Drawable.ConstantState state = icon.getConstantState();
-        if (state == null) return null;
-        android.graphics.drawable.Drawable copy = state.newDrawable(getResources(), getTheme()).mutate();
-        int normal = com.google.android.material.color.MaterialColors.getColor(
-                this, androidx.appcompat.R.attr.colorControlNormal,
-                android.graphics.Color.BLACK);
-        copy.setTint(normal);
-        return copy;
+        ViewNavigation.updateActions(mOptionsMenu, mCurrentView);
     }
 
     private void updateViewSwitchButtons() {
-        if (mOptionsMenu == null) return;
-
-        boolean enabled = Utils.getSharedPreference(this,
-                GeneralPreferences.KEY_VIEW_SWITCH_BUTTONS, false);
-        MenuItem switchItem = mOptionsMenu.findItem(R.id.action_view_switch);
-        MenuItem currentItem = navigationItemForView(mCurrentView);
-        boolean showSwitch = enabled && currentItem != null;
-        if (switchItem != null) {
-            switchItem.setVisible(showSwitch);
-            if (showSwitch) {
-                switchItem.setTitle(currentItem.getTitle());
-                if (switchItem.getActionView() instanceof AppCompatImageButton button) {
-                    button.setImageDrawable(viewNavigationIcon(currentItem));
-                    button.setContentDescription(currentItem.getTitle());
-                }
-            }
-        }
-
-        MenuItem today = mOptionsMenu.findItem(R.id.action_today);
-        if (today != null) {
-            today.setVisible(true);
-            today.setShowAsAction(showSwitch || isTaskView(mCurrentView)
-                    ? MenuItem.SHOW_AS_ACTION_ALWAYS : MenuItem.SHOW_AS_ACTION_IF_ROOM);
-        }
+        if (mNavigationView != null)
+            ViewNavigation.updateToolbar(this, mOptionsMenu, mNavigationView.getMenu(), mCurrentView);
     }
 
     private void switchToDefaultView() {
@@ -1058,28 +1004,7 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
     }
 
     private void showViewSelectionMenu(View anchor) {
-        androidx.appcompat.widget.PopupMenu popup =
-                new androidx.appcompat.widget.PopupMenu(this, anchor, android.view.Gravity.END);
-        popup.setForceShowIcon(true);
-        Menu menu = popup.getMenu();
-        final int group = 1;
-        for (int i = 0; i < NAVIGATION_VIEWS.length; i++) {
-            MenuItem source = mNavigationView.getMenu().findItem(NAVIGATION_ITEMS[i]);
-            if (source == null) continue;
-            MenuItem item = menu.add(group, NAVIGATION_ITEMS[i], i, source.getTitle());
-            item.setIcon(viewNavigationIcon(source));
-        }
-        menu.setGroupCheckable(group, true, true);
-        MenuItem current = navigationItemForView(mCurrentView);
-        if (current != null) {
-            MenuItem selected = menu.findItem(current.getItemId());
-            if (selected != null) selected.setChecked(true);
-        }
-        popup.setOnMenuItemClickListener(item -> {
-            navigateToView(navigationView(item.getItemId()));
-            return true;
-        });
-        popup.show();
+        ViewNavigation.showSelection(this, anchor, mNavigationView.getMenu(), mCurrentView, this::navigateToView);
     }
 
     @Override
@@ -1154,24 +1079,9 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         super.onActivityResult(requestCode, resultCode, data);
     }
 
-    private static final int[] NAVIGATION_ITEMS = {
-            R.id.day_menu_item, R.id.week_menu_item, R.id.month_menu_item,
-            R.id.agenda_menu_item, R.id.reminders_menu_item, R.id.tasks_menu_item
-    };
-    private static final int[] NAVIGATION_VIEWS = {
-            ViewType.DAY, ViewType.WEEK, ViewType.MONTH,
-            ViewType.AGENDA, ViewType.REMINDERS, ViewType.TASKS
-    };
-
-    private static int navigationView(int itemId) {
-        for (int i = 0; i < NAVIGATION_ITEMS.length; i++)
-            if (NAVIGATION_ITEMS[i] == itemId) return NAVIGATION_VIEWS[i];
-        return -1;
-    }
-
     // All view entry points share the same date and task-navigation behavior.
     private void navigateToView(int viewType) {
-        if (viewType == mCurrentView || navigationItemForView(viewType) == null) return;
+        if (viewType == mCurrentView || ViewNavigation.itemForView(mNavigationView.getMenu(), viewType) == null) return;
         if (isTaskView(viewType)) {
             Time today = new Time(mTimeZone);
             today.set(System.currentTimeMillis());
@@ -1182,18 +1092,13 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
     }
 
     private void selectNavigationView(int viewType) {
-        int selected = R.id.week_menu_item;
-        for (int i = 0; i < NAVIGATION_VIEWS.length; i++) {
-            if (NAVIGATION_VIEWS[i] == viewType) selected = NAVIGATION_ITEMS[i];
-            mNavigationView.getMenu().findItem(NAVIGATION_ITEMS[i]).setChecked(false);
-        }
-        mNavigationView.getMenu().findItem(selected).setChecked(true);
+        ViewNavigation.select(mNavigationView.getMenu(), viewType);
     }
 
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
         int itemId = item.getItemId();
-        int view = navigationView(itemId);
+        int view = ViewNavigation.viewForItem(itemId);
         if (view != -1) {
             navigateToView(view);
         } else if (itemId == R.id.action_settings) {
