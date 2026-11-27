@@ -1066,7 +1066,7 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
             default:
                 return;
         }
-        mController.sendEvent(this, EventType.GO_TO, null, null, -1, nextView);
+        switchToView(nextView);
     }
 
     @Override
