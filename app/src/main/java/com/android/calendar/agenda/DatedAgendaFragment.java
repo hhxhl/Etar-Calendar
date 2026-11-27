@@ -126,6 +126,12 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
                 new Anchor(center.minusDays(BLOCK_DAYS), -1, -1, -1, 0), true);
     }
 
+    public void refreshSearchSources() {
+        if (searchQuery == null || !isResumed() || filter == null) return;
+        reloadCalendars();
+        eventsChanged();
+    }
+
     public void showToday() {
         if (list != null) goTo(LocalDate.now(zone));
     }
@@ -370,7 +376,9 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
             Row row = rows.get(index);
             AgendaEntry event = row.event;
             LocalDate day = row.day == null ? (targetDay == null ? firstDay : targetDay) : row.day;
-            long instance = row.task != null ? -row.task.id - 1 : event == null ? -1 : event.instanceId;
+            // Long.MIN_VALUE identifies the undated section header in saved scroll state.
+            long instance = row.task != null ? -row.task.id - 1
+                    : row.day == null ? Long.MIN_VALUE : event == null ? -1 : event.instanceId;
             return new Anchor(day, instance, event == null ? -1 : event.id,
                     event == null ? -1 : event.begin, DatedListUi.topOffset(list));
         }
@@ -555,6 +563,10 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         int index = -1;
         for (int i = 0; i < rows.size(); i++) {
             Row row = rows.get(i);
+            if (row.day == null && !row.isItem() && anchor.instance == Long.MIN_VALUE) {
+                index = i;
+                break;
+            }
             if (row.task != null && anchor.instance == -row.task.id - 1) {
                 index = i;
                 break;

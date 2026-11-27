@@ -53,7 +53,10 @@ public class SearchActivity extends AppCompatActivity implements SearchView.OnQu
     private BroadcastReceiver timeChangesReceiver;
     private boolean observingTasks;
     private final BroadcastReceiver taskChanges = new BroadcastReceiver() {
-        @Override public void onReceive(Context context, Intent intent) { refreshResults(); }
+        @Override public void onReceive(Context context, Intent intent) {
+            DatedAgendaFragment fragment = results();
+            if (fragment != null) fragment.refreshSearchSources();
+        }
     };
 
     private final ContentObserver observer = new ContentObserver(handler) {
