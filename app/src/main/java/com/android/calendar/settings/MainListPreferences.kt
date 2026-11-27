@@ -82,7 +82,7 @@ class MainListPreferences : PreferenceFragmentCompat() {
                     key = accountCategoryUniqueKey
                     title = calendar.accountName
                     icon = ContextCompat.getDrawable(requireContext(), R.drawable.outline_account_circle)
-                    order = if (calendar.isLocal) 10 else 11 // show offline calendar first
+                    order = if (calendar.isLocal) 10 else 12 // offline calendars, offline lists, remote accounts
                     isOrderingAsAdded = false // use alphabetic ordering for children
                 }
                 screen.addPreference(accountCategory)
@@ -212,7 +212,7 @@ class MainListPreferences : PreferenceFragmentCompat() {
             key = categoryKey
             title = getString(R.string.tasks_offline_lists)
             icon = ContextCompat.getDrawable(requireContext(), R.drawable.outline_account_circle)
-            order = 12
+            order = 11
             isOrderingAsAdded = false
         }
         // A PreferenceGroup must be attached to the screen before adding children,
