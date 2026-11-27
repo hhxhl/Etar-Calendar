@@ -46,17 +46,11 @@
     <color name="month_focus_month_bgcolor_dark">@color/etar_surface_dark</color>
     <color name="month_bgcolor">@color/etar_surface_light</color>
     <color name="month_bgcolor_dark">@color/etar_surface_dark</color>
-    <color name="edit_event_color_dark">@color/etar_surface_dark</color>
     <color name="agenda_day_bar_background_color">@color/etar_surface_light</color>
-    <color name="agenda_general_background_color_dark">@color/etar_surface_dark</color>
-    <color name="spinner_privacy_popupBackground_dark">@color/etar_surface_dark</color>
-    <color name="recurrence_picker_background_dark">@color/etar_surface_dark</color>
     <color name="calendar_hour_background">@color/etar_container_light</color>
     <color name="calendar_hour_background_dark">@color/etar_container_dark</color>
-    <color name="calendar_date_banner_background_dark">@color/etar_container_dark</color>
     <color name="month_other_bgcolor">@color/etar_container_light</color>
     <color name="month_other_bgcolor_dark">@color/etar_container_dark</color>
-    <color name="event_info_label_background_color_dark">@color/etar_container_dark</color>
     <color name="month_day_number">@color/etar_on_surface_light</color>
     <color name="month_day_number_dark">@color/etar_on_surface_dark</color>
     <color name="month_day_number_black">@color/etar_on_surface_dark</color>
@@ -75,9 +69,6 @@
     <color name="calendar_secondary_visible">@color/etar_on_surface_light</color>
     <color name="calendar_secondary_visible_dark">@color/etar_on_surface_dark</color>
     <color name="calendar_secondary_visible_black">@color/etar_on_surface_dark</color>
-    <color name="create_event_date_color_dark">@color/etar_on_surface_dark</color>
-    <color name="edit_event_small_dark">@color/etar_on_surface_dark</color>
-    <color name="calendar_owner_text_color_dark">@color/etar_on_surface_variant_dark</color>
     <color name="calendar_date_range_color">@color/etar_on_surface_variant_light</color>
     <color name="week_saturday">@color/etar_on_surface_variant_light</color>
     <color name="week_saturday_dark">@color/etar_on_surface_variant_dark</color>
@@ -132,11 +123,6 @@
     <color name="calendar_secondary_hidden">@color/etar_on_surface_variant_light</color>
     <color name="calendar_secondary_hidden_dark">@color/etar_on_surface_variant_dark</color>
     <color name="calendar_secondary_hidden_black">@color/etar_on_surface_variant_dark</color>
-    <color name="calendar_item_disabled_dark">@color/etar_on_surface_variant_dark</color>
-    <color name="event_info_organizer_color_dark">@color/etar_on_surface_variant_dark</color>
-    <color name="event_info_description_color_dark">@color/etar_on_surface_variant_dark</color>
-    <color name="event_info_body_color_dark">@color/etar_on_surface_variant_dark</color>
-    <color name="event_info_label_color_dark">@color/etar_on_surface_variant_dark</color>
     <color name="calendar_grid_line_highlight_color">@color/etar_outline_light</color>
     <color name="calendar_grid_line_highlight_color_dark">@color/etar_outline_dark</color>
     <color name="mini_month_today_outline_color">@color/etar_outline_light</color>
@@ -246,8 +232,6 @@
     <color name="month_focus_month_bgcolor_black">@color/bg_black</color>
     <color name="month_other_bgcolor_black">@color/bg_black</color>
 
-    <color name="widget_header_dark">@color/etar_primary_container_dark</color>
-    <color name="widget_on_header_dark">@color/etar_on_primary_container_dark</color>
     <color name="widget_text">@color/etar_on_surface_light</color>
     <color name="widget_text_dark">@color/etar_on_surface_dark</color>
     <color name="widget_text_black">@color/etar_on_surface_dark</color>
