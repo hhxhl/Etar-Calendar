@@ -10,4 +10,5 @@
     <color name="widget_live_secondary">#616161</color>
     <color name="widget_live_grid">#CCCCCC</color>
     <color name="widget_live_on_primary">#FFFFFF</color>
+    <color name="widget_live_festival">#A04419</color>
 </resources>

@@ -8,4 +8,5 @@
     <string name="localization_import">Import holiday JSON</string>
     <string name="localization_updated">Imported holiday data for %1$d year(s)</string>
     <string name="localization_failed">Import failed</string>
+    <string name="widget_special_countdown">%2$d days until %1$s</string>
 </resources>

@@ -235,6 +235,13 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
             views.setTextViewText(R.id.widget_lunar_day, WidgetHeaderUtils.vertical(lunar));
             views.setViewVisibility(R.id.widget_lunar_day,
                     lunar.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
+            String marker = com.android.calendar.LocalizedDay.marker(context, today);
+            views.setTextViewText(R.id.widget_holiday_marker, marker);
+            views.setViewVisibility(R.id.widget_holiday_marker,
+                    marker.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
+            if (!marker.isEmpty()) {
+                views.setTextColor(R.id.widget_holiday_marker, WidgetHeaderUtils.markerColor(marker));
+            }
             int headerTextColor = WidgetHeaderUtils.accentColor(context);
             if (WidgetUtils.usesLiveTheme(context)) {
                 for (int id : new int[]{R.id.day_of_week, R.id.date, R.id.widget_lunar_day}) {
@@ -274,10 +281,23 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
                         android.util.TypedValue.COMPLEX_UNIT_DIP);
             }
 
-            CharSequence special = WidgetHeaderUtils.specialDates(context, today);
-            views.setTextViewText(R.id.widget_special_dates, special);
-            views.setViewVisibility(R.id.widget_special_dates,
-                    special.length() == 0 ? android.view.View.GONE : android.view.View.VISIBLE);
+            WidgetHeaderUtils.SpecialDates special = WidgetHeaderUtils.specialDates(context, today);
+            boolean festivalToday = special.days == 0 && !special.festival.isEmpty();
+            String primary = special.isEmpty() ? "" : special.days > 0
+                    ? context.getString(R.string.widget_special_countdown, special.names(), special.days)
+                    : festivalToday ? special.festival : special.term;
+            String secondary = festivalToday ? special.term : "";
+            views.setTextViewText(R.id.widget_special_dates, primary);
+            views.setTextViewText(R.id.widget_special_term, secondary);
+            views.setViewVisibility(R.id.widget_special_dates_row,
+                    primary.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
+            views.setViewVisibility(R.id.widget_special_term,
+                    secondary.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
+            WidgetUtils.setThemeText(context, views, R.id.widget_special_dates,
+                    festivalToday ? R.color.widget_live_festival : R.color.widget_live_accent,
+                    festivalToday ? WidgetHeaderUtils.festivalColor(context) : headerTextColor);
+            WidgetUtils.setThemeText(context, views, R.id.widget_special_term,
+                    R.color.widget_live_accent, headerTextColor);
 
             // Attach to list of events
             views.setRemoteAdapter(R.id.events_list, updateIntent);

@@ -107,8 +107,21 @@
 
         <FrameLayout
             android:layout_width="0dp"
-            android:layout_height="1dp"
-            android:layout_weight="1" />
+            android:layout_height="match_parent"
+            android:layout_weight="1">
+
+            <TextView
+                android:id="@+id/widget_holiday_marker"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_gravity="start|center_vertical"
+                android:layout_marginStart="16.5dp"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:textSize="13sp"
+                android:maxLines="1"
+                android:visibility="gone" />
+        </FrameLayout>
 
         <ImageView
             android:id="@+id/iv_settings"
@@ -126,19 +139,36 @@
         android:layout_marginStart="8dp"
         android:layout_marginEnd="8dp" />
 
-    <TextView
-        android:id="@+id/widget_special_dates"
+    <LinearLayout
+        android:id="@+id/widget_special_dates_row"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="start"
+        android:orientation="horizontal"
+        android:gravity="start|center_vertical"
         android:paddingStart="8dp"
         android:paddingEnd="8dp"
         android:paddingTop="3dp"
-        android:paddingBottom="0dp"
-        android:textSize="12sp"
-        android:maxLines="3"
-        android:ellipsize="end"
-        android:visibility="gone" />
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/widget_special_dates"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="start"
+            android:textSize="12sp"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <TextView
+            android:id="@+id/widget_special_term"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:textSize="12sp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:visibility="gone" />
+    </LinearLayout>
 
     <ListView
         android:id="@+id/events_list"

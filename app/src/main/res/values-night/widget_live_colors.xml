@@ -2,4 +2,5 @@
 <resources>
     <color name="widget_live_background">@color/widget_background_dark</color>
     <color name="widget_live_background_black">@color/bg_black</color>
+    <color name="widget_live_festival">#FFB78B</color>
 </resources>
