@@ -221,18 +221,16 @@ public class WeekAppWidgetService extends RemoteViewsService {
                     views.setOnClickFillInIntent(rowIds[i],
                             WidgetClickActivity.itemIntent(event.taskId, day.timeMillis));
 
-                    com.android.calendar.ItemAppearance.widgetBackground(mContext, views, surfaceIds[i], event.color);
-                    com.android.calendar.ItemAppearance.widgetBar(mContext, views, barIds[i], event.color);
+                    com.android.calendar.ItemAppearance.bindWidget(mContext, views, event.color,
+                            surfaceIds[i], barIds[i], textIds[i], timeIds[i]);
                     views.setViewVisibility(barIds[i], View.VISIBLE);
                     if (!event.isAllDay && event.timeLabel != null && !event.timeLabel.isEmpty()) {
                         views.setViewVisibility(timeIds[i], View.VISIBLE);
                         views.setTextViewText(timeIds[i], event.timeLabel);
-                        com.android.calendar.ItemAppearance.widgetText(mContext, views, timeIds[i], event.color);
                     } else {
                         views.setViewVisibility(timeIds[i], View.GONE);
                     }
                     views.setTextViewText(textIds[i], event.title);
-                    com.android.calendar.ItemAppearance.widgetText(mContext, views, textIds[i], event.color);
                     views.setViewPadding(rowIds[i], 1, 0, 1, 0);
                 } else {
                     views.setViewVisibility(rowIds[i], View.GONE);

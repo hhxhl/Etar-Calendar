@@ -3,17 +3,19 @@ package com.android.calendar;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.graphics.Canvas;
+import android.graphics.Paint;
 import android.graphics.drawable.GradientDrawable;
 import ws.xsoh.etar.R;
 import android.view.View;
 import android.widget.RemoteViews;
+import android.widget.TextView;
 import androidx.core.graphics.ColorUtils;
 import com.android.calendar.theme.DynamicThemeKt;
 
 /** Shared source-color presentation for calendar rows, grid items and widgets. */
 public final class ItemAppearance {
     private static final int BACKGROUND_ALPHA = 36;
-    private static final int CORNER_DP = 4;
 
     private ItemAppearance() {}
 
@@ -40,43 +42,81 @@ public final class ItemAppearance {
     }
 
     public static float radius(Context context) {
-        return CORNER_DP * context.getResources().getDisplayMetrics().density;
+        return context.getResources().getDimension(R.dimen.item_corner_radius);
     }
 
-    public static void apply(View view, int foreground) {
+    public static float barWidth(Context context) {
+        return context.getResources().getDimension(R.dimen.item_color_bar_width);
+    }
+
+    public static void drawSurface(Context context, Canvas canvas, Paint paint,
+            float left, float top, float right, float bottom, int foreground, int animationAlpha) {
+        int oldColor = paint.getColor();
+        Paint.Style oldStyle = paint.getStyle();
+        boolean oldAntiAlias = paint.isAntiAlias();
+        paint.setStyle(Paint.Style.FILL);
+        paint.setAntiAlias(true);
+        paint.setColor(background(foreground));
+        paint.setAlpha(Math.round(BACKGROUND_ALPHA * animationAlpha / 255f));
+        float radius = radius(context);
+        canvas.drawRoundRect(left, top, right, bottom, radius, radius, paint);
+        paint.setColor(oldColor);
+        paint.setStyle(oldStyle);
+        paint.setAntiAlias(oldAntiAlias);
+    }
+
+    public static void drawBar(Context context, Canvas canvas, Paint paint,
+            float left, float top, float right, float bottom, int foreground) {
+        int oldColor = paint.getColor();
+        Paint.Style oldStyle = paint.getStyle();
+        boolean oldAntiAlias = paint.isAntiAlias();
+        paint.setStyle(Paint.Style.FILL);
+        paint.setAntiAlias(true);
+        paint.setColor(foreground);
+        float width = barWidth(context);
+        canvas.drawRoundRect(left, top + 1, Math.min(right, left + width),
+                bottom - 1, width / 2, width / 2, paint);
+        paint.setColor(oldColor);
+        paint.setStyle(oldStyle);
+        paint.setAntiAlias(oldAntiAlias);
+    }
+
+    public static int bindRow(View root, int displayColor, TextView... labels) {
+        int color = foreground(root.getContext(), displayColor);
+        apply(root, color);
+        setTextColor(color, labels);
+        return color;
+    }
+
+    public static void setTextColor(int foreground, TextView... labels) {
+        for (TextView label : labels) label.setTextColor(foreground);
+    }
+
+    private static void apply(View view, int foreground) {
         GradientDrawable drawable = (GradientDrawable) view.getContext()
                 .getDrawable(R.drawable.item_rounded_surface).mutate();
         drawable.setColor(background(foreground));
         view.setBackground(drawable);
     }
 
-    public static void widgetBackground(Context context, RemoteViews views, int backgroundId, int displayColor) {
-        // Tint the opaque source first, then apply exactly the same alpha used
-        // by the canvas and list backgrounds. SRC_IN is declared in each layout.
+    public static void bindWidget(Context context, RemoteViews views, int displayColor,
+            int backgroundId, int barId, int... textIds) {
+        // Resolve the palette once per item. The host can switch both colors
+        // together when using the live system theme.
         if (com.android.calendar.widget.WidgetUtils.usesLiveTheme(context)) {
+            int light = foreground(displayColor, false);
+            int dark = foreground(displayColor, true);
             views.setColorStateList(backgroundId, "setImageTintList",
-                    ColorStateList.valueOf(foreground(displayColor, false)),
-                    ColorStateList.valueOf(foreground(displayColor, true)));
+                    ColorStateList.valueOf(light), ColorStateList.valueOf(dark));
+            views.setColorInt(barId, "setBackgroundColor", light, dark);
+            for (int textId : textIds) views.setColorInt(textId, "setTextColor", light, dark);
         } else {
-            views.setColorStateList(backgroundId, "setImageTintList",
-                    ColorStateList.valueOf(foreground(context, displayColor)));
+            int color = foreground(context, displayColor);
+            views.setColorStateList(backgroundId, "setImageTintList", ColorStateList.valueOf(color));
+            views.setInt(barId, "setBackgroundColor", color);
+            for (int textId : textIds) views.setTextColor(textId, color);
         }
+        // Tint first, then apply the same alpha as Canvas and ordinary Views.
         views.setInt(backgroundId, "setImageAlpha", BACKGROUND_ALPHA);
-    }
-
-    public static void widgetText(Context context, RemoteViews views, int id, int displayColor) {
-        if (com.android.calendar.widget.WidgetUtils.usesLiveTheme(context)) {
-            views.setColorInt(id, "setTextColor", foreground(displayColor, false), foreground(displayColor, true));
-        } else {
-            views.setTextColor(id, foreground(context, displayColor));
-        }
-    }
-
-    public static void widgetBar(Context context, RemoteViews views, int id, int displayColor) {
-        if (com.android.calendar.widget.WidgetUtils.usesLiveTheme(context)) {
-            views.setColorInt(id, "setBackgroundColor", foreground(displayColor, false), foreground(displayColor, true));
-        } else {
-            views.setInt(id, "setBackgroundColor", foreground(context, displayColor));
-        }
     }
 }

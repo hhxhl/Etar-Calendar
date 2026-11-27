@@ -604,15 +604,9 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
             AgendaEntry entry = row.event;
             boolean past = entry.allDay ? !row.day.isAfter(today)
                     : Math.max(entry.begin, millis(row.day)) <= System.currentTimeMillis();
-            int color = com.android.calendar.ItemAppearance.foreground(context,
-                    Utils.getDisplayColorFromColor(context, entry.color));
-            com.android.calendar.ItemAppearance.apply(root, color);
-            int titleColor = color;
-            int textColor = color;
-            title.setTextColor(titleColor);
-            countdown.setTextColor(textColor);
-            when.setTextColor(textColor);
-            where.setTextColor(textColor);
+            com.android.calendar.ItemAppearance.bindRow(root,
+                    Utils.getDisplayColorFromColor(context, entry.color),
+                    title, countdown, when, where, chip);
             title.setTypeface(past ? Typeface.DEFAULT : Typeface.DEFAULT_BOLD);
             title.setPaintFlags(entry.status == Events.STATUS_CANCELED
                     ? title.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG
@@ -621,7 +615,6 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
 
             chip.setText(ItemStateSymbols.event(entry.begin, entry.end, entry.allDay,
                     zone, System.currentTimeMillis()));
-            chip.setTextColor(color);
 
             String tz = entry.allDay ? "UTC" : zone.getId();
             int flags = entry.allDay ? 0 : DateUtils.FORMAT_SHOW_TIME;

@@ -80,15 +80,13 @@ final class TaskListUi {
                     ZoneId.of(Utils.getTimeZone(context, null)), System.currentTimeMillis());
     }
 
-    static void bindRow(View root, CheckBox done, TextView title, TaskStore.Task task,
+    static int bindRow(View root, CheckBox done, TextView title, TaskStore.Task task,
             TaskStore store, Runnable afterComplete) {
         Context context = root.getContext();
-        int color = com.android.calendar.ItemAppearance.foreground(context,
-                TaskCalendarUi.displayColor(context, task, false));
-        com.android.calendar.ItemAppearance.apply(root, color);
+        int color = com.android.calendar.ItemAppearance.bindRow(root,
+                TaskCalendarUi.displayColor(context, task, false), done, title);
         done.setOnCheckedChangeListener(null);
         done.setChecked(task.done);
-        done.setTextColor(color);
         done.setText(stateSymbol(context, task, task.done));
         done.setContentDescription(context.getString(R.string.tasks_complete) + " " + task.title);
         done.setOnCheckedChangeListener((button, checked) -> {
@@ -97,10 +95,10 @@ final class TaskListUi {
             if (afterComplete != null) afterComplete.run();
         });
         title.setText(task.title);
-        title.setTextColor(color);
         title.setTypeface(task.done ? Typeface.DEFAULT : Typeface.DEFAULT_BOLD);
         title.setPaintFlags(task.done ? title.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG
                 : title.getPaintFlags() & ~Paint.STRIKE_THRU_TEXT_FLAG);
         root.setOnClickListener(v -> TaskCalendarUi.openTask(context, task.id));
+        return color;
     }
 }

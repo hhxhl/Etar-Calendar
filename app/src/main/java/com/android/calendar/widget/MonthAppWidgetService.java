@@ -222,13 +222,12 @@ public class MonthAppWidgetService extends RemoteViewsService {
                     views.setOnClickFillInIntent(rowIds[i],
                             WidgetClickActivity.itemIntent(chip.taskId, cell.timeMillis));
 
-                    com.android.calendar.ItemAppearance.widgetBackground(mContext, views, surfaceIds[i], chip.color);
-                    com.android.calendar.ItemAppearance.widgetBar(mContext, views, barIds[i], chip.color);
+                    com.android.calendar.ItemAppearance.bindWidget(mContext, views, chip.color,
+                            surfaceIds[i], barIds[i], textIds[i]);
                     boolean showTitle = !chip.isAllDay || chip.spanType == MonthAppWidgetModel.EventChip.SPAN_START
                             || chip.spanType == MonthAppWidgetModel.EventChip.SPAN_SINGLE;
                     views.setViewVisibility(barIds[i], showTitle ? View.VISIBLE : View.GONE);
                     views.setTextViewText(textIds[i], showTitle ? chip.title : "");
-                    com.android.calendar.ItemAppearance.widgetText(mContext, views, textIds[i], chip.color);
                     views.setViewPadding(rowIds[i], pad, 0, pad, 0);
                 } else {
                     views.setViewVisibility(rowIds[i], View.GONE);

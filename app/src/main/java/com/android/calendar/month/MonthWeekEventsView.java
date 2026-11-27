@@ -1546,15 +1546,12 @@ public class MonthWeekEventsView extends SimpleWeekView {
             float bottom = top + mFormat.getEventLines() * mEventHeight
                     + 2 * mBoundaries.mBorderThickness
                     + (isTimeInNextLine(preferences) ? mExtrasHeight : 0);
-            float radius = com.android.calendar.ItemAppearance.radius(mContext);
-            mEventSquarePaint.setStyle(Style.FILL);
-            mEventSquarePaint.setAntiAlias(true);
-            mEventSquarePaint.setColor(com.android.calendar.ItemAppearance.background(getRectangleColor()));
-            canvas.drawRoundRect(left, top, right, bottom, radius, radius, mEventSquarePaint);
+            int color = com.android.calendar.ItemAppearance.foreground(mContext, mEvent.color);
+            com.android.calendar.ItemAppearance.drawSurface(mContext, canvas, mEventSquarePaint,
+                    left, top, right, bottom, color, 255);
             if (!mBoundaries.hasBorder()) {
-                mEventSquarePaint.setColor(getRectangleColor());
-                canvas.drawRoundRect(left, top + 1, Math.min(right, left + 2 * getResources().getDisplayMetrics().density),
-                        bottom - 1, 1, 1, mEventSquarePaint);
+                com.android.calendar.ItemAppearance.drawBar(mContext, canvas, mEventSquarePaint,
+                        left, top, right, bottom, color);
             }
         }
 

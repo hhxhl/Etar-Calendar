@@ -327,15 +327,14 @@ public class CalendarAppWidgetService extends RemoteViewsService {
                     views = new RemoteViews(mContext.getPackageName(), R.layout.widget_item);
                 }
                 int displayColor = Utils.getDisplayColorFromColor(mContext, eventInfo.color);
-                com.android.calendar.ItemAppearance.widgetBackground(mContext, views, R.id.widget_item_surface, displayColor);
-                com.android.calendar.ItemAppearance.widgetBar(mContext, views, R.id.agenda_item_color, displayColor);
-                com.android.calendar.ItemAppearance.widgetText(mContext, views, R.id.title, displayColor);
-
-                if (!eventInfo.allDay) {
+                if (eventInfo.allDay) {
+                    com.android.calendar.ItemAppearance.bindWidget(mContext, views, displayColor,
+                            R.id.widget_item_surface, R.id.agenda_item_color, R.id.title);
+                } else {
+                    com.android.calendar.ItemAppearance.bindWidget(mContext, views, displayColor,
+                            R.id.widget_item_surface, R.id.agenda_item_color, R.id.title, R.id.when, R.id.where);
                     updateTextView(views, R.id.when, eventInfo.visibWhen, eventInfo.when);
                     updateTextView(views, R.id.where, eventInfo.visibWhere, eventInfo.where);
-                    com.android.calendar.ItemAppearance.widgetText(mContext, views, R.id.when, displayColor);
-                    com.android.calendar.ItemAppearance.widgetText(mContext, views, R.id.where, displayColor);
                 }
                 String countdown = eventInfo.id < -1 ? "" : com.android.calendar.EventCountdown.widgetLabel(mContext, eventInfo.id, eventInfo.start);
                 String displayTitle = countdown.isEmpty() ? eventInfo.title : eventInfo.title + " · " + countdown;

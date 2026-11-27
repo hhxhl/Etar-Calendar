@@ -30,7 +30,6 @@ import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.database.Cursor;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Paint.Align;
 import android.graphics.Paint.Style;
@@ -3465,20 +3464,13 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         r.right = (int) event.right;
 
         int color = ItemAppearance.foreground(mContext, event.color);
-        int oldColor = p.getColor();
-        boolean oldAntiAlias = p.isAntiAlias();
-        p.setAntiAlias(true);
-        p.setStyle(Style.FILL);
-        p.setColor(ItemAppearance.background(color));
-        p.setAlpha(Math.round(Color.alpha(p.getColor()) * mEventsAlpha / 255f));
         float radius = ItemAppearance.radius(mContext);
         canvas.save();
         if (canvas.clipRect(visibleLeft, visibleTop, visibleRight, visibleBot)) {
-            canvas.drawRoundRect(r.left, r.top, r.right, r.bottom, radius, radius, p);
+            ItemAppearance.drawSurface(mContext, canvas, p, r.left, r.top, r.right, r.bottom,
+                    color, mEventsAlpha);
         }
         canvas.restore();
-        p.setColor(oldColor);
-        p.setAntiAlias(oldAntiAlias);
 
         // If this event is selected, then use the selection color
         if (mSelectedEvent == event && mClickedEvent != null) {
