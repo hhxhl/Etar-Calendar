@@ -6,7 +6,6 @@ import android.os.Bundle;
 import android.os.CancellationSignal;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.OperationCanceledException;
 import android.provider.CalendarContract.Attendees;
 import android.provider.CalendarContract.Calendars;
 import android.provider.CalendarContract.Events;
@@ -34,6 +33,7 @@ import com.android.calendar.ItemStateSymbols;
 import com.android.calendar.DatedItemsRepository;
 import com.android.calendar.DatedItemsRepository.AgendaEntry;
 import com.android.calendar.DatedListUi;
+import com.android.calendar.ViewQueryLoader;
 import com.android.calendar.EventCountdown;
 import com.android.calendar.Utils;
 import com.android.calendar.event.EditEventActivity;
@@ -51,9 +51,6 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.TimeZone;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 import ws.xsoh.etar.R;
 
@@ -73,10 +70,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
     // Null means ordinary agenda; an empty string means search is waiting for a query.
     private String searchQuery;
     private AgendaRows adapter;
-    private ExecutorService worker;
-    private Future<?> future;
-    private CancellationSignal cancellation;
-    private int generation;
+    private ViewQueryLoader loader;
     private boolean loading, active, binding;
     private long calendarId = -1;
     private ZoneId zone;
@@ -191,7 +185,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         }
         if (pendingAnchor == null) pendingAnchor = new Anchor(
                 searchQuery == null ? targetDay : firstDay, -1, -1, -1, 0);
-        worker = Executors.newSingleThreadExecutor();
+        loader = new ViewQueryLoader();
         hasLoaded = false;
         loadedFirstDay = loadedLastDay = null;
         publishedDay = null;
@@ -328,8 +322,8 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         active = false;
         main.removeCallbacksAndMessages(null);
         cancelQuery();
-        if (worker != null) worker.shutdownNow();
-        worker = null;
+        if (loader != null) loader.close();
+        loader = null;
         list = null;
         filter = null;
         status = null;
@@ -340,11 +334,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
     }
 
     private void cancelQuery() {
-        generation++;
-        if (cancellation != null) cancellation.cancel();
-        if (future != null) future.cancel(true);
-        cancellation = null;
-        future = null;
+        if (loader != null) loader.cancel();
         loading = false;
     }
 
@@ -407,7 +397,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
     }
 
     private void request(LocalDate first, LocalDate last, Anchor anchor, boolean clear) {
-        if (list == null || worker == null) return;
+        if (list == null || loader == null) return;
         if (!active) {
             firstDay = first;
             lastDay = last;
@@ -439,59 +429,49 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         LocalDate today = LocalDate.now(queryZone);
         boolean hideDeclined = GeneralPreferences.Companion.getSharedPreferences(context)
                 .getBoolean(GeneralPreferences.KEY_HIDE_DECLINED, false);
-        CancellationSignal signal = new CancellationSignal();
-        cancellation = signal;
-        int ticket = generation;
         String queryText = searchQuery;
-        future = worker.submit(() -> {
-            try {
-                List<Row> result = query(context, first, last, selected, hideDeclined, today, queryText, signal);
-                if (queryText == null && result.stream().noneMatch(row -> row.event != null)
-                        && result.stream().noneMatch(row -> row.day.equals(anchor.day))) {
-                    // Keep an actual date anchor even when no instances exist in this window.
-                    result.add(new Row(anchor.day, null));
-                    result.sort(Comparator.comparing(row -> row.day));
-                }
-                main.post(() -> {
-                    if (!active || list == null || ticket != generation) return;
-                    loading = false;
-                    firstDay = first;
-                    lastDay = last;
-                    hasLoaded = true;
-                    loadedFirstDay = first;
-                    loadedLastDay = last;
-                    binding = true;
-                    rows.clear();
-                    rows.addAll(result);
-                    adapter.notifyDataSetChanged();
-                    if (result.stream().noneMatch(Row::isItem)) {
-                        status.setText(queryText == null ? R.string.agenda_no_events_in_range
-                                : queryText.isEmpty() ? R.string.agenda_search_enter_query
-                                : R.string.agenda_search_no_results);
-                        status.setVisibility(View.VISIBLE);
-                    } else status.setVisibility(View.GONE);
-                    restoreAnchor(anchor);
-                    pendingAnchor = null;
-                    binding = false;
-                });
-            } catch (OperationCanceledException ignored) {
-                // A newer query or a destroyed view owns the UI now.
-            } catch (RuntimeException error) {
-                Log.w(TAG, "Could not query agenda instances", error);
-                main.post(() -> {
-                    if (!active || list == null || ticket != generation) return;
-                    loading = false;
-                    if (loadedFirstDay != null && loadedLastDay != null) {
-                        firstDay = loadedFirstDay;
-                        lastDay = loadedLastDay;
-                        updateSearchRange();
-                    }
-                    pendingAnchor = null;
-                    status.setText(Utils.isCalendarPermissionGranted(requireContext(), false)
-                            ? R.string.agenda_load_failed : R.string.calendar_permission_not_granted);
-                    status.setVisibility(View.VISIBLE);
-                });
+        loader.request(0, signal -> {
+            List<Row> result = query(context, first, last, selected, hideDeclined, today, queryText, signal);
+            if (queryText == null && result.stream().noneMatch(row -> row.event != null)
+                    && result.stream().noneMatch(row -> row.day.equals(anchor.day))) {
+                result.add(new Row(anchor.day, null));
+                result.sort(Comparator.comparing(row -> row.day));
             }
+            return result;
+        }, result -> {
+            if (!active || list == null) return;
+            loading = false;
+            firstDay = first;
+            lastDay = last;
+            hasLoaded = true;
+            loadedFirstDay = first;
+            loadedLastDay = last;
+            binding = true;
+            rows.clear();
+            rows.addAll(result);
+            adapter.notifyDataSetChanged();
+            if (result.stream().noneMatch(Row::isItem)) {
+                status.setText(queryText == null ? R.string.agenda_no_events_in_range
+                        : queryText.isEmpty() ? R.string.agenda_search_enter_query
+                        : R.string.agenda_search_no_results);
+                status.setVisibility(View.VISIBLE);
+            } else status.setVisibility(View.GONE);
+            restoreAnchor(anchor);
+            pendingAnchor = null;
+            binding = false;
+        }, error -> {
+            if (!active || list == null) return;
+            Log.w(TAG, "Could not query agenda instances", error);
+            loading = false;
+            if (loadedFirstDay != null && loadedLastDay != null) {
+                firstDay = loadedFirstDay;
+                lastDay = loadedLastDay;
+                updateSearchRange();
+            }
+            pendingAnchor = null;
+            status.setText(Utils.isCalendarPermissionGranted(requireContext(), false)
+                    ? R.string.agenda_load_failed : R.string.calendar_permission_not_granted);
+            status.setVisibility(View.VISIBLE);
         });
     }
 

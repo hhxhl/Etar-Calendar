@@ -1,12 +1,8 @@
 package com.android.calendar.tasks;
 
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
+import com.android.calendar.ViewQueryLoader;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.function.Consumer;
 import java.util.function.LongFunction;
 
@@ -23,12 +19,8 @@ final class TaskListLoader<T> {
         }
     }
 
-    private final Handler main = new Handler(Looper.getMainLooper());
-    private final ExecutorService worker = Executors.newSingleThreadExecutor();
+    private final ViewQueryLoader loader = new ViewQueryLoader();
     private final TaskStore store;
-    private Runnable pending;
-    private Future<?> running;
-    private int generation;
     private boolean active;
 
     TaskListLoader(TaskStore store) { this.store = store; }
@@ -37,42 +29,18 @@ final class TaskListLoader<T> {
     void request(long selected, LongFunction<List<T>> query, Consumer<Result<T>> apply,
             Runnable onError) {
         if (!active) return;
-        cancel();
-        final int ticket = generation;
-        pending = () -> {
-            pending = null;
-            running = worker.submit(() -> {
-                try {
-                    List<TaskStore.TaskList> lists = store.visibleLists();
-                    long id = lists.stream().anyMatch(list -> list.id == selected) ? selected : 0;
-                    Result<T> result = new Result<>(lists, id, query.apply(id));
-                    main.post(() -> {
-                        if (active && ticket == generation) apply.accept(result);
-                    });
-                } catch (RuntimeException error) {
-                    if (Thread.currentThread().isInterrupted()) return;
-                    Log.w("TaskListLoader", "Could not load local items", error);
-                    main.post(() -> {
-                        if (active && ticket == generation) onError.run();
-                    });
-                }
-            });
-        };
-        main.postDelayed(pending, 40);
+        loader.request(40, signal -> {
+            List<TaskStore.TaskList> lists = store.visibleLists();
+            long id = lists.stream().anyMatch(list -> list.id == selected) ? selected : 0;
+            signal.throwIfCanceled();
+            return new Result<>(lists, id, query.apply(id));
+        }, apply, error -> {
+            Log.w("TaskListLoader", "Could not load local items", error);
+            onError.run();
+        });
     }
 
-    private void cancel() {
-        generation++;
-        if (pending != null) main.removeCallbacks(pending);
-        if (running != null) running.cancel(true);
-        pending = null;
-        running = null;
-    }
+    void stop() { active = false; loader.cancel(); }
+    void close() { active = false; loader.close(); }
 
-    void stop() { active = false; cancel(); }
-    void close() {
-        stop();
-        worker.shutdownNow();
-        main.removeCallbacksAndMessages(null);
-    }
 }
