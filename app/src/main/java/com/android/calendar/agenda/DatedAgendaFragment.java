@@ -20,6 +20,7 @@ import android.text.TextUtils;
 import android.text.format.DateFormat;
 import android.text.format.DateUtils;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -27,6 +28,7 @@ import android.view.ViewGroup;
 import android.widget.AbsListView;
 import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.Spinner;
@@ -205,8 +207,9 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         filter = new Spinner(context);
         root.addView(filter, new LinearLayout.LayoutParams(-1, -2));
         status = new TextView(context);
-        status.setPadding(dp(16), dp(12), dp(16), dp(12));
+        status.setPadding(dp(16), dp(20), dp(16), dp(20));
         status.setTextColor(DynamicThemeKt.getColor(context, "agenda_item_where_text_color"));
+        status.setBackgroundResource(DynamicThemeKt.getDrawableId(context, "agenda_item_bg_primary"));
         status.setVisibility(View.GONE);
         root.addView(status, new LinearLayout.LayoutParams(-1, -2));
         list = new ListView(context);
@@ -644,54 +647,76 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         main.post(reload);
     }
 
-    private final class AgendaRows extends BaseAdapter {
-        @Override public int getCount() { return rows.size(); }
-        @Override public Object getItem(int position) { return rows.get(position); }
-        @Override public long getItemId(int position) { return position; }
-        @Override public int getViewTypeCount() { return 2; }
-        @Override public int getItemViewType(int position) { return rows.get(position).event == null ? 0 : 1; }
-        @Override public boolean areAllItemsEnabled() { return false; }
-        @Override public boolean isEnabled(int position) { return rows.get(position).event != null; }
+    /** Main agenda rows mirror the dated reminders' layout and theme palette.
+     * The legacy agenda_item layout remains unchanged for search and tablet panes.
+     */
+    private final class AgendaRowView {
+        final LinearLayout root;
+        final ColorChipView chip;
+        final TextView title, when, where, countdown;
 
-        @Override public View getView(int position, View convertView, ViewGroup parent) {
-            Row row = rows.get(position);
-            Context context = parent.getContext();
-            LocalDate today = LocalDate.now(zone);
-            LayoutInflater inflater = LayoutInflater.from(context);
-            if (row.event == null) {
-                View header = convertView == null ? inflater.inflate(R.layout.agenda_day, parent, false) : convertView;
-                long time = millis(row.day);
-                ((TextView) header.findViewById(R.id.day)).setText(
-                        Utils.getDayOfWeekString(julian(row.day), julian(today), time, context));
-                ((TextView) header.findViewById(R.id.date)).setText(
-                        Utils.formatDateRange(context, time, time, DateUtils.FORMAT_SHOW_DATE));
-                header.setBackgroundResource(DynamicThemeKt.getDrawableId(context,
-                        row.day.isAfter(today) ? "agenda_item_bg_primary" : "agenda_item_bg_secondary"));
-                View boundary = header.findViewById(R.id.top_divider_past_present);
-                boolean firstPresent = !row.day.isBefore(today) && position > 0
-                        && rows.get(position - 1).day.isBefore(today);
-                boundary.setVisibility(firstPresent ? View.VISIBLE : View.GONE);
-                return header;
-            }
+        AgendaRowView(Context context) {
+            root = new LinearLayout(context);
+            root.setOrientation(LinearLayout.VERTICAL);
+            root.setMinimumHeight(dp(64));
 
-            View item = convertView == null ? inflater.inflate(R.layout.agenda_item, parent, false) : convertView;
+            View divider = new View(context);
+            divider.setBackgroundResource(R.color.agenda_list_separator_color);
+            root.addView(divider, new LinearLayout.LayoutParams(-1, 1));
+
+            LinearLayout item = new LinearLayout(context);
+            item.setGravity(Gravity.CENTER_VERTICAL);
+            item.setMinimumHeight(dp(64) - 1);
+            item.setPadding(0, 0, dp(16), 0);
+            root.addView(item, new LinearLayout.LayoutParams(-1, -2));
+
+            FrameLayout leading = new FrameLayout(context);
+            chip = new ColorChipView(context);
+            FrameLayout.LayoutParams chipParams = new FrameLayout.LayoutParams(dp(24), dp(24),
+                    Gravity.CENTER_VERTICAL | Gravity.START);
+            chipParams.setMarginStart(dp(16));
+            leading.addView(chip, chipParams);
+            item.addView(leading, new LinearLayout.LayoutParams(dp(48), dp(48)));
+
+            LinearLayout details = new LinearLayout(context);
+            details.setOrientation(LinearLayout.VERTICAL);
+            details.setPadding(0, dp(8), 0, dp(8));
+            title = textView(context, 18);
+            when = textView(context, 14);
+            where = textView(context, 14);
+            details.addView(title);
+            details.addView(when);
+            details.addView(where);
+            item.addView(details, new LinearLayout.LayoutParams(0, -2, 1));
+
+            countdown = textView(context, 12);
+            LinearLayout.LayoutParams countdownParams = new LinearLayout.LayoutParams(-2, -2);
+            countdownParams.setMarginStart(dp(8));
+            item.addView(countdown, countdownParams);
+            root.setTag(this);
+        }
+
+        private TextView textView(Context context, int size) {
+            TextView view = new TextView(context);
+            view.setTextSize(size);
+            view.setSingleLine(true);
+            view.setEllipsize(TextUtils.TruncateAt.END);
+            return view;
+        }
+
+        void bind(Row row, Context context, LocalDate today) {
             Entry entry = row.event;
-            TextView title = item.findViewById(R.id.title);
-            TextView when = item.findViewById(R.id.when);
-            TextView where = item.findViewById(R.id.where);
-            ColorChipView chip = item.findViewById(R.id.agenda_item_color);
             boolean past = entry.allDay ? !row.day.isAfter(today)
                     : Math.max(entry.begin, millis(row.day)) <= System.currentTimeMillis();
-            item.setBackgroundResource(DynamicThemeKt.getDrawableId(context,
+            root.setBackgroundResource(DynamicThemeKt.getDrawableId(context,
                     past ? "agenda_item_bg_secondary" : "agenda_item_bg_primary"));
             boolean declined = entry.response == Attendees.ATTENDEE_STATUS_DECLINED;
             boolean invited = entry.response == Attendees.ATTENDEE_STATUS_INVITED;
             boolean ownNonResponding = !entry.organizerCanRespond && TextUtils.equals(entry.owner, entry.organizer);
-            int titleColor = DynamicThemeKt.getColor(context,
-                    declined && !ownNonResponding ? "agenda_item_declined_color" : "agenda_item_standard_color");
-            int textColor = ownNonResponding ? titleColor : DynamicThemeKt.getColor(context,
-                    declined ? "agenda_item_where_declined_text_color" : "agenda_item_where_text_color");
+            int titleColor = DynamicThemeKt.getColor(context, "agenda_item_standard_color");
+            int textColor = DynamicThemeKt.getColor(context, "agenda_item_where_text_color");
             title.setTextColor(titleColor);
+            countdown.setTextColor(textColor);
             when.setTextColor(textColor);
             where.setTextColor(textColor);
             title.setTypeface(past ? Typeface.DEFAULT : Typeface.DEFAULT_BOLD);
@@ -721,12 +746,43 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
             when.setText(time);
             where.setText(entry.location);
             where.setVisibility(TextUtils.isEmpty(entry.location) ? View.GONE : View.VISIBLE);
-            TextView countdown = item.findViewById(R.id.event_countdown_label);
             String label = EventCountdown.label(context, entry.id, entry.begin, entry.allDay);
             countdown.setText(label);
             countdown.setVisibility(label.isEmpty() ? View.GONE : View.VISIBLE);
-            item.findViewById(R.id.selected_marker).setVisibility(View.GONE);
-            return item;
+        }
+    }
+
+    private final class AgendaRows extends BaseAdapter {
+        @Override public int getCount() { return rows.size(); }
+        @Override public Object getItem(int position) { return rows.get(position); }
+        @Override public long getItemId(int position) { return position; }
+        @Override public int getViewTypeCount() { return 2; }
+        @Override public int getItemViewType(int position) { return rows.get(position).event == null ? 0 : 1; }
+        @Override public boolean areAllItemsEnabled() { return false; }
+        @Override public boolean isEnabled(int position) { return rows.get(position).event != null; }
+
+        @Override public View getView(int position, View convertView, ViewGroup parent) {
+            Row row = rows.get(position);
+            Context context = parent.getContext();
+            LocalDate today = LocalDate.now(zone);
+            LayoutInflater inflater = LayoutInflater.from(context);
+            if (row.event == null) {
+                View header = convertView == null ? inflater.inflate(R.layout.agenda_day, parent, false) : convertView;
+                long time = millis(row.day);
+                ((TextView) header.findViewById(R.id.day)).setText(
+                        Utils.getDayOfWeekString(julian(row.day), julian(today), time, context));
+                ((TextView) header.findViewById(R.id.date)).setText(
+                        Utils.formatDateRange(context, time, time, DateUtils.FORMAT_SHOW_DATE));
+                header.setBackgroundResource(DynamicThemeKt.getDrawableId(context,
+                        row.day.isAfter(today) ? "agenda_item_bg_primary" : "agenda_item_bg_secondary"));
+                header.findViewById(R.id.top_divider_past_present).setVisibility(View.GONE);
+                return header;
+            }
+
+            AgendaRowView holder = convertView != null && convertView.getTag() instanceof AgendaRowView
+                    ? (AgendaRowView) convertView.getTag() : new AgendaRowView(context);
+            holder.bind(row, context, today);
+            return holder.root;
         }
     }
 }
