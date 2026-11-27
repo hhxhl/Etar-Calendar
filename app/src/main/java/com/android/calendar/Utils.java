@@ -24,6 +24,7 @@ import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.app.SearchManager;
+import android.appwidget.AppWidgetManager;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.ContentResolver;
@@ -309,6 +310,22 @@ public class Utils {
      */
     public static String getWidgetScheduledUpdateAction(Context context) {
         return "com.android.calendar.APPWIDGET_SCHEDULED_UPDATE";
+    }
+
+    /** Refresh collection content without replacing the host widget layout or adapter. */
+    public static void notifyWidgetDataChanged(Context context) {
+        if (!CalendarAppWidgetProvider.isWidgetSupported(context)) return;
+        AppWidgetManager manager = AppWidgetManager.getInstance(context);
+        if (manager == null) return;
+        notifyWidgetCollection(manager, context, CalendarAppWidgetProvider.class, R.id.events_list);
+        notifyWidgetCollection(manager, context, MonthAppWidgetProvider.class, R.id.grid_view);
+        notifyWidgetCollection(manager, context, WeekAppWidgetProvider.class, R.id.grid_view);
+    }
+
+    private static void notifyWidgetCollection(AppWidgetManager manager, Context context,
+            Class<?> provider, int viewId) {
+        int[] ids = manager.getAppWidgetIds(new ComponentName(context, provider));
+        if (ids != null && ids.length > 0) manager.notifyAppWidgetViewDataChanged(ids, viewId);
     }
 
     /**

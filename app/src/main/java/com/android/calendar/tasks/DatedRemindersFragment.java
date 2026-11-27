@@ -91,6 +91,7 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
     @Override public void onResume() {
         super.onResume();
         loader.start();
+        TaskAlarmReceiver.schedule(requireContext());
         if (firstResume) {
             firstResume = false;
             pendingScroll = initialDate;

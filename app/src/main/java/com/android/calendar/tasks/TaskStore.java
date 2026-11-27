@@ -34,7 +34,7 @@ public final class TaskStore extends SQLiteOpenHelper {
 
     private void notifyChanged(boolean alarmsChanged) {
         if (alarmsChanged) TaskAlarmReceiver.schedule(appContext);
-        com.android.calendar.Utils.sendUpdateWidgetIntent(appContext);
+        com.android.calendar.Utils.notifyWidgetDataChanged(appContext);
         appContext.sendBroadcast(new android.content.Intent(ACTION_TASKS_CHANGED)
                 .setPackage(appContext.getPackageName()));
     }
@@ -348,15 +348,20 @@ public final class TaskStore extends SQLiteOpenHelper {
         notifyChanged();
     }
 
-    private static final String ALARMS=" FROM tasks t WHERE t._deleted=0 AND t.status=0 AND t.is_allday=0 AND t.due IS NOT NULL AND t.alarm_fired IS NULL AND EXISTS(SELECT 1 FROM properties p WHERE p.task_id=t._id AND p.mimetype='vnd.android.cursor.item/alarm')";
+    private static final String ALARM_FILTER = " AND t.status=0 AND t.is_allday=0"
+            + " AND t.due IS NOT NULL AND t.alarm_fired IS NULL"
+            + " AND EXISTS(SELECT 1 FROM properties p WHERE p.task_id=t._id AND p.mimetype='vnd.android.cursor.item/alarm')";
+    private static final String ALARMS = " FROM tasks t WHERE t._deleted=0" + ALARM_FILTER;
     public Long nextAlarm() {
         try(Cursor c=getReadableDatabase().rawQuery("SELECT MIN(t.due)"+ALARMS,null)){return c.moveToFirst()&&!c.isNull(0)?c.getLong(0):null;}
     }
     public List<Task> dueAlarms(long now) {
         ArrayList<Task> result=new ArrayList<>();
-        try(Cursor c=getReadableDatabase().rawQuery("SELECT t._id"+ALARMS+" AND t.due<=?",new String[]{Long.toString(now)})){
-            while(c.moveToNext()){Task t=find(c.getLong(0));if(t!=null)result.add(t);}
-        }return result;
+        try (Cursor c = getReadableDatabase().rawQuery(SELECT + ALARM_FILTER
+                + " AND t.due<=? ORDER BY t.due,t._id", new String[]{Long.toString(now)})) {
+            while (c.moveToNext()) result.add(read(c));
+        }
+        return result;
     }
     public void markFired(long id,long due) {
         ContentValues v=new ContentValues();v.put("alarm_fired",due);

@@ -1108,42 +1108,46 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         super.onActivityResult(requestCode, resultCode, data);
     }
 
+    private static final int[] NAVIGATION_ITEMS = {
+            R.id.day_menu_item, R.id.week_menu_item, R.id.month_menu_item,
+            R.id.agenda_menu_item, R.id.reminders_menu_item, R.id.tasks_menu_item
+    };
+    private static final int[] NAVIGATION_VIEWS = {
+            ViewType.DAY, ViewType.WEEK, ViewType.MONTH,
+            ViewType.AGENDA, ViewType.REMINDERS, ViewType.TASKS
+    };
+
+    private static int navigationView(int itemId) {
+        for (int i = 0; i < NAVIGATION_ITEMS.length; i++)
+            if (NAVIGATION_ITEMS[i] == itemId) return NAVIGATION_VIEWS[i];
+        return -1;
+    }
+
+    private void selectNavigationView(int viewType) {
+        int selected = R.id.week_menu_item;
+        for (int i = 0; i < NAVIGATION_VIEWS.length; i++) {
+            if (NAVIGATION_VIEWS[i] == viewType) selected = NAVIGATION_ITEMS[i];
+            mNavigationView.getMenu().findItem(NAVIGATION_ITEMS[i]).setChecked(false);
+        }
+        mNavigationView.getMenu().findItem(selected).setChecked(true);
+    }
+
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
-        final int itemId = item.getItemId();
-        if (itemId == R.id.day_menu_item) {
-            if (mCurrentView != ViewType.DAY) {
-                switchToView(ViewType.DAY);
-            }
-        } else if (itemId == R.id.week_menu_item) {
-            if (mCurrentView != ViewType.WEEK) {
-                switchToView(ViewType.WEEK);
-            }
-        } else if (itemId == R.id.month_menu_item) {
-            if (mCurrentView != ViewType.MONTH) {
-                mController.sendEvent(this, EventType.GO_TO, null, null, -1, ViewType.MONTH);
-            }
-        } else if (itemId == R.id.agenda_menu_item) {
-            if (mCurrentView != ViewType.AGENDA) {
-                switchToView(ViewType.AGENDA);
-            }
-        } else if (itemId == R.id.reminders_menu_item) {
-            if (mCurrentView != ViewType.REMINDERS) {
-                Time today = new Time(mTimeZone);
-                today.set(System.currentTimeMillis());
-                mController.sendEvent(this, EventType.GO_TO, today, today, -1, ViewType.REMINDERS);
-            }
-        } else if (itemId == R.id.tasks_menu_item) {
-            if (mCurrentView != ViewType.TASKS) {
-                Time today = new Time(mTimeZone);
-                today.set(System.currentTimeMillis());
-                mController.sendEvent(this, EventType.GO_TO, today, today, -1, ViewType.TASKS);
+        int itemId = item.getItemId();
+        int view = navigationView(itemId);
+        if (view != -1) {
+            if (mCurrentView != view) {
+                if (isTaskView(view)) {
+                    Time today = new Time(mTimeZone);
+                    today.set(System.currentTimeMillis());
+                    mController.sendEvent(this, EventType.GO_TO, today, today, -1, view);
+                } else switchToView(view);
             }
         } else if (itemId == R.id.action_settings) {
             mController.sendEvent(this, EventType.LAUNCH_SETTINGS, null, null, 0, 0);
         } else if (itemId == R.id.action_about) {
-            Intent intent = new Intent(this, AboutActivity.class);
-            startActivity(intent);
+            startActivity(new Intent(this, AboutActivity.class));
         }
         mDrawerLayout.closeDrawers();
         return true;
@@ -1206,24 +1210,15 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
             updateViewSwitchButtons();
         }
         updateReminderMenuVisibility();
-        // Navigation has two groups; keep a single calendar view checked even
-        // when navigation originates from a gesture or a toolbar button.
-        mNavigationView.getMenu().findItem(R.id.day_menu_item).setChecked(false);
-        mNavigationView.getMenu().findItem(R.id.week_menu_item).setChecked(false);
-        mNavigationView.getMenu().findItem(R.id.month_menu_item).setChecked(false);
-        mNavigationView.getMenu().findItem(R.id.agenda_menu_item).setChecked(false);
-        mNavigationView.getMenu().findItem(R.id.reminders_menu_item).setChecked(false);
-        mNavigationView.getMenu().findItem(R.id.tasks_menu_item).setChecked(false);
+        selectNavigationView(viewType);
         // Create new fragment
         Fragment frag = null;
         Fragment secFrag = null;
         switch (viewType) {
             case ViewType.REMINDERS:
-                mNavigationView.getMenu().findItem(R.id.reminders_menu_item).setChecked(true);
                 frag = new com.android.calendar.tasks.DatedRemindersFragment();
                 break;
             case ViewType.TASKS:
-                mNavigationView.getMenu().findItem(R.id.tasks_menu_item).setChecked(true);
                 frag = new com.android.calendar.tasks.UndatedTasksFragment();
                 if (mIsTabletConfig) {
                     mToolbar.setTitle(R.string.tasks_title);
@@ -1231,7 +1226,6 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
                 }
                 break;
             case ViewType.AGENDA:
-                mNavigationView.getMenu().findItem(R.id.agenda_menu_item).setChecked(true);
                 frag = DatedAgendaFragment.newInstance(timeMillis, mAgendaRestoreState);
                 mAgendaRestoreState = null;
                 if (mIsTabletConfig) {
@@ -1239,14 +1233,12 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
                 }
                 break;
             case ViewType.DAY:
-                mNavigationView.getMenu().findItem(R.id.day_menu_item).setChecked(true);
                 frag = new DayFragment(timeMillis, 1);
                 if (mIsTabletConfig) {
                     mToolbar.setTitle(R.string.day_view);
                 }
                 break;
             case ViewType.MONTH:
-                mNavigationView.getMenu().findItem(R.id.month_menu_item).setChecked(true);
                 frag = new MonthByWeekFragment(timeMillis, false);
                 if (mShowAgendaWithMonth) {
                     secFrag = DatedAgendaFragment.newInstance(timeMillis, null);
@@ -1257,7 +1249,6 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
                 break;
             case ViewType.WEEK:
             default:
-                mNavigationView.getMenu().findItem(R.id.week_menu_item).setChecked(true);
                 frag = new DayFragment(timeMillis, Utils.getDaysPerWeek(this));
                 if (mIsTabletConfig) {
                     mToolbar.setTitle(R.string.week_view);
