@@ -1,6 +1,8 @@
 package com.android.calendar.settings
 
 import android.content.Context
+import android.content.Intent
+import android.provider.Settings
 import android.graphics.PorterDuff
 import android.graphics.drawable.Drawable
 import androidx.core.content.ContextCompat
@@ -54,6 +56,20 @@ internal object SourcePreferences {
                 .setPositiveButton(positiveRes) { _, _ -> onDelete() }
                 .setNegativeButton(negativeRes, null)
                 .show()
+            true
+        }
+    }
+
+    fun notifications(context: Context, channelId: String, summaryRes: Int? = null,
+                      beforeOpen: () -> Unit = {}) = Preference(context).apply {
+        setTitle(R.string.preferences_manage_notifications)
+        summaryRes?.let { setSummary(it) }
+        setOnPreferenceClickListener {
+            beforeOpen()
+            context.startActivity(Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).apply {
+                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                putExtra(Settings.EXTRA_CHANNEL_ID, channelId)
+            })
             true
         }
     }

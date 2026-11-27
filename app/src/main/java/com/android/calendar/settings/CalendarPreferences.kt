@@ -148,16 +148,7 @@ class CalendarPreferences : PreferenceFragmentCompat(), com.android.calendar.col
 
         screen.addPreference(visiblePreference)
 
-        if(Utils.isOreoOrLater()){
-            val notificationPreference = Preference(context).apply {
-                title = getString(R.string.preferences_manage_notifications)
-                intent = Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).apply {
-                    putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                    putExtra(Settings.EXTRA_CHANNEL_ID, channelId(this@CalendarPreferences.calendarId))
-                }
-            }
-            screen.addPreference(notificationPreference)
-        }
+        screen.addPreference(SourcePreferences.notifications(context, channelId(calendarId)))
 
         screen.addPreference(colorPreference)
         if (isLocalAccount) {

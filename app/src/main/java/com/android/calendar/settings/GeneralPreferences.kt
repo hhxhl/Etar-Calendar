@@ -141,9 +141,8 @@ class GeneralPreferences : PreferenceFragmentCompat(),
                 System.currentTimeMillis(), false)
         homeTzPref.summary = timezoneName ?: timeZoneId
 
-        val tzpd = requireActivity().supportFragmentManager
-                .findFragmentByTag(FRAG_TAG_TIME_ZONE_PICKER) as TimeZonePickerDialog?
-        tzpd?.setOnTimeZoneSetListener(this)
+        com.android.calendar.ItemDateTimePickers.restoreZone(requireActivity().supportFragmentManager,
+                FRAG_TAG_TIME_ZONE_PICKER, this)
 
     }
 
@@ -152,19 +151,9 @@ class GeneralPreferences : PreferenceFragmentCompat(),
     }
 
     private fun showTimezoneDialog() {
-        val arguments = Bundle().apply {
-            putLong(TimeZonePickerDialog.BUNDLE_START_TIME_MILLIS, System.currentTimeMillis())
-            putString(TimeZonePickerDialog.BUNDLE_TIME_ZONE, timeZoneId ?: Utils.getTimeZone(activity, null))
-        }
-
-        val fm = requireActivity().supportFragmentManager
-        var tzpd: TimeZonePickerDialog? = fm.findFragmentByTag(FRAG_TAG_TIME_ZONE_PICKER) as TimeZonePickerDialog?
-        tzpd?.dismiss()
-
-        tzpd = TimeZonePickerDialog()
-        tzpd.arguments = arguments
-        tzpd.setOnTimeZoneSetListener(this)
-        tzpd.show(fm, FRAG_TAG_TIME_ZONE_PICKER)
+        com.android.calendar.ItemDateTimePickers.showZone(requireActivity().supportFragmentManager,
+                FRAG_TAG_TIME_ZONE_PICKER, System.currentTimeMillis(),
+                timeZoneId ?: Utils.getTimeZone(activity, null), this)
     }
 
     override fun onStart() {

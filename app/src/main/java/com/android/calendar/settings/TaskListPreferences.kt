@@ -1,9 +1,6 @@
 package com.android.calendar.settings
 
-import android.content.Intent
-import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import com.android.calendar.colorpicker.ColorPickerDialog
@@ -53,20 +50,10 @@ class TaskListPreferences : PreferenceFragmentCompat(), OnColorSelectedListener 
             }
         })
 
-        if (Build.VERSION.SDK_INT >= 26) {
-            screen.addPreference(Preference(context).apply {
-                title = getString(R.string.preferences_manage_notifications)
-                summary = getString(R.string.tasks_list_notifications_shared)
-                setOnPreferenceClickListener {
-                    TaskAlarmReceiver.ensureChannel(requireContext())
-                    startActivity(Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).apply {
-                        putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                        putExtra(Settings.EXTRA_CHANNEL_ID, TaskAlarmReceiver.CHANNEL)
-                    })
-                    true
-                }
-            })
-        }
+        screen.addPreference(SourcePreferences.notifications(context, TaskAlarmReceiver.CHANNEL,
+                R.string.tasks_list_notifications_shared) {
+            TaskAlarmReceiver.ensureChannel(requireContext())
+        })
 
         screen.addPreference(SourcePreferences.color(context, COLOR_KEY, displayColor(list), ::showColorPicker))
         screen.addPreference(SourcePreferences.name(context, "task_list_name").apply {
