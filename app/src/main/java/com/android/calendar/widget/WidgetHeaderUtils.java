@@ -6,7 +6,6 @@ import android.app.PendingIntent;
 import android.view.View;
 import android.widget.RemoteViews;
 import java.time.ZoneId;
-import android.os.Build;
 
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.ColorUtils;
@@ -31,11 +30,8 @@ final class WidgetHeaderUtils {
 
     static int accentColor(Context context) {
         boolean dark = ColorUtils.calculateLuminance(background(context)) < 0.5;
-        if (Build.VERSION.SDK_INT >= 31) {
-            return ContextCompat.getColor(context, dark ? R.color.etar_primary_dark
-                    : R.color.etar_primary_light);
-        }
-        return ContextCompat.getColor(context, R.color.colorPrimaryDark);
+        return ContextCompat.getColor(context, dark ? R.color.etar_primary_dark
+                : R.color.etar_primary_light);
     }
 
     static int secondaryColor(Context context) {

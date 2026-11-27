@@ -134,13 +134,6 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
     private static final int PERMISSIONS_REQUEST_WRITE_CALENDAR = 0;
     private static final int PERMISSIONS_REQUEST_POST_NOTIFICATIONS = 1;
 
-    // Indices of buttons for the drop down menu (tabs replacement)
-    // Must match the strings in the array buttons_list in arrays.xml and the
-    // OnNavigationListener
-    private static final int BUTTON_DAY_INDEX = 0;
-    private static final int BUTTON_WEEK_INDEX = 1;
-    private static final int BUTTON_MONTH_INDEX = 2;
-    private static final int BUTTON_AGENDA_INDEX = 3;
     private static boolean mIsMultipane;
     private static boolean mIsTabletConfig;
     private static boolean mShowAgendaWithMonth;

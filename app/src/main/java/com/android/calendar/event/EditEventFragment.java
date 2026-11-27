@@ -35,7 +35,6 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.provider.CalendarContract.Attendees;
 import android.provider.CalendarContract.Calendars;
@@ -1012,13 +1011,8 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
                     final String selection;
                     final String[] selectionArgs;
                     final boolean isRecurring = mModel.hasRecurrence();
-                    if (isRecurring && Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-                        // recurring event AND api level < 30. disable changing calendars as moving
-                        // recurrences is currently only possible for api level 30+
-                        selection = EditEventHelper.CALENDARS_WHERE;
-                        selectionArgs = new String[] { Long.toString(mModel.mCalendarId) };
-                    } else if (isRecurring) {
-                        // recurring event AND api level >= 30. enable changing calendars to synced
+                    if (isRecurring) {
+                        // Enable changing calendars to synced
                         // calendars only, as we currently don't allow recurrence exceptions in local calendars
                         // and would lose them when moving the recurrence between calendars
                         selection = EditEventHelper.CALENDARS_SELECTION_FOR_MOVING_RECURRENCE;

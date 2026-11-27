@@ -306,21 +306,19 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
                 WidgetUtils.applyWidgetBackground(context, views, R.id.widget_background, appWidgetId);
             }
             if (full) {
-                if (android.os.Build.VERSION.SDK_INT >= 31) {
-                    android.os.Bundle options = appWidgetManager.getAppWidgetOptions(appWidgetId);
-                    boolean landscape = context.getResources().getConfiguration().orientation
-                            == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
-                    int width = options.getInt(landscape ? AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH
-                            : AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH);
-                    int height = options.getInt(landscape ? AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT
-                            : AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT);
-                    // Keep the visible surface square for compact, near-square launcher cells.
-                    // Deliberately taller or wider layouts keep their available space.
-                    boolean compactSquare = width > 0 && width <= 200 && height >= width
-                            && height <= width * 1.4f;
-                    views.setViewLayoutHeight(R.id.widget_background, compactSquare ? width : -1,
-                            android.util.TypedValue.COMPLEX_UNIT_DIP);
-                }
+                android.os.Bundle options = appWidgetManager.getAppWidgetOptions(appWidgetId);
+                boolean landscape = context.getResources().getConfiguration().orientation
+                        == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+                int width = options.getInt(landscape ? AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH
+                        : AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH);
+                int height = options.getInt(landscape ? AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT
+                        : AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT);
+                // Keep the visible surface square for compact, near-square launcher cells.
+                // Deliberately taller or wider layouts keep their available space.
+                boolean compactSquare = width > 0 && width <= 200 && height >= width
+                        && height <= width * 1.4f;
+                views.setViewLayoutHeight(R.id.widget_background, compactSquare ? width : -1,
+                        android.util.TypedValue.COMPLEX_UNIT_DIP);
 
 
                 Intent updateIntent = new Intent(context, CalendarAppWidgetService.class);
