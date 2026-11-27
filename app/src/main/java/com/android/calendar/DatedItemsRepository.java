@@ -99,7 +99,7 @@ public final class DatedItemsRepository {
 
     public static List<Item<TaskStore.Task>> reminders(TaskStore store, long listId, ZoneId zone) {
         ArrayList<Item<TaskStore.Task>> items = new ArrayList<>();
-        for (TaskStore.Task task : store.visibleTasks(listId)) {
+        for (TaskStore.Task task : store.visibleReminders(listId)) {
             if (task.due == null) continue;
             LocalDate date = Instant.ofEpochMilli(task.due)
                     .atZone(task.allDay ? ZoneOffset.UTC : zone).toLocalDate();

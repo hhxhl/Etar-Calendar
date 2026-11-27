@@ -23,7 +23,6 @@ import com.android.calendar.timezonepicker.TimeZonePickerDialog;
 import com.android.calendar.timezonepicker.TimeZonePickerUtils;
 import com.google.android.material.datepicker.MaterialDatePicker;
 import com.google.android.material.timepicker.MaterialTimePicker;
-import com.google.android.material.timepicker.TimeFormat;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import ws.xsoh.etar.databinding.SimpleFrameLayoutMaterialBinding;
 import android.widget.ArrayAdapter;
@@ -58,6 +57,28 @@ public final class TaskListActivity extends AppCompatActivity {
     private Bundle restoredDraft;
     private java.util.function.Supplier<Bundle> captureDraft;
     private Runnable saveEditor, deleteEditor;
+    private Bundle initialDraft;
+
+    private void discardOrFinish() {
+        if (captureDraft == null || initialDraft == null
+                || sameDraft(initialDraft, captureDraft.get())) {
+            finish();
+            return;
+        }
+        new MaterialAlertDialogBuilder(this)
+                .setMessage(R.string.discard_event_changes)
+                .setPositiveButton(R.string.discard, (dialog, which) -> finish())
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private static boolean sameDraft(Bundle first, Bundle second) {
+        if (!first.keySet().equals(second.keySet())) return false;
+        for (String key : first.keySet()) {
+            if (!java.util.Objects.equals(first.get(key), second.get(key))) return false;
+        }
+        return true;
+    }
     private static final String COLOR_PICKER = "TaskItemColorPicker";
     private static final String DATE_PICKER = "TaskDatePicker", TIME_PICKER = "TaskTimePicker", ZONE_PICKER = "TaskZonePicker";
     private static final String[] RULES={null,"FREQ=DAILY","FREQ=WEEKLY","FREQ=MONTHLY","FREQ=YEARLY"};
@@ -76,6 +97,7 @@ public final class TaskListActivity extends AppCompatActivity {
             waitingForPermissionSettings=state.getBoolean("waiting_for_permission_settings");
             restoredPermissionFlow=finishAfterPermission || waitingForPermissionSettings;
             restoredDraft=state.getBundle("editor_draft");
+            initialDraft=state.getBundle("initial_editor_draft");
         }
         if(editorOnly){
             if(finishAfterPermission||waitingForPermissionSettings)return;
@@ -129,6 +151,7 @@ public final class TaskListActivity extends AppCompatActivity {
         state.putBoolean("finish_after_permission", finishAfterPermission);
         state.putBoolean("waiting_for_permission_settings", waitingForPermissionSettings);
         if (captureDraft != null) state.putBundle("editor_draft", captureDraft.get());
+        if (initialDraft != null) state.putBundle("initial_editor_draft", initialDraft);
         super.onSaveInstanceState(state);
     }
 
@@ -187,7 +210,7 @@ public final class TaskListActivity extends AppCompatActivity {
         int id = item.getItemId();
         if (saveEditor != null && id == R.id.action_done) { saveEditor.run(); return true; }
         if (saveEditor != null && (id == R.id.action_cancel || id == android.R.id.home)) {
-            finish(); return true;
+            discardOrFinish(); return true;
         }
         if (deleteEditor != null && id == R.id.info_action_delete) { deleteEditor.run(); return true; }
         return super.onOptionsItemSelected(item);
@@ -380,6 +403,25 @@ public final class TaskListActivity extends AppCompatActivity {
                 R.id.timezone_button, R.id.view2, R.id.rrule_icon, R.id.rrule,
                 R.id.event_countdown, R.id.view4, R.id.reminder_icon, R.id.reminder_items_container, R.id.view5);
 
+        // Capture the original form before restoring changes from a recreated Activity.
+        if (initialDraft == null) {
+            initialDraft = new Bundle();
+            initialDraft.putString("title", title.getText().toString());
+            initialDraft.putString("notes", notes.getText().toString());
+            initialDraft.putString("url", url.getText().toString());
+            initialDraft.putInt("item_color", itemColor[0]);
+            initialDraft.putBoolean("countdown", countdown.isChecked());
+            initialDraft.putBoolean("complete", completed.isChecked());
+            initialDraft.putLong("list_id", available.get(Math.max(0, list.getSelectedItemPosition())).id);
+            initialDraft.putBoolean("has_time", reminder && !allDay.isChecked());
+            initialDraft.putLong("date", date[0].toEpochDay());
+            initialDraft.putLong("time", time[0].toSecondOfDay());
+            initialDraft.putString("zone", zone[0].getId());
+            initialDraft.putBoolean("alarm", alarm.isChecked());
+            initialDraft.putInt("repeat", repeatIndex[0]);
+            initialDraft.putInt("priority", priority.getSelectedItemPosition());
+        }
+
         // Restore only the draft, not the original baseline used for detecting schedule edits.
         if (restoredDraft != null) {
             Bundle draft = restoredDraft;
@@ -415,9 +457,8 @@ public final class TaskListActivity extends AppCompatActivity {
         };
         dateButton.setOnClickListener(v -> {
             if (getSupportFragmentManager().findFragmentByTag(DATE_PICKER) != null) return;
-            MaterialDatePicker<Long> picker = MaterialDatePicker.Builder.datePicker()
-                    .setSelection(date[0].atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli())
-                    .setTitleText(R.string.goto_date).build();
+            MaterialDatePicker<Long> picker = com.android.calendar.ItemDateTimePickers.date(this,
+                    date[0].atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli());
             bindDate.accept(picker);
             picker.show(getSupportFragmentManager(), DATE_PICKER);
         });
@@ -436,11 +477,8 @@ public final class TaskListActivity extends AppCompatActivity {
         };
         timeButton.setOnClickListener(v -> {
             if (getSupportFragmentManager().findFragmentByTag(TIME_PICKER) != null) return;
-            MaterialTimePicker picker = new MaterialTimePicker.Builder()
-                    .setHour(time[0].getHour()).setMinute(time[0].getMinute())
-                    .setTimeFormat(android.text.format.DateFormat.is24HourFormat(this)
-                            ? TimeFormat.CLOCK_24H : TimeFormat.CLOCK_12H)
-                    .setInputMode(MaterialTimePicker.INPUT_MODE_CLOCK).build();
+            MaterialTimePicker picker = com.android.calendar.ItemDateTimePickers.time(
+                    this, time[0].getHour(), time[0].getMinute());
             bindTime.accept(picker);
             picker.show(getSupportFragmentManager(), TIME_PICKER);
         });
@@ -536,6 +574,9 @@ public final class TaskListActivity extends AppCompatActivity {
             deleteEditor = null;
             if (finishAfterPermission) checkAlarmPermissions(); else finish();
         };
+        getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
+            @Override public void handleOnBackPressed() { discardOrFinish(); }
+        });
         invalidateOptionsMenu();
     }
 

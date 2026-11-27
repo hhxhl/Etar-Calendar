@@ -49,7 +49,7 @@ import kotlinx.coroutines.withContext
 import ws.xsoh.etar.R
 
 
-class CalendarPreferences : PreferenceFragmentCompat() {
+class CalendarPreferences : PreferenceFragmentCompat(), com.android.calendar.colorpicker.ColorPickerSwatch.OnColorSelectedListener {
 
     private var calendarId: Long = -1
     private lateinit var calendarRepository: ICalendarRepository
@@ -227,12 +227,15 @@ class CalendarPreferences : PreferenceFragmentCompat() {
         val isTablet = Utils.getConfigBool(context, R.bool.tablet_config)
         val calendarDialogPicker = CalendarColorPickerDialogX.newInstance(calendarId, isTablet,
                 object : CalendarColorPickerDialogX.OnCalendarColorSelectedListener {
-                    override fun onColorSelected(color: Int) {
-                        val colorPref = findPreference<Preference>(COLOR_KEY)!!
-                        colorPref.icon = getColorIcon(color)
-                    }
+                    override fun onColorSelected(color: Int) { /* Delivered by target fragment. */ }
                 })
-        calendarDialogPicker.show(parentFragmentManager, COLOR_PICKER_DIALOG_TAG)
+        @Suppress("DEPRECATION")
+        calendarDialogPicker.setTargetFragment(this, 0)
+        calendarDialogPicker.showOnce(parentFragmentManager, COLOR_PICKER_DIALOG_TAG)
+    }
+
+    override fun onColorSelected(color: Int) {
+        findPreference<Preference>(COLOR_KEY)?.icon = getColorIcon(color)
     }
 
     data class AuthenticatorInfo(val label: String?,

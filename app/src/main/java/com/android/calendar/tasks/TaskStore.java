@@ -161,15 +161,22 @@ public final class TaskStore extends SQLiteOpenHelper {
         return t;
     }
     public List<Task> tasks(long listId) {
-        return queryTasks(listId, false);
+        return queryTasks(listId, false, null);
     }
     public List<Task> visibleTasks(long listId) {
-        return queryTasks(listId, true);
+        return queryTasks(listId, true, null);
     }
-    private List<Task> queryTasks(long listId, boolean visibleOnly) {
+    public List<Task> visibleReminders(long listId) {
+        return queryTasks(listId, true, true);
+    }
+    public List<Task> visibleUndatedTasks(long listId) {
+        return queryTasks(listId, true, false);
+    }
+    private List<Task> queryTasks(long listId, boolean visibleOnly, Boolean dated) {
         ArrayList<Task> result=new ArrayList<>();
         String filter=listId==0?"":" AND t.list_id=?";
         if (visibleOnly) filter += " AND EXISTS(SELECT 1 FROM tasklists l WHERE l._id=t.list_id AND l.visible=1)";
+        if (dated != null) filter += dated ? " AND t.due IS NOT NULL" : " AND t.due IS NULL";
         try(Cursor c=getReadableDatabase().rawQuery(SELECT+filter+" ORDER BY t.status=2,t.due IS NULL,t.due,t._id",listId==0?null:new String[]{Long.toString(listId)})) {
             while(c.moveToNext()) result.add(read(c));
         }

@@ -110,7 +110,7 @@ public final class UndatedTasksFragment extends Fragment implements CalendarCont
         if (rows == null || !isAdded()) return;
         Context context = requireContext();
         rows.removeAllViews();
-        for (TaskStore.Task task : store.visibleTasks(listId)) {
+        for (TaskStore.Task task : store.visibleUndatedTasks(listId)) {
             if (task.due != null) continue;
             LinearLayout row = new LinearLayout(context);
             row.setGravity(Gravity.CENTER_VERTICAL);

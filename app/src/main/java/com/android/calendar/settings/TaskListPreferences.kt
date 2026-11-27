@@ -11,10 +11,8 @@ import androidx.preference.EditTextPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceFragmentCompat
-import com.android.calendar.Utils
 import com.android.calendar.colorpicker.ColorPickerDialog
 import com.android.calendar.colorpicker.ColorPickerSwatch.OnColorSelectedListener
-import com.android.calendar.colorpicker.HsvColorComparator
 import com.android.calendar.tasks.TaskAlarmReceiver
 import com.android.calendar.tasks.TaskStore
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -151,16 +149,14 @@ class TaskListPreferences : PreferenceFragmentCompat(), OnColorSelectedListener 
     private fun showColorPicker() {
         if (parentFragmentManager.findFragmentByTag(COLOR_DIALOG_TAG) != null) return
         val list = store.findList(listId) ?: return
-        val colors = resources.getIntArray(R.array.defaultCalendarColors)
-                .toTypedArray().sortedWith(HsvColorComparator()).toIntArray()
-        val size = if (Utils.getConfigBool(context, R.bool.tablet_config))
-            ColorPickerDialog.SIZE_LARGE else ColorPickerDialog.SIZE_SMALL
+        val colors = ColorPickerDialog.defaultColors(requireContext(), displayColor(list))
+        val size = ColorPickerDialog.paletteSize(requireContext())
         // Resolve the manager from the attached preference fragment, not the
         // new dialog (which has not been added to a FragmentManager yet).
         val picker = ColorPickerDialog.newInstance(R.string.calendar_color_picker_dialog_title,
                 colors, displayColor(list), 4, size)
         picker.setTargetFragment(this, 0)
-        picker.show(parentFragmentManager, COLOR_DIALOG_TAG)
+        picker.showOnce(parentFragmentManager, COLOR_DIALOG_TAG)
     }
 
     override fun onColorSelected(color: Int) {

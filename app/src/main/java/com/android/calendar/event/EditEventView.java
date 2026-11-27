@@ -90,13 +90,11 @@ import com.android.calendar.timezonepicker.TimeZoneInfo;
 import com.android.calendar.timezonepicker.TimeZonePickerDialog;
 import com.android.calendar.timezonepicker.TimeZonePickerUtils;
 
-import com.google.android.material.datepicker.CalendarConstraints;
 import com.google.android.material.datepicker.MaterialDatePicker;
 import com.google.android.material.datepicker.MaterialPickerOnPositiveButtonClickListener;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.timepicker.MaterialTimePicker;
-import com.google.android.material.timepicker.TimeFormat;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1731,14 +1729,10 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
     }
 
     public void showTimerPickerDialog(View view) {
-        int timeFormat = DateFormat.is24HourFormat(mActivity) ? TimeFormat.CLOCK_24H : TimeFormat.CLOCK_12H;
-
-        MaterialTimePicker materialTimePicker = new MaterialTimePicker.Builder()
-                .setHour((view == mStartTimeButton) ? mStartTime.getHour() : mEndTime.getHour())
-                .setMinute((view == mStartTimeButton) ? mStartTime.getMinute() : mEndTime.getMinute())
-                .setTimeFormat(timeFormat)
-                .setInputMode(MaterialTimePicker.INPUT_MODE_CLOCK)
-                .build();
+        MaterialTimePicker materialTimePicker = com.android.calendar.ItemDateTimePickers.time(
+                mActivity,
+                (view == mStartTimeButton) ? mStartTime.getHour() : mEndTime.getHour(),
+                (view == mStartTimeButton) ? mStartTime.getMinute() : mEndTime.getMinute());
 
         materialTimePicker.addOnPositiveButtonClickListener((dialog) -> {
             onTimeSet(view, materialTimePicker.getHour(), materialTimePicker.getMinute());
@@ -1800,22 +1794,16 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
             onDateSet(view, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH));
         };
 
-        CalendarConstraints calendarConstraints = new CalendarConstraints.Builder()
-                .setFirstDayOfWeek(Utils.getFirstDayOfWeekAsCalendar(mActivity))
-                .build();
-
         Calendar calPickTime = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+        calPickTime.clear();
         if (view == mStartDateButton) {
             calPickTime.set(mStartTime.getYear(), mStartTime.getMonth(), mStartTime.getDay());
         } else {
             calPickTime.set(mEndTime.getYear(), mEndTime.getMonth(), mEndTime.getDay());
         }
 
-        MaterialDatePicker<Long> datePickerDialog = MaterialDatePicker.Builder.datePicker()
-                .setSelection(calPickTime.getTimeInMillis())
-                .setCalendarConstraints(calendarConstraints)
-                .setTitleText(R.string.goto_date)
-                .build();
+        MaterialDatePicker<Long> datePickerDialog = com.android.calendar.ItemDateTimePickers.date(
+                mActivity, calPickTime.getTimeInMillis());
 
         datePickerDialog.addOnPositiveButtonClickListener(materialPickerOnPositiveButtonClickListener);
         datePickerDialog.show(mActivity.getSupportFragmentManager(), "DatePicker");

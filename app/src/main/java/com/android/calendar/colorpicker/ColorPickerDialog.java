@@ -18,6 +18,10 @@ package com.android.calendar.colorpicker;
 
 import android.app.Activity;
 import android.app.Dialog;
+import android.content.Context;
+import androidx.fragment.app.FragmentManager;
+import com.android.calendar.Utils;
+import java.util.Arrays;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -70,6 +74,29 @@ public class ColorPickerDialog extends DialogFragment implements OnColorSelected
         ColorPickerDialog ret = new ColorPickerDialog();
         ret.initialize(titleResId, colors, selectedColor, columns, size);
         return ret;
+    }
+
+    public static int[] sortedColors(int[] colors) {
+        Integer[] boxed = Arrays.stream(colors).boxed().toArray(Integer[]::new);
+        Arrays.sort(boxed, new HsvColorComparator());
+        return Arrays.stream(boxed).mapToInt(Integer::intValue).toArray();
+    }
+
+    public static int[] defaultColors(Context context, int selectedColor) {
+        int[] colors = context.getResources().getIntArray(R.array.defaultCalendarColors);
+        if (selectedColor != 0 && Arrays.stream(colors).noneMatch(c -> c == selectedColor)) {
+            colors = Arrays.copyOf(colors, colors.length + 1);
+            colors[colors.length - 1] = selectedColor;
+        }
+        return sortedColors(colors);
+    }
+
+    public static int paletteSize(Context context) {
+        return Utils.getConfigBool(context, R.bool.tablet_config) ? SIZE_LARGE : SIZE_SMALL;
+    }
+
+    public void showOnce(FragmentManager manager, String tag) {
+        if (!manager.isStateSaved() && manager.findFragmentByTag(tag) == null) showNow(manager, tag);
     }
 
     public void initialize(int titleResId, int[] colors, int selectedColor, int columns, int size) {
