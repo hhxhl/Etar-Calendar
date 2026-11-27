@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
+import ws.xsoh.etar.R;
 import android.view.View;
 import android.widget.RemoteViews;
 import androidx.core.graphics.ColorUtils;
@@ -43,21 +44,24 @@ public final class ItemAppearance {
     }
 
     public static void apply(View view, int foreground) {
-        GradientDrawable drawable = new GradientDrawable();
+        GradientDrawable drawable = (GradientDrawable) view.getContext()
+                .getDrawable(R.drawable.item_rounded_surface).mutate();
         drawable.setColor(background(foreground));
-        drawable.setCornerRadius(radius(view.getContext()));
         view.setBackground(drawable);
     }
 
     public static void widgetBackground(Context context, RemoteViews views, int backgroundId, int displayColor) {
+        // Tint the opaque source first, then apply exactly the same alpha used
+        // by the canvas and list backgrounds. SRC_IN is declared in each layout.
         if (com.android.calendar.widget.WidgetUtils.usesLiveTheme(context)) {
             views.setColorStateList(backgroundId, "setImageTintList",
-                    ColorStateList.valueOf(background(foreground(displayColor, false))),
-                    ColorStateList.valueOf(background(foreground(displayColor, true))));
+                    ColorStateList.valueOf(foreground(displayColor, false)),
+                    ColorStateList.valueOf(foreground(displayColor, true)));
         } else {
             views.setColorStateList(backgroundId, "setImageTintList",
-                    ColorStateList.valueOf(background(foreground(context, displayColor))));
+                    ColorStateList.valueOf(foreground(context, displayColor)));
         }
+        views.setInt(backgroundId, "setImageAlpha", BACKGROUND_ALPHA);
     }
 
     public static void widgetText(Context context, RemoteViews views, int id, int displayColor) {

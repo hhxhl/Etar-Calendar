@@ -59,7 +59,9 @@
                 android:layout_height="match_parent"
                 android:scaleType="fitXY"
                 android:src="@drawable/item_rounded_surface"
-                android:tint="#00FFFFFF" />
+                android:tint="#FFFFFFFF"
+                android:tintMode="src_in"
+                android:alpha="1" />
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -108,7 +110,9 @@
                 android:layout_height="match_parent"
                 android:scaleType="fitXY"
                 android:src="@drawable/item_rounded_surface"
-                android:tint="#00FFFFFF" />
+                android:tint="#FFFFFFFF"
+                android:tintMode="src_in"
+                android:alpha="1" />
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -157,7 +161,9 @@
                 android:layout_height="match_parent"
                 android:scaleType="fitXY"
                 android:src="@drawable/item_rounded_surface"
-                android:tint="#00FFFFFF" />
+                android:tint="#FFFFFFFF"
+                android:tintMode="src_in"
+                android:alpha="1" />
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -206,7 +212,9 @@
                 android:layout_height="match_parent"
                 android:scaleType="fitXY"
                 android:src="@drawable/item_rounded_surface"
-                android:tint="#00FFFFFF" />
+                android:tint="#FFFFFFFF"
+                android:tintMode="src_in"
+                android:alpha="1" />
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -255,7 +263,9 @@
                 android:layout_height="match_parent"
                 android:scaleType="fitXY"
                 android:src="@drawable/item_rounded_surface"
-                android:tint="#00FFFFFF" />
+                android:tint="#FFFFFFFF"
+                android:tintMode="src_in"
+                android:alpha="1" />
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
