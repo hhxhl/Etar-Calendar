@@ -57,4 +57,11 @@
     <string name="agenda_all_calendars">全部日历</string>
     <string name="agenda_no_events_in_range">此日期范围内没有日程</string>
     <string name="agenda_load_failed">无法加载日程</string>
+    <string name="tasks_add_offline_list">添加离线列表</string>
+    <string name="tasks_add_caldav_list">添加 CalDAV 列表</string>
+    <string name="tasks_offline_lists">离线列表</string>
+    <string name="tasks_edit_list">编辑列表</string>
+    <string name="tasks_add_list_button">添加列表</string>
+    <string name="tasks_offline_list_message">离线列表不会同步到云服务，只能在手机上使用。</string>
+    <string name="tasks_caldav_list_unavailable">暂未实现 CalDAV 列表同步。</string>
 </resources>

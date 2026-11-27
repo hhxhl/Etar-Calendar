@@ -31,6 +31,8 @@ import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceScreen
 import com.android.calendar.persistence.Calendar
+import com.android.calendar.tasks.TaskStore
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import ws.xsoh.etar.R
 
 
@@ -52,6 +54,8 @@ class MainListPreferences : PreferenceFragmentCompat() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         activity?.title = getString(R.string.preferences_title)
+        parentFragmentManager.setFragmentResultListener(AddOfflineCalendarDialogFragment.TASK_LIST_CHANGED,
+                viewLifecycleOwner) { _, _ -> updateTaskListPreferences(preferenceScreen) }
 
         val factory = MainListViewModelFactory(requireActivity().application)
         mainListViewModel = ViewModelProvider(this, factory).get(MainListViewModel::class.java)
@@ -185,11 +189,55 @@ class MainListPreferences : PreferenceFragmentCompat() {
         screen.addPreference(addEtesyncPreference)
         screen.addPreference(addOfflinePreference)
         screen.addPreference(Preference(requireContext()).apply {
-            title = getString(R.string.tasks_manage_lists)
-            icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_task_outline)
-            intent = Intent(requireContext(), com.android.calendar.tasks.TaskListActivity::class.java)
-                    .putExtra("manage_lists", true)
+            title = getString(R.string.tasks_add_offline_list)
+            icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_add)
+            setOnPreferenceClickListener {
+                AddOfflineCalendarDialogFragment.forTaskList().show(parentFragmentManager, "addOfflineList")
+                true
+            }
         })
+        screen.addPreference(Preference(requireContext()).apply {
+            title = getString(R.string.tasks_add_caldav_list)
+            icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_add)
+            setOnPreferenceClickListener {
+                MaterialAlertDialogBuilder(requireContext())
+                        .setTitle(R.string.tasks_add_caldav_list)
+                        .setMessage(R.string.tasks_caldav_list_unavailable)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show()
+                true
+            }
+        })
+        updateTaskListPreferences(screen)
+    }
+
+    private fun updateTaskListPreferences(screen: PreferenceScreen) {
+        val categoryKey = "offline_task_lists"
+        val old = screen.findPreference<PreferenceCategory>(categoryKey)
+        if (old != null) screen.removePreference(old)
+        val category = PreferenceCategory(requireContext()).apply {
+            key = categoryKey
+            title = getString(R.string.tasks_offline_lists)
+            icon = ContextCompat.getDrawable(requireContext(), R.drawable.outline_account_circle)
+            order = 12
+            isOrderingAsAdded = false
+        }
+        val store = TaskStore.get(requireContext())
+        for (list in store.lists()) {
+            category.addPreference(Preference(requireContext()).apply {
+                key = "task_list_${list.id}"
+                title = list.name.ifBlank { getString(R.string.tasks_default_list) }
+                icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_task_outline)?.mutate()?.apply {
+                    if (list.color != 0) setColorFilter(list.color, Mode.SRC_IN)
+                }
+                setOnPreferenceClickListener {
+                    AddOfflineCalendarDialogFragment.forTaskList(list.id)
+                            .show(parentFragmentManager, "editOfflineList")
+                    true
+                }
+            })
+        }
+        if (category.preferenceCount > 0) screen.addPreference(category)
     }
 
     private fun addOfflineCalendar() {

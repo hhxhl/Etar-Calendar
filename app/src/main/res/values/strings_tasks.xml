@@ -57,4 +57,11 @@
     <string name="agenda_all_calendars">All calendars</string>
     <string name="agenda_no_events_in_range">No events in this date range</string>
     <string name="agenda_load_failed">Could not load events</string>
+    <string name="tasks_add_offline_list">Add offline list</string>
+    <string name="tasks_add_caldav_list">Add CalDAV list</string>
+    <string name="tasks_offline_lists">Offline lists</string>
+    <string name="tasks_edit_list">Edit list</string>
+    <string name="tasks_add_list_button">Add list</string>
+    <string name="tasks_offline_list_message">Offline lists are not synchronized to a cloud service and are only available on your phone.</string>
+    <string name="tasks_caldav_list_unavailable">CalDAV list synchronization is not implemented yet.</string>
 </resources>
