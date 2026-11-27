@@ -1,21 +1,15 @@
 package com.android.calendar.settings
 
 import android.content.Intent
-import android.graphics.PorterDuff
-import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import androidx.core.content.ContextCompat
-import androidx.preference.EditTextPreference
 import androidx.preference.Preference
-import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceFragmentCompat
 import com.android.calendar.colorpicker.ColorPickerDialog
 import com.android.calendar.colorpicker.ColorPickerSwatch.OnColorSelectedListener
 import com.android.calendar.tasks.TaskAlarmReceiver
 import com.android.calendar.tasks.TaskStore
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import ws.xsoh.etar.R
 
 /** Offline reminder/task list settings. Uses the existing task store and preference UI. */
@@ -44,20 +38,13 @@ class TaskListPreferences : PreferenceFragmentCompat(), OnColorSelectedListener 
     private fun displayColor(list: TaskStore.TaskList): Int =
         if (list.color == 0) requireContext().getColor(R.color.event_center) else list.color
 
-    private fun colorIcon(color: Int): Drawable =
-        ContextCompat.getDrawable(requireContext(), R.drawable.circle)!!.mutate().apply {
-            setColorFilter(color, PorterDuff.Mode.SRC_IN)
-        }
-
     private fun populate() {
         val context = preferenceManager.context
         val screen = preferenceManager.createPreferenceScreen(context)
         preferenceScreen = screen
         val list = store.findList(listId) ?: return
 
-        screen.addPreference(MaterialSwitchPreference(context).apply {
-            key = "task_list_visible"
-            title = getString(R.string.tasks_list_visible)
+        screen.addPreference(SourcePreferences.visibility(context, "task_list_visible", R.string.tasks_list_visible).apply {
             isPersistent = false
             isChecked = list.visible
             setOnPreferenceChangeListener { _, value ->
@@ -81,19 +68,8 @@ class TaskListPreferences : PreferenceFragmentCompat(), OnColorSelectedListener 
             })
         }
 
-        screen.addPreference(Preference(context).apply {
-            key = COLOR_KEY
-            title = getString(R.string.preferences_calendar_color)
-            icon = colorIcon(displayColor(list))
-            setOnPreferenceClickListener {
-                showColorPicker()
-                true
-            }
-        })
-        screen.addPreference(EditTextPreference(context).apply {
-            key = "task_list_name"
-            title = getString(R.string.preferences_calendar_display_name)
-            dialogTitle = title
+        screen.addPreference(SourcePreferences.color(context, COLOR_KEY, displayColor(list), ::showColorPicker))
+        screen.addPreference(SourcePreferences.name(context, "task_list_name").apply {
             isPersistent = false
             text = displayName(list)
             setOnPreferenceChangeListener { _, value ->
@@ -110,34 +86,20 @@ class TaskListPreferences : PreferenceFragmentCompat(), OnColorSelectedListener 
             }
         })
         if (listId != 1L) {
-            screen.addPreference(Preference(context).apply {
-                title = getString(R.string.tasks_delete_list)
-                setOnPreferenceClickListener {
-                    MaterialAlertDialogBuilder(requireContext())
-                            .setMessage(R.string.tasks_delete_list_confirm)
-                            .setPositiveButton(R.string.tasks_delete) { _, _ ->
-                                store.deleteList(listId)
-                                parentFragmentManager.popBackStack()
-                            }
-                            .setNegativeButton(android.R.string.cancel, null)
-                            .show()
-                    true
-                }
+            screen.addPreference(SourcePreferences.delete(context, R.string.tasks_delete_list,
+                    R.string.tasks_delete_list_confirm, R.string.tasks_delete, android.R.string.cancel) {
+                store.deleteList(listId)
+                parentFragmentManager.popBackStack()
             })
         }
 
-        val info = PreferenceCategory(context).apply {
-            title = getString(R.string.tasks_list_info)
-        }
+        val info = SourcePreferences.information(context, R.string.tasks_list_info)
         screen.addPreference(info)
         val items = store.tasks(listId)
         val reminders = items.count { it.due != null }
         val tasks = items.size - reminders
         fun addInfo(label: String) {
-            info.addPreference(Preference(context).apply {
-                title = label
-                isSelectable = false
-            })
+            info.addPreference(SourcePreferences.info(context, label))
         }
         addInfo(resources.getQuantityString(R.plurals.tasks_list_reminder_count, reminders, reminders))
         addInfo(resources.getQuantityString(R.plurals.tasks_list_task_count, tasks, tasks))
@@ -155,13 +117,12 @@ class TaskListPreferences : PreferenceFragmentCompat(), OnColorSelectedListener 
         // new dialog (which has not been added to a FragmentManager yet).
         val picker = ColorPickerDialog.newInstance(R.string.calendar_color_picker_dialog_title,
                 colors, displayColor(list), 4, size)
-        picker.setTargetFragment(this, 0)
-        picker.showOnce(parentFragmentManager, COLOR_DIALOG_TAG)
+        SourcePreferences.showPicker(this, picker, COLOR_DIALOG_TAG)
     }
 
     override fun onColorSelected(color: Int) {
         store.setListColor(listId, color)
-        findPreference<Preference>(COLOR_KEY)?.icon = colorIcon(color)
+        findPreference<Preference>(COLOR_KEY)?.icon = SourcePreferences.colorIcon(requireContext(), color)
     }
 
     companion object {

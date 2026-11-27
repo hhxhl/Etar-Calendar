@@ -1,17 +1,12 @@
 package com.android.calendar.tasks;
 
 import android.content.Context;
-import android.graphics.Paint;
-import android.graphics.Typeface;
-import android.graphics.drawable.InsetDrawable;
 import android.widget.ImageView;
 import android.os.Bundle;
 import android.text.format.DateUtils;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
 import android.widget.CheckBox;
 import android.widget.LinearLayout;
@@ -38,7 +33,6 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
     private Spinner filter;
     private ListView list;
     private TaskStore store;
-    private List<TaskStore.TaskList> lists;
     private final ArrayList<Row> rows = new ArrayList<>();
     private ReminderAdapter adapter;
     private CalendarController controller;
@@ -85,17 +79,6 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
         });
         root.addView(list,new LinearLayout.LayoutParams(-1,0,1));
         reloadLists();
-        filter.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
-            @Override public void onNothingSelected(android.widget.AdapterView<?> parent) {}
-            @Override public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
-                if (lists == null || position > lists.size()) return;
-                long selected = position == 0 ? 0 : lists.get(position-1).id;
-                if (listId != selected) {
-                    listId = selected;
-                    refresh(true);
-                }
-            }
-        });
         DatedListUi.listenToScroll(list, this::updateScrolledTitle);
         refresh(false);
         scrollTo(initialDate);
@@ -128,20 +111,13 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
 
     private void reloadLists() {
         if (filter == null) return;
-        lists=store.visibleLists();
-        ArrayList<String> names=new ArrayList<>();
-        names.add(getString(R.string.reminders_all));
-        int position=0;
-        for (int i=0;i<lists.size();i++) {
-            TaskStore.TaskList item=lists.get(i);
-            names.add(item.name.isEmpty()?getString(R.string.tasks_default_list):item.name);
-            if (item.id==listId) position=i+1;
-        }
-        if(position==0)listId=0;
-        ArrayAdapter<String> labels=new ArrayAdapter<>(requireContext(),android.R.layout.simple_spinner_item,names);
-        labels.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        filter.setAdapter(labels);
-        filter.setSelection(position);
+        listId = TaskListUi.bindFilter(filter, store.visibleLists(), R.string.reminders_all,
+                listId, selected -> {
+                    if (listId != selected) {
+                        listId = selected;
+                        refresh(true);
+                    }
+                });
     }
 
     private void appendDays(List<DatedItemsRepository.Item<TaskStore.Task>> tasks, boolean includeToday) {
@@ -237,9 +213,7 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
 
             // The agenda's color chip occupies 16 + 24 + 8 = 48dp.
             // Match its text start while retaining a 48dp checkbox touch target.
-            done = ReminderCompletion.create(context);
-            done.setButtonDrawable(new InsetDrawable(done.getButtonDrawable(), dp(16), 0, dp(8), 0));
-            done.setGravity(Gravity.CENTER_VERTICAL);
+            done = TaskListUi.completion(context, true);
             layout.addLeading(done);
             title = layout.addText(18);
             subtitle = layout.addText(14);
@@ -259,22 +233,8 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
 
         void bind(Row row, Context context) {
             TaskStore.Task task = row.task;
-            int standardColor = DynamicThemeKt.getColor(context, "agenda_item_standard_color");
             int secondaryColor = DynamicThemeKt.getColor(context, "agenda_item_where_text_color");
-            root.setBackgroundResource(DynamicThemeKt.getDrawableId(context,
-                    task.done ? "agenda_item_bg_secondary" : "agenda_item_bg_primary"));
-            // Detach the previous row's listener before rebinding a recycled checkbox.
-            done.setOnCheckedChangeListener(null);
-            done.setChecked(task.done);
-            done.setButtonTintList(android.content.res.ColorStateList.valueOf(
-                    TaskCalendarUi.displayColor(context, task, false)));
-            done.setContentDescription(getString(R.string.tasks_complete) + " " + task.title);
-            done.setOnCheckedChangeListener((button, checked) -> store.complete(task.id, checked, task.due));
-            title.setText(task.title);
-            title.setTextColor(standardColor);
-            title.setTypeface(task.done ? Typeface.DEFAULT : Typeface.DEFAULT_BOLD);
-            title.setPaintFlags(task.done ? title.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG
-                    : title.getPaintFlags() & ~Paint.STRIKE_THRU_TEXT_FLAG);
+            TaskListUi.bindRow(root, done, title, task, store, null);
             String when = task.allDay ? getString(R.string.reminders_all_day)
                     : Utils.formatDateRange(context, task.due, task.due, DateUtils.FORMAT_SHOW_TIME);
             boolean overdue = !task.done && (task.allDay ? row.day.isBefore(LocalDate.now(zone()))
@@ -289,7 +249,6 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
             countdown.setVisibility(label.isEmpty() ? View.GONE : View.VISIBLE);
             bell.setVisibility(task.alarm ? View.VISIBLE : View.GONE);
             bell.setColorFilter(secondaryColor);
-            root.setOnClickListener(v -> TaskCalendarUi.openTask(context, task.id));
         }
     }
 

@@ -3,63 +3,50 @@ package com.android.calendar.tasks;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
+import android.widget.BaseAdapter;
 import android.widget.CheckBox;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
+import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import androidx.fragment.app.Fragment;
 import com.android.calendar.CalendarController;
+import com.android.calendar.DatedListUi;
+import com.android.calendar.theme.DynamicThemeKt;
 import java.util.ArrayList;
 import java.util.List;
 import ws.xsoh.etar.R;
 
-/** The reminders navigation destination, sharing the calendar's toolbar and drawer. */
+/** Undated tasks share the reminder list presentation without date grouping. */
 public final class UndatedTasksFragment extends Fragment implements CalendarController.EventHandler {
     private Spinner filter;
-    private LinearLayout rows;
-    private ScrollView scroll;
+    private ListView list;
+    private TaskAdapter adapter;
     private long listId;
-    private List<TaskStore.TaskList> lists;
     private TaskStore store;
+    private final List<TaskStore.Task> rows = new ArrayList<>();
 
     @Override public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle state) {
         Context context = requireContext();
         store = TaskStore.get(context);
-        if (state != null) {
-            listId = state.getLong("list_id");
-        }
+        if (state != null) listId = state.getLong("list_id");
         LinearLayout root = new LinearLayout(context);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(16), dp(8), dp(16), dp(8));
         filter = new Spinner(context);
         root.addView(filter, new LinearLayout.LayoutParams(-1, -2));
-        scroll = new ScrollView(context);
-        rows = new LinearLayout(context);
-        rows.setOrientation(LinearLayout.VERTICAL);
-        scroll.addView(rows);
-        root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
-        reloadLists();
-        filter.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
-            @Override public void onNothingSelected(android.widget.AdapterView<?> parent) {}
-            @Override public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
-                if (lists == null || position > lists.size()) return;
-                listId = position == 0 ? 0 : lists.get(position - 1).id;
-                refresh();
-            }
-        });
+        adapter = new TaskAdapter();
+        list = DatedListUi.createList(context, adapter);
+        root.addView(list, new LinearLayout.LayoutParams(-1, 0, 1));
         return root;
     }
 
     @Override public void onResume() {
         super.onResume();
         reloadLists();
-        TaskAlarmReceiver.schedule(requireContext());
+        refresh(true);
     }
 
     @Override public void onSaveInstanceState(Bundle out) {
@@ -68,93 +55,110 @@ public final class UndatedTasksFragment extends Fragment implements CalendarCont
     }
 
     @Override public void onDestroyView() {
-        rows = null;
-        scroll = null;
+        list = null;
         filter = null;
+        adapter = null;
+        rows.clear();
         super.onDestroyView();
-    }
-
-    private int dp(int n) {
-        return Math.round(n * getResources().getDisplayMetrics().density);
     }
 
     private void reloadLists() {
         if (filter == null) return;
-        lists = store.visibleLists();
-        ArrayList<String> names = new ArrayList<>();
-        names.add(getString(R.string.tasks_all));
-        int position = 0;
-        for (int i = 0; i < lists.size(); i++) {
-            TaskStore.TaskList list = lists.get(i);
-            names.add(list.name.isEmpty() ? getString(R.string.tasks_default_list) : list.name);
-            if (list.id == listId) position = i + 1;
-        }
-        if (position == 0) listId = 0;
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_item, names);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        filter.setAdapter(adapter);
-        filter.setSelection(position);
-        refresh();
+        listId = TaskListUi.bindFilter(filter, store.visibleLists(), R.string.tasks_all, listId,
+                selected -> {
+                    if (selected != listId) {
+                        listId = selected;
+                        refresh(false);
+                    }
+                });
     }
 
     public long getListId() { return listId; }
 
     public void createTask() {
         if (!isAdded()) return;
-        Intent intent = new Intent(requireContext(), TaskListActivity.class)
-                .putExtra("new_task", true).putExtra("list_id", listId);
-        startActivity(intent);
+        startActivity(new Intent(requireContext(), TaskListActivity.class)
+                .putExtra("new_task", true).putExtra("list_id", listId));
     }
 
-    private void refresh() {
-        if (rows == null || !isAdded()) return;
-        Context context = requireContext();
-        rows.removeAllViews();
-        for (TaskStore.Task task : store.visibleUndatedTasks(listId)) {
-            if (task.due != null) continue;
-            LinearLayout row = new LinearLayout(context);
-            row.setGravity(Gravity.CENTER_VERTICAL);
-            CheckBox done = new com.google.android.material.checkbox.MaterialCheckBox(context);
-            done.setChecked(task.done);
-            done.setButtonTintList(android.content.res.ColorStateList.valueOf(
-                    TaskCalendarUi.displayColor(context, task, false)));
-            done.setContentDescription(getString(R.string.tasks_complete) + " " + task.title);
-            done.setOnCheckedChangeListener((button, checked) -> {
-                store.complete(task.id, checked, task.due);
-                refresh();
-            });
-            row.addView(done);
-            LinearLayout details = new LinearLayout(context);
-            details.setOrientation(LinearLayout.VERTICAL);
-            details.setPadding(dp(6), dp(10), dp(6), dp(10));
-            TextView title = new TextView(context);
-            title.setText(task.title);
-            title.setTextSize(18);
-            if (task.done) title.setPaintFlags(title.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
-            details.addView(title);
-            details.setOnClickListener(v -> TaskCalendarUi.openTask(context, task.id));
-            row.addView(details, new LinearLayout.LayoutParams(0, -2, 1));
-            rows.addView(row);
+    private void refresh(boolean preservePosition) {
+        if (list == null || !isAdded()) return;
+        int first = list.getFirstVisiblePosition();
+        long anchor = first < rows.size() ? rows.get(first).id : -1;
+        int offset = DatedListUi.topOffset(list);
+        rows.clear();
+        rows.addAll(store.visibleUndatedTasks(listId));
+        adapter.notifyDataSetChanged();
+        if (!preservePosition) {
+            list.setSelection(0);
+        } else if (anchor != -1 && !rows.isEmpty()) {
+            int index = Math.min(first, rows.size() - 1);
+            for (int i = 0; i < rows.size(); i++) {
+                if (rows.get(i).id == anchor) { index = i; break; }
+            }
+            list.setSelectionFromTop(index, offset);
         }
-        if (rows.getChildCount() == 0) {
-            TextView empty = new TextView(context);
-            empty.setPadding(0, dp(20), 0, 0);
-            empty.setText(R.string.tasks_empty);
-            rows.addView(empty);
+    }
+
+    private final class TaskRow {
+        final DatedListUi.RowLayout layout;
+        final CheckBox done;
+        final TextView title;
+        TaskRow(Context context) {
+            layout = new DatedListUi.RowLayout(context);
+            done = TaskListUi.completion(context, false);
+            layout.addLeading(done);
+            title = layout.addText(18);
+            layout.root.setTag(this);
+        }
+
+        void bind(TaskStore.Task task) {
+            TaskListUi.bindRow(layout.root, done, title, task, store, () -> refresh(true));
+        }
+    }
+
+    private final class TaskAdapter extends BaseAdapter {
+        @Override public int getCount() { return Math.max(1, rows.size()); }
+        @Override public Object getItem(int position) { return rows.isEmpty() ? null : rows.get(position); }
+        @Override public long getItemId(int position) { return rows.isEmpty() ? -1 : rows.get(position).id; }
+        @Override public boolean areAllItemsEnabled() { return false; }
+        @Override public boolean isEnabled(int position) { return !rows.isEmpty(); }
+        @Override public int getViewTypeCount() { return 2; }
+        @Override public int getItemViewType(int position) { return rows.isEmpty() ? 0 : 1; }
+
+        @Override public View getView(int position, View recycled, ViewGroup parent) {
+            Context context = parent.getContext();
+            if (rows.isEmpty()) {
+                TextView empty = recycled instanceof TextView ? (TextView) recycled : new TextView(context);
+                int p = DatedListUi.dp(context, 16);
+                empty.setPadding(p, DatedListUi.dp(context, 20), p, DatedListUi.dp(context, 20));
+                empty.setTextColor(DynamicThemeKt.getColor(context, "agenda_item_where_text_color"));
+                empty.setBackgroundResource(DynamicThemeKt.getDrawableId(context, "agenda_item_bg_primary"));
+                empty.setText(R.string.tasks_empty);
+                return empty;
+            }
+            TaskRow row = recycled != null && recycled.getTag() instanceof TaskRow
+                    ? (TaskRow) recycled.getTag() : new TaskRow(context);
+            row.bind(rows.get(position));
+            return row.layout.root;
         }
     }
 
     @Override public long getSupportedEventTypes() {
         return CalendarController.EventType.EVENTS_CHANGED | CalendarController.EventType.GO_TO;
     }
+
     @Override public void handleEvent(CalendarController.EventInfo event) {
         if (event.eventType == CalendarController.EventType.GO_TO) {
-            if ((event.extraLong & CalendarController.EXTRA_GOTO_TODAY) != 0 && scroll != null) {
-                scroll.scrollTo(0, 0);
-            }
+            if ((event.extraLong & CalendarController.EXTRA_GOTO_TODAY) != 0 && list != null)
+                list.setSelection(0);
         } else if (event.eventType == CalendarController.EventType.EVENTS_CHANGED) {
             eventsChanged();
         }
     }
-    @Override public void eventsChanged() { refresh(); }
+
+    @Override public void eventsChanged() {
+        reloadLists();
+        refresh(true);
+    }
 }

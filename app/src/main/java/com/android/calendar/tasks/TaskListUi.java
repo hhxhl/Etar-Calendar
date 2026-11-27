@@ -1,0 +1,84 @@
+package com.android.calendar.tasks;
+
+import android.content.Context;
+import android.content.res.ColorStateList;
+import android.graphics.Paint;
+import android.graphics.Typeface;
+import android.graphics.drawable.InsetDrawable;
+import android.view.Gravity;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.CheckBox;
+import android.widget.Spinner;
+import android.widget.TextView;
+import com.android.calendar.DatedListUi;
+import com.android.calendar.theme.DynamicThemeKt;
+import com.google.android.material.checkbox.MaterialCheckBox;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.LongConsumer;
+import ws.xsoh.etar.R;
+
+/** Common list filter and row binding for tasks and reminders. */
+final class TaskListUi {
+    private TaskListUi() {}
+
+    static long bindFilter(Spinner filter, List<TaskStore.TaskList> lists, int allLabel,
+            long selected, LongConsumer onSelected) {
+        Context context = filter.getContext();
+        ArrayList<String> names = new ArrayList<>();
+        names.add(context.getString(allLabel));
+        int position = 0;
+        for (int i = 0; i < lists.size(); i++) {
+            TaskStore.TaskList list = lists.get(i);
+            names.add(list.name.isEmpty() ? context.getString(R.string.tasks_default_list) : list.name);
+            if (list.id == selected) position = i + 1;
+        }
+        ArrayAdapter<String> labels = new ArrayAdapter<>(context, android.R.layout.simple_spinner_item, names);
+        labels.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        filter.setOnItemSelectedListener(null);
+        filter.setAdapter(labels);
+        filter.setSelection(position);
+        filter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override public void onNothingSelected(AdapterView<?> parent) {}
+            @Override public void onItemSelected(AdapterView<?> parent, View view, int p, long id) {
+                if (p >= 0 && p <= lists.size()) onSelected.accept(p == 0 ? 0 : lists.get(p - 1).id);
+            }
+        });
+        return position == 0 ? 0 : lists.get(position - 1).id;
+    }
+
+    static CheckBox completion(Context context, boolean reminder) {
+        CheckBox box = reminder ? ReminderCompletion.create(context) : new MaterialCheckBox(context);
+        if (reminder && box.getButtonDrawable() != null) {
+            box.setButtonDrawable(new InsetDrawable(box.getButtonDrawable(),
+                    DatedListUi.dp(context, 16), 0, DatedListUi.dp(context, 8), 0));
+        } else {
+            box.setPadding(DatedListUi.dp(context, 8), 0, 0, 0);
+        }
+        box.setGravity(Gravity.CENTER_VERTICAL);
+        return box;
+    }
+
+    static void bindRow(View root, CheckBox done, TextView title, TaskStore.Task task,
+            TaskStore store, Runnable afterComplete) {
+        Context context = root.getContext();
+        root.setBackgroundResource(DynamicThemeKt.getDrawableId(context,
+                task.done ? "agenda_item_bg_secondary" : "agenda_item_bg_primary"));
+        done.setOnCheckedChangeListener(null);
+        done.setChecked(task.done);
+        done.setButtonTintList(ColorStateList.valueOf(TaskCalendarUi.displayColor(context, task, false)));
+        done.setContentDescription(context.getString(R.string.tasks_complete) + " " + task.title);
+        done.setOnCheckedChangeListener((button, checked) -> {
+            store.complete(task.id, checked, task.due);
+            if (afterComplete != null) afterComplete.run();
+        });
+        title.setText(task.title);
+        title.setTextColor(DynamicThemeKt.getColor(context, "agenda_item_standard_color"));
+        title.setTypeface(task.done ? Typeface.DEFAULT : Typeface.DEFAULT_BOLD);
+        title.setPaintFlags(task.done ? title.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG
+                : title.getPaintFlags() & ~Paint.STRIKE_THRU_TEXT_FLAG);
+        root.setOnClickListener(v -> TaskCalendarUi.openTask(context, task.id));
+    }
+}
