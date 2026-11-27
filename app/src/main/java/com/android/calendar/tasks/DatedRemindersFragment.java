@@ -4,7 +4,6 @@ import android.content.Context;
 import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.graphics.drawable.InsetDrawable;
-import android.text.TextUtils;
 import android.widget.ImageView;
 import android.os.Bundle;
 import android.text.format.DateUtils;
@@ -12,7 +11,6 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AbsListView;
 import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
 import android.widget.CheckBox;
@@ -22,15 +20,14 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import androidx.fragment.app.Fragment;
 import com.android.calendar.CalendarController;
+import com.android.calendar.DatedItemsRepository;
+import com.android.calendar.DatedListUi;
 import com.android.calendar.Utils;
-import com.android.calendar.calendarcommon2.Time;
 import com.android.calendar.theme.DynamicThemeKt;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import ws.xsoh.etar.R;
 
@@ -49,7 +46,6 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
     private boolean binding;
     private boolean firstResume = true;
     private LocalDate initialDate;
-    private int scrollState = AbsListView.OnScrollListener.SCROLL_STATE_IDLE;
     private static final class Row {
         final LocalDate day;
         final TaskStore.Task task;
@@ -62,10 +58,6 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
     public long getListId() { return listId; }
     private int dp(int n) { return Math.round(n * getResources().getDisplayMetrics().density); }
     private ZoneId zone() { return ZoneId.of(Utils.getTimeZone(requireContext(), null)); }
-    private LocalDate day(TaskStore.Task task) {
-        return Instant.ofEpochMilli(task.due).atZone(task.allDay ? ZoneOffset.UTC : zone()).toLocalDate();
-    }
-
     @Override public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle state) {
         Context context = requireContext();
         store = TaskStore.get(context);
@@ -80,13 +72,8 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
         root.setOrientation(LinearLayout.VERTICAL);
         filter = new Spinner(context);
         root.addView(filter, new LinearLayout.LayoutParams(-1,-2));
-        list = new ListView(context);
-        list.setDivider(null);
-        list.setPadding(0,0,0,dp(80));
-        list.setClipToPadding(false);
         adapter = new ReminderAdapter();
-        list.setAdapter(adapter);
-        list.setItemsCanFocus(true);
+        list = DatedListUi.createList(context, adapter);
         list.setOnItemClickListener((parent, view, position, id) -> {
             Row row = rows.get(position);
             if (row.completedCount >= 0) {
@@ -109,17 +96,7 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
                 }
             }
         });
-        list.setOnScrollListener(new AbsListView.OnScrollListener() {
-            @Override public void onScrollStateChanged(AbsListView view,int state) {
-                if (scrollState != SCROLL_STATE_IDLE && state == SCROLL_STATE_IDLE) {
-                    updateScrolledTitle(view.getFirstVisiblePosition());
-                }
-                scrollState = state;
-            }
-            @Override public void onScroll(AbsListView view,int first,int count,int total) {
-                if (scrollState != SCROLL_STATE_IDLE) updateScrolledTitle(first);
-            }
-        });
+        DatedListUi.listenToScroll(list, this::updateScrolledTitle);
         refresh(false);
         scrollTo(initialDate);
         return root;
@@ -167,24 +144,9 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
         filter.setSelection(position);
     }
 
-    private void appendDays(List<TaskStore.Task> tasks, boolean includeToday) {
-        LocalDate last=null;
-        LocalDate today=LocalDate.now(zone());
-        boolean todayAdded=false;
-        for (TaskStore.Task task : tasks) {
-            LocalDate date=day(task);
-            if (includeToday && !todayAdded && date.isAfter(today)) {
-                rows.add(new Row(today,null,-1));
-                todayAdded=true;
-            }
-            if (!date.equals(last)) {
-                rows.add(new Row(date,null,-1));
-                last=date;
-            }
-            if(date.equals(today))todayAdded=true;
-            rows.add(new Row(date,task,-1));
-        }
-        if (includeToday && !todayAdded) rows.add(new Row(today,null,-1));
+    private void appendDays(List<DatedItemsRepository.Item<TaskStore.Task>> tasks, boolean includeToday) {
+        DatedListUi.appendDays(rows, tasks, includeToday ? LocalDate.now(zone()) : null,
+                date -> new Row(date, null, -1), item -> new Row(item.day, item.value, -1));
     }
 
     private void refresh(boolean preservePosition) {
@@ -192,17 +154,11 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
         int first=list.getFirstVisiblePosition();
         Row previousRow=first<rows.size()?rows.get(first):null;
         LocalDate previous=previousRow==null?null:previousRow.day;
-        int offset=list.getChildCount()>0?list.getChildAt(0).getTop():0;
-        List<TaskStore.Task> pending=new ArrayList<>(), completed=new ArrayList<>();
-        for (TaskStore.Task task:store.tasks(listId)) {
-            if(task.due==null)continue;
-            (task.done?completed:pending).add(task);
+        int offset=DatedListUi.topOffset(list);
+        List<DatedItemsRepository.Item<TaskStore.Task>> pending = new ArrayList<>(), completed = new ArrayList<>();
+        for (DatedItemsRepository.Item<TaskStore.Task> item : DatedItemsRepository.reminders(store, listId, zone())) {
+            (item.value.done ? completed : pending).add(item);
         }
-        Comparator<TaskStore.Task> order=Comparator.comparing(this::day)
-                .thenComparing(task->!task.allDay)
-                .thenComparingLong(task->task.due)
-                .thenComparingLong(task->task.id);
-        pending.sort(order); completed.sort(order);
         binding=true;
         rows.clear();
         appendDays(pending,true);
@@ -227,20 +183,12 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
     }
 
     private int findDay(LocalDate day) {
-        int last=0;
-        for(int i=0;i<rows.size();i++){
-            Row row=rows.get(i);
-            if(row.completedCount>=0)break;
-            if(row.task==null && row.day!=null){
-                last=i;
-                if(!row.day.isBefore(day))return i;
-            }
-        }
-        return last;
+        return Math.max(0, DatedListUi.findHeader(rows, day,
+                row -> row.task == null ? row.day : null, row -> row.completedCount >= 0));
     }
 
     private void updateScrolledTitle(int first) {
-        if(binding || first>=rows.size() || !isAdded())return;
+        if(binding || first<0 || first>=rows.size() || !isAdded())return;
         LocalDate date=rows.get(first).day;
         if(date!=null && !date.equals(topDay))publishTitle(date);
     }
@@ -258,11 +206,7 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
         topDay=date;
         list.post(()->{
             if(list==null||!isAdded()||!date.equals(topDay)||controller.getViewType()!=CalendarController.ViewType.REMINDERS)return;
-            Time time=new Time(zone().getId());
-            time.set(date.atStartOfDay(zone()).toInstant().toEpochMilli());
-            controller.setTime(time.toMillis());
-            controller.sendEvent(this,CalendarController.EventType.UPDATE_TITLE,time,time,null,-1,
-                    CalendarController.ViewType.CURRENT,0,null,null);
+            DatedListUi.publishDate(controller, this, zone(), date);
         });
     }
 
@@ -288,48 +232,24 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
         final ImageView bell;
 
         ReminderRowView(Context context) {
-            root = new LinearLayout(context);
-            root.setOrientation(LinearLayout.VERTICAL);
-            root.setMinimumHeight(dp(64));
-
-            View divider = new View(context);
-            divider.setBackgroundResource(R.color.agenda_list_separator_color);
-            root.addView(divider, new LinearLayout.LayoutParams(-1, 1));
-
-            LinearLayout item = new LinearLayout(context);
-            item.setGravity(Gravity.CENTER_VERTICAL);
-            item.setMinimumHeight(dp(64) - 1);
-            item.setPadding(0, 0, dp(16), 0);
-            root.addView(item, new LinearLayout.LayoutParams(-1, -2));
+            DatedListUi.RowLayout layout = new DatedListUi.RowLayout(context);
+            root = layout.root;
 
             // The agenda's color chip occupies 16 + 24 + 8 = 48dp.
             // Match its text start while retaining a 48dp checkbox touch target.
             done = ReminderCompletion.create(context);
             done.setButtonDrawable(new InsetDrawable(done.getButtonDrawable(), dp(16), 0, dp(8), 0));
             done.setGravity(Gravity.CENTER_VERTICAL);
-            item.addView(done, new LinearLayout.LayoutParams(dp(48), dp(48)));
-
-            LinearLayout details = new LinearLayout(context);
-            details.setOrientation(LinearLayout.VERTICAL);
-            details.setPadding(0, dp(8), 0, dp(8));
-            title = new TextView(context);
-            title.setTextSize(18);
-            title.setSingleLine(true);
-            title.setEllipsize(TextUtils.TruncateAt.END);
-            details.addView(title);
-            subtitle = new TextView(context);
-            subtitle.setTextSize(14);
-            subtitle.setSingleLine(true);
-            subtitle.setEllipsize(TextUtils.TruncateAt.END);
-            details.addView(subtitle);
-            item.addView(details, new LinearLayout.LayoutParams(0, -2, 1));
+            layout.addLeading(done);
+            title = layout.addText(18);
+            subtitle = layout.addText(14);
 
             bell = new ImageView(context);
             bell.setImageResource(R.drawable.ic_reminder_outline);
             bell.setContentDescription(getString(R.string.tasks_notify));
             LinearLayout.LayoutParams bellParams = new LinearLayout.LayoutParams(dp(24), dp(24));
             bellParams.setMarginStart(dp(8));
-            item.addView(bell, bellParams);
+            layout.item.addView(bell, bellParams);
             root.setTag(this);
         }
 
@@ -397,15 +317,7 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
                 return heading;
             }
             if(row.task==null){
-                View header=convertView != null ? convertView : getLayoutInflater().inflate(R.layout.agenda_day,parent,false);
-                long millis=row.day.atStartOfDay(zone()).toInstant().toEpochMilli();
-                int julian=(int)(row.day.toEpochDay()+2440588L);
-                int today=(int)(LocalDate.now(zone()).toEpochDay()+2440588L);
-                ((TextView)header.findViewById(R.id.day)).setText(Utils.getDayOfWeekString(julian,today,millis,context));
-                ((TextView)header.findViewById(R.id.date)).setText(Utils.formatDateRange(context,millis,millis,DateUtils.FORMAT_SHOW_DATE));
-                header.setBackgroundResource(DynamicThemeKt.getDrawableId(context,
-                        julian>today?"agenda_item_bg_primary":"agenda_item_bg_secondary"));
-                return header;
+                return DatedListUi.dateHeader(convertView, parent, row.day, zone());
             }
             ReminderRowView holder=convertView != null && convertView.getTag() instanceof ReminderRowView
                     ? (ReminderRowView)convertView.getTag() : new ReminderRowView(context);

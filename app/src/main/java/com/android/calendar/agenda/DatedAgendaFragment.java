@@ -1,12 +1,9 @@
 package com.android.calendar.agenda;
 
-import android.content.ContentResolver;
-import android.content.ContentUris;
 import android.content.Context;
 import android.database.Cursor;
 import android.graphics.Paint;
 import android.graphics.Typeface;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.CancellationSignal;
 import android.os.Handler;
@@ -15,7 +12,6 @@ import android.os.OperationCanceledException;
 import android.provider.CalendarContract.Attendees;
 import android.provider.CalendarContract.Calendars;
 import android.provider.CalendarContract.Events;
-import android.provider.CalendarContract.Instances;
 import android.text.TextUtils;
 import android.text.format.DateFormat;
 import android.text.format.DateUtils;
@@ -24,7 +20,6 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AbsListView;
 import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
 import android.widget.FrameLayout;
@@ -40,9 +35,11 @@ import com.android.calendar.CalendarController.EventInfo;
 import com.android.calendar.CalendarController.EventType;
 import com.android.calendar.CalendarController.ViewType;
 import com.android.calendar.ColorChipView;
+import com.android.calendar.DatedItemsRepository;
+import com.android.calendar.DatedItemsRepository.AgendaEntry;
+import com.android.calendar.DatedListUi;
 import com.android.calendar.EventCountdown;
 import com.android.calendar.Utils;
-import com.android.calendar.calendarcommon2.Time;
 import com.android.calendar.event.EditEventActivity;
 import com.android.calendar.settings.GeneralPreferences;
 import com.android.calendar.theme.DynamicThemeKt;
@@ -67,15 +64,6 @@ import ws.xsoh.etar.R;
 public final class DatedAgendaFragment extends Fragment implements CalendarController.EventHandler {
     private static final String TAG = "DatedAgendaFragment";
     private static final int BLOCK_DAYS = 90;
-    private static final long JULIAN_EPOCH = 2440588L;
-    private static final String[] PROJECTION = {
-            Instances._ID, Instances.EVENT_ID, Instances.TITLE, Instances.EVENT_LOCATION,
-            Instances.ALL_DAY, Instances.DISPLAY_COLOR, Instances.BEGIN, Instances.END,
-            Instances.START_DAY, Instances.END_DAY, Instances.STATUS, Instances.SELF_ATTENDEE_STATUS,
-            Instances.ORGANIZER, Instances.OWNER_ACCOUNT, Instances.CAN_ORGANIZER_RESPOND,
-            Instances.EVENT_TIMEZONE
-    };
-
     private final Handler main = new Handler(Looper.getMainLooper());
     private final ArrayList<Row> rows = new ArrayList<>();
     private final ArrayList<Long> calendarIds = new ArrayList<>();
@@ -90,7 +78,6 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
     private CancellationSignal cancellation;
     private int generation;
     private boolean loading, active, binding;
-    private int scrollState = AbsListView.OnScrollListener.SCROLL_STATE_IDLE;
     private long calendarId = -1;
     private ZoneId zone;
     private LocalDate firstDay, lastDay, targetDay, publishedDay;
@@ -112,36 +99,10 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         return fragment;
     }
 
-    private static final class Entry {
-        final long instanceId, id, begin, end;
-        final int startDay, endDay, color, status, response;
-        final String title, location, organizer, owner, timezone;
-        final boolean allDay, organizerCanRespond;
-
-        Entry(Cursor cursor) {
-            instanceId = cursor.getLong(0);
-            id = cursor.getLong(1);
-            title = cursor.getString(2);
-            location = cursor.getString(3);
-            allDay = cursor.getInt(4) != 0;
-            color = cursor.getInt(5);
-            begin = cursor.getLong(6);
-            end = cursor.getLong(7);
-            startDay = cursor.getInt(8);
-            endDay = cursor.getInt(9);
-            status = cursor.getInt(10);
-            response = cursor.getInt(11);
-            organizer = cursor.getString(12);
-            owner = cursor.getString(13);
-            organizerCanRespond = cursor.getInt(14) != 0;
-            timezone = cursor.getString(15);
-        }
-    }
-
     private static final class Row {
         final LocalDate day;
-        final Entry event;
-        Row(LocalDate day, Entry event) { this.day = day; this.event = event; }
+        final AgendaEntry event;
+        Row(LocalDate day, AgendaEntry event) { this.day = day; this.event = event; }
     }
 
     private static final class Anchor {
@@ -161,8 +122,6 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
     private LocalDate date(long millis) { return Instant.ofEpochMilli(millis).atZone(zone).toLocalDate(); }
     private long millis(LocalDate day) { return day.atStartOfDay(zone).toInstant().toEpochMilli(); }
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
-    private static int julian(LocalDate date) { return (int) (date.toEpochDay() + JULIAN_EPOCH); }
-    private static LocalDate day(int julian) { return LocalDate.ofEpochDay(julian - JULIAN_EPOCH); }
 
     @Override public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle saved) {
         Context context = requireContext();
@@ -195,7 +154,6 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         hasLoaded = false;
         loadedFirstDay = loadedLastDay = null;
         publishedDay = null;
-        scrollState = AbsListView.OnScrollListener.SCROLL_STATE_IDLE;
 
         LinearLayout root = new LinearLayout(context);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -207,13 +165,8 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         status.setBackgroundResource(DynamicThemeKt.getDrawableId(context, "agenda_item_bg_primary"));
         status.setVisibility(View.GONE);
         root.addView(status, new LinearLayout.LayoutParams(-1, -2));
-        list = new ListView(context);
-        list.setDivider(null);
-        list.setPadding(0, 0, 0, dp(80));
-        list.setClipToPadding(false);
         adapter = new AgendaRows();
-        list.setAdapter(adapter);
-        list.setItemsCanFocus(true);
+        list = DatedListUi.createList(context, adapter);
         root.addView(list, new LinearLayout.LayoutParams(-1, 0, 1));
         reloadCalendars();
         filter.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
@@ -230,24 +183,11 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         });
         list.setOnItemClickListener((parent, view, position, id) -> {
             if (position >= rows.size()) return;
-            Entry event = rows.get(position).event;
+            AgendaEntry event = rows.get(position).event;
             if (event != null) EditEventActivity.openEvent(requireContext(), event.id,
                     event.begin, event.end, Attendees.ATTENDEE_STATUS_NONE);
         });
-        // Match the reminders view: native ListView scrolling only updates the
-        // visible date; reaching either edge never starts a provider query.
-        list.setOnScrollListener(new AbsListView.OnScrollListener() {
-            @Override public void onScrollStateChanged(AbsListView view, int state) {
-                if (scrollState != SCROLL_STATE_IDLE && state == SCROLL_STATE_IDLE) {
-                    updateScrolledTitle(view.getFirstVisiblePosition());
-                }
-                scrollState = state;
-            }
-
-            @Override public void onScroll(AbsListView view, int first, int visible, int total) {
-                if (scrollState != SCROLL_STATE_IDLE) updateScrolledTitle(first);
-            }
-        });
+        DatedListUi.listenToScroll(list, this::updateScrolledTitle);
         return root;
     }
 
@@ -336,10 +276,10 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         if (list != null && !rows.isEmpty()) {
             int index = Math.min(list.getFirstVisiblePosition(), rows.size() - 1);
             Row row = rows.get(index);
-            Entry event = row.event;
+            AgendaEntry event = row.event;
             return new Anchor(row.day, event == null ? -1 : event.instanceId,
                     event == null ? -1 : event.id, event == null ? -1 : event.begin,
-                    list.getChildCount() == 0 ? 0 : list.getChildAt(0).getTop());
+                    DatedListUi.topOffset(list));
         }
         if (pendingAnchor != null) return pendingAnchor;
         LocalDate anchor = targetDay == null ? LocalDate.now(zone == null ? ZoneId.systemDefault() : zone) : targetDay;
@@ -472,59 +412,19 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
 
     private static List<Row> query(Context context, LocalDate first, LocalDate last,
             long selected, boolean hideDeclined, LocalDate today, CancellationSignal signal) {
-        ContentResolver resolver = context.getContentResolver();
-        Uri.Builder builder = Instances.CONTENT_BY_DAY_URI.buildUpon();
-        ContentUris.appendId(builder, julian(first));
-        ContentUris.appendId(builder, julian(last));
-        String selection = Calendars.VISIBLE + "=1";
-        if (hideDeclined) selection += " AND " + Instances.SELF_ATTENDEE_STATUS
-                + "!=" + Attendees.ATTENDEE_STATUS_DECLINED;
-        if (selected >= 0) selection += " AND " + Instances.CALENDAR_ID + "=?";
-        String[] args = selected < 0 ? null : new String[]{Long.toString(selected)};
-        ArrayList<Row> items = new ArrayList<>();
-        int start = julian(first), end = julian(last);
-        try (Cursor cursor = resolver.query(builder.build(), PROJECTION, selection, args,
-                Instances.START_DAY + " ASC, " + Instances.BEGIN + " ASC, " + Instances.TITLE + " ASC", signal)) {
-            if (cursor == null) throw new IllegalStateException("CalendarProvider returned no cursor");
-            while (cursor.moveToNext()) {
-                signal.throwIfCanceled();
-                Entry entry = new Entry(cursor);
-                for (int d = Math.max(start, entry.startDay); d <= Math.min(end, entry.endDay); d++) {
-                    items.add(new Row(day(d), entry));
-                }
-            }
-        }
-        items.sort(Comparator.comparing((Row row) -> row.day)
-                .thenComparingLong(row -> row.event.begin)
-                .thenComparing(row -> row.event.title == null ? "" : row.event.title)
-                .thenComparingLong(row -> row.event.instanceId));
+        List<DatedItemsRepository.Item<AgendaEntry>> items =
+                DatedItemsRepository.agenda(context, first, last, selected, hideDeclined, signal);
         ArrayList<Row> result = new ArrayList<>();
-        LocalDate previous = null;
-        boolean todayAdded = today.isBefore(first) || today.isAfter(last);
-        for (Row row : items) {
-            if (!row.day.equals(previous)) {
-                if (!todayAdded && row.day.isAfter(today)) {
-                    result.add(new Row(today, null));
-                    todayAdded = true;
-                }
-                result.add(new Row(row.day, null));
-                if (row.day.equals(today)) todayAdded = true;
-                previous = row.day;
-            }
-            result.add(row);
-        }
-        if (!todayAdded) result.add(new Row(today, null));
+        DatedListUi.appendDays(result, items,
+                today.isBefore(first) || today.isAfter(last) ? null : today,
+                date -> new Row(date, null), item -> new Row(item.day, item.value));
         return result;
     }
 
     private void restoreAnchor(Anchor anchor) {
-        int index = -1, nearest = -1, lastHeader = -1;
+        int index = -1;
         for (int i = 0; i < rows.size(); i++) {
             Row row = rows.get(i);
-            if (row.event == null) {
-                lastHeader = i;
-                if (nearest == -1 && !row.day.isBefore(anchor.day)) nearest = i;
-            }
             if (!row.day.equals(anchor.day)) continue;
             if (row.event == null && anchor.instance < 0 && anchor.eventId < 0) {
                 index = i;
@@ -548,7 +448,8 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
             }
             binding = false;
         }
-        if (index < 0) index = nearest >= 0 ? nearest : lastHeader;
+        if (index < 0) index = DatedListUi.findHeader(rows, anchor.day,
+                row -> row.event == null ? row.day : null, row -> false);
         if (index >= 0) list.setSelectionFromTop(index, exact ? anchor.offset : 0);
         targetDay = index >= 0 ? rows.get(index).day : anchor.day;
         publishDay(targetDay);
@@ -566,11 +467,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         main.post(() -> {
             if (!active || list == null || !day.equals(publishedDay)
                     || controller.getViewType() != ViewType.AGENDA) return;
-            Time time = new Time(zone.getId());
-            time.set(millis(day));
-            controller.setTime(time.toMillis());
-            controller.sendEvent(this, EventType.UPDATE_TITLE, time, time, null,
-                    -1, ViewType.CURRENT, 0, null, null);
+            DatedListUi.publishDate(controller, this, zone, day);
         });
     }
 
@@ -606,19 +503,8 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         final TextView title, when, where, countdown;
 
         AgendaRowView(Context context) {
-            root = new LinearLayout(context);
-            root.setOrientation(LinearLayout.VERTICAL);
-            root.setMinimumHeight(dp(64));
-
-            View divider = new View(context);
-            divider.setBackgroundResource(R.color.agenda_list_separator_color);
-            root.addView(divider, new LinearLayout.LayoutParams(-1, 1));
-
-            LinearLayout item = new LinearLayout(context);
-            item.setGravity(Gravity.CENTER_VERTICAL);
-            item.setMinimumHeight(dp(64) - 1);
-            item.setPadding(0, 0, dp(16), 0);
-            root.addView(item, new LinearLayout.LayoutParams(-1, -2));
+            DatedListUi.RowLayout layout = new DatedListUi.RowLayout(context);
+            root = layout.root;
 
             FrameLayout leading = new FrameLayout(context);
             chip = new ColorChipView(context);
@@ -626,36 +512,19 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
                     Gravity.CENTER_VERTICAL | Gravity.START);
             chipParams.setMarginStart(dp(16));
             leading.addView(chip, chipParams);
-            item.addView(leading, new LinearLayout.LayoutParams(dp(48), dp(48)));
-
-            LinearLayout details = new LinearLayout(context);
-            details.setOrientation(LinearLayout.VERTICAL);
-            details.setPadding(0, dp(8), 0, dp(8));
-            title = textView(context, 18);
-            when = textView(context, 14);
-            where = textView(context, 14);
-            details.addView(title);
-            details.addView(when);
-            details.addView(where);
-            item.addView(details, new LinearLayout.LayoutParams(0, -2, 1));
-
-            countdown = textView(context, 12);
+            layout.addLeading(leading);
+            title = layout.addText(18);
+            when = layout.addText(14);
+            where = layout.addText(14);
+            countdown = DatedListUi.RowLayout.textView(context, 12);
             LinearLayout.LayoutParams countdownParams = new LinearLayout.LayoutParams(-2, -2);
             countdownParams.setMarginStart(dp(8));
-            item.addView(countdown, countdownParams);
+            layout.item.addView(countdown, countdownParams);
             root.setTag(this);
         }
 
-        private TextView textView(Context context, int size) {
-            TextView view = new TextView(context);
-            view.setTextSize(size);
-            view.setSingleLine(true);
-            view.setEllipsize(TextUtils.TruncateAt.END);
-            return view;
-        }
-
         void bind(Row row, Context context, LocalDate today) {
-            Entry entry = row.event;
+            AgendaEntry entry = row.event;
             boolean past = entry.allDay ? !row.day.isAfter(today)
                     : Math.max(entry.begin, millis(row.day)) <= System.currentTimeMillis();
             root.setBackgroundResource(DynamicThemeKt.getDrawableId(context,
@@ -715,18 +584,8 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
             Row row = rows.get(position);
             Context context = parent.getContext();
             LocalDate today = LocalDate.now(zone);
-            LayoutInflater inflater = LayoutInflater.from(context);
             if (row.event == null) {
-                View header = convertView == null ? inflater.inflate(R.layout.agenda_day, parent, false) : convertView;
-                long time = millis(row.day);
-                ((TextView) header.findViewById(R.id.day)).setText(
-                        Utils.getDayOfWeekString(julian(row.day), julian(today), time, context));
-                ((TextView) header.findViewById(R.id.date)).setText(
-                        Utils.formatDateRange(context, time, time, DateUtils.FORMAT_SHOW_DATE));
-                header.setBackgroundResource(DynamicThemeKt.getDrawableId(context,
-                        row.day.isAfter(today) ? "agenda_item_bg_primary" : "agenda_item_bg_secondary"));
-                header.findViewById(R.id.top_divider_past_present).setVisibility(View.GONE);
-                return header;
+                return DatedListUi.dateHeader(convertView, parent, row.day, zone);
             }
 
             AgendaRowView holder = convertView != null && convertView.getTag() instanceof AgendaRowView
