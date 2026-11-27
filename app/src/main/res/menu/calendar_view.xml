@@ -23,6 +23,7 @@
             android:icon="@drawable/outline_view_agenda"
             android:title="@string/agenda_view" />
         <item android:id="@+id/reminders_menu_item"
+            android:checkable="true"
             android:icon="@drawable/ic_task_outline"
             android:title="@string/tasks_title" />
     </group>

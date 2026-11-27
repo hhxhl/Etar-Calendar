@@ -53,6 +53,7 @@ public final class TaskListActivity extends AppCompatActivity {
         store=TaskStore.get(this);
         editorOnly=getIntent().getBooleanExtra("new_task",false)||getIntent().hasExtra("task_id");
         listsOnly=getIntent().getBooleanExtra("manage_lists",false);
+        listId=getIntent().getLongExtra("list_id",0);
         if(state!=null){
             listId=state.getLong("list_id");
             showScheduled=state.getBoolean("show_scheduled");
