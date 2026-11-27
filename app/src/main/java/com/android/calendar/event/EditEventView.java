@@ -510,7 +510,7 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
         if (mModel == null || (mCalendarsCursor == null && mModel.mUri == null)) {
             return false;
         }
-        return fillModelFromUI();
+        return EditEventHelper.canModifyEvent(mModel) ? fillModelFromUI() : fillModelFromReadOnlyUi();
     }
 
     public boolean fillModelFromReadOnlyUi() {
@@ -1132,7 +1132,7 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
         updateView();
         mScrollView.setVisibility(View.VISIBLE);
         mLoadingMessage.setVisibility(View.GONE);
-        setTitleFocus();
+        if (EditEventHelper.canModifyEvent(model) && model.mId == -1) setTitleFocus();
         sendAccessibilityEvent();
     }
 
@@ -1331,6 +1331,9 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
                 mUrlGroup.setVisibility(View.GONE);
             }
             mCalendarsSpinner.setEnabled(false);
+            mAvailabilitySpinner.setEnabled(false);
+            mAccessLevelSpinner.setEnabled(false);
+            mColorPicker.setEnabled(EditEventHelper.canModifyCalendar(mModel));
         } else {
             for (View v : mViewOnlyList) {
                 v.setVisibility(View.GONE);
@@ -1360,6 +1363,9 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
 
             // disallow changing calendar for recurrences when not modifying all instances
             mCalendarsSpinner.setEnabled(mode == Utils.MODIFY_ALL);
+            mAvailabilitySpinner.setEnabled(true);
+            mAccessLevelSpinner.setEnabled(true);
+            mColorPicker.setEnabled(true);
         }
         setAllDayViewsVisibility(mAllDayCheckBox.isChecked());
         boolean editable = mode != Utils.MODIFY_UNINITIALIZED && EditEventHelper.canModifyEvent(mModel);
@@ -1629,6 +1635,7 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
             return;
         }
 
+        if (mModel.mId != -1 && !EditEventHelper.canModifyEvent(mModel)) return;
         mModel.mCalendarId = c.getLong(EditEventHelper.CALENDARS_INDEX_ID);
         EditEventHelper.setModelFromCalendarCursor(mModel, c, mActivity);
         // ensure model is up to date so that reminders don't get lost on calendar change

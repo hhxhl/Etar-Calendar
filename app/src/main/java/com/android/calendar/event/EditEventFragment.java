@@ -150,6 +150,24 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
         }
     };
     private boolean mUseCustomActionBar;
+    private boolean mExistingEvent;
+    private String mExportText;
+    private final androidx.activity.result.ActivityResultLauncher<Intent> mExportLauncher =
+            registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult(),
+                    result -> {
+                        if (result.getResultCode() != Activity.RESULT_OK || result.getData() == null
+                                || result.getData().getData() == null || mExportText == null) return;
+                        try (java.io.OutputStream output = requireContext().getContentResolver()
+                                .openOutputStream(result.getData().getData())) {
+                            if (output == null) throw new java.io.IOException("No output stream");
+                            output.write(mExportText.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                            Toast.makeText(requireContext(), R.string.cal_export_success, Toast.LENGTH_SHORT).show();
+                        } catch (java.io.IOException | SecurityException error) {
+                            Toast.makeText(requireContext(), R.string.cal_export_error, Toast.LENGTH_SHORT).show();
+                        } finally {
+                            mExportText = null;
+                        }
+                    });
     private View.OnClickListener mOnColorPickerClicked = new View.OnClickListener() {
 
         @Override
@@ -196,16 +214,26 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
                 if (mRestoreModel != null) {
                     mModel = mRestoreModel;
                 }
-                if (mShowModifyDialogOnLaunch && mModification == Utils.MODIFY_UNINITIALIZED) {
-                    if (mModel.hasRecurrence()) {
+                boolean editable = EditEventHelper.canModifyEvent(mModel);
+                if (!editable) mModification = Utils.MODIFY_UNINITIALIZED;
+                else if (mModification == Utils.MODIFY_UNINITIALIZED) {
+                    if (mModel.hasRecurrence() && mShowModifyDialogOnLaunch) {
                         displayEditWhichDialog();
-                    } else {
+                    } else if (!mModel.hasRecurrence()) {
                         mModification = Utils.MODIFY_ALL;
                     }
-
+                }
+                if (mExistingEvent && mActivity != null) {
+                    int response = mActivity.getIntent().getIntExtra(Attendees.ATTENDEE_STATUS,
+                            Attendees.ATTENDEE_STATUS_NONE);
+                    if (mRestoreModel == null && response != Attendees.ATTENDEE_STATUS_NONE
+                            && EditEventHelper.canRespond(mModel)) mModel.mSelfAttendeeStatus = response;
+                    if (mActivity.getSupportActionBar() != null) mActivity.getSupportActionBar()
+                            .setTitle(editable ? R.string.event_edit : R.string.event_info_title);
                 }
                 mView.setModel(mModel);
                 mView.setModification(mModification);
+                mActivity.invalidateOptionsMenu();
             }
         }
     }
@@ -258,13 +286,9 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
             mModel.setEventColor(mEventColor);
         }
 
-        if (mBegin <= 0) {
-            // use a default value instead
-            mBegin = mHelper.constructDefaultStartTime(System.currentTimeMillis());
-        }
-        if (mEnd < mBegin) {
-            // use a default value instead
-            mEnd = mHelper.constructDefaultEndTime(mBegin, mActivity);
+        if (mUri == null) {
+            if (mBegin <= 0) mBegin = mHelper.constructDefaultStartTime(System.currentTimeMillis());
+            if (mEnd < mBegin) mEnd = mHelper.constructDefaultEndTime(mBegin, mActivity);
         }
 
         // Kick off the query for the event
@@ -315,7 +339,9 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
         mInputMethodManager = (InputMethodManager)
                 activity.getSystemService(Context.INPUT_METHOD_SERVICE);
 
-        mUseCustomActionBar = !Utils.getConfigBool(mActivity, R.bool.multiple_pane_config);
+        mExistingEvent = mActivity instanceof EditEventActivity
+                && ((EditEventActivity) mActivity).isExistingEvent();
+        mUseCustomActionBar = !mExistingEvent && !Utils.getConfigBool(mActivity, R.bool.multiple_pane_config);
     }
 
     @Override
@@ -371,6 +397,7 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
         }
 
         if (savedInstanceState != null) {
+            mExportText = savedInstanceState.getString("event_export_text");
             if (savedInstanceState.containsKey(BUNDLE_KEY_MODEL)) {
                 mRestoreModel = (CalendarEventModel) savedInstanceState.getSerializable(
                         BUNDLE_KEY_MODEL);
@@ -401,7 +428,33 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
 
         if (!mUseCustomActionBar) {
             inflater.inflate(R.menu.edit_event_title_bar, menu);
+            if (mExistingEvent) {
+                menu.add(0, R.id.info_action_duplicate, 10, R.string.duplicate_label);
+                menu.add(0, R.id.info_action_share_event, 11, R.string.share_label);
+                menu.add(0, R.id.info_action_export, 12, R.string.cal_export_event_title);
+                menu.add(0, R.id.info_action_delete, 13, R.string.delete_label);
+            }
         }
+    }
+
+    private boolean existingReady() {
+        return mExistingEvent && mOutstandingQueries == 0 && mOriginalModel != null && mModel != null;
+    }
+
+    @Override public void onPrepareOptionsMenu(Menu menu) {
+        super.onPrepareOptionsMenu(menu);
+        if (!mExistingEvent) return;
+        boolean ready = existingReady();
+        MenuItem done = menu.findItem(R.id.action_done);
+        if (done != null) done.setVisible(ready && (EditEventHelper.canModifyEvent(mModel)
+                || EditEventHelper.canRespond(mModel) || EditEventHelper.canAddReminders(mModel)
+                || EditEventHelper.canModifyCalendar(mModel)));
+        for (int id : new int[]{R.id.info_action_duplicate, R.id.info_action_share_event, R.id.info_action_export}) {
+            MenuItem item = menu.findItem(id);
+            if (item != null) item.setVisible(ready);
+        }
+        MenuItem delete = menu.findItem(R.id.info_action_delete);
+        if (delete != null) delete.setVisible(ready && EditEventHelper.canModifyCalendar(mOriginalModel));
     }
 
     @Override
@@ -418,7 +471,24 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
      * @return whether the event was handled here
      */
     private boolean onActionBarItemSelected(int itemId) {
+        if (itemId == R.id.info_action_duplicate || itemId == R.id.info_action_share_event
+                || itemId == R.id.info_action_export || itemId == R.id.info_action_delete) {
+            if (!existingReady()) return true;
+            if (itemId == R.id.info_action_duplicate) duplicateExisting();
+            else if (itemId == R.id.info_action_delete) {
+                if (EditEventHelper.canModifyCalendar(mOriginalModel)) {
+                    new DeleteEventHelper(mActivity, mActivity, true)
+                            .delete(mBegin, mEnd, mOriginalModel, -1);
+                }
+            } else shareExisting(itemId == R.id.info_action_export);
+            return true;
+        }
         if (itemId == R.id.action_done) {
+            if (mExistingEvent && !existingReady()) return true;
+            if (mExistingEvent && !EditEventHelper.canModifyEvent(mModel)) {
+                saveViewerChanges();
+                return true;
+            }
             if (EditEventHelper.canModifyEvent(mModel) || EditEventHelper.canRespond(mModel)) {
                 if (mView != null && mView.prepareForSave()) {
                     if (mModification == Utils.MODIFY_UNINITIALIZED) {
@@ -443,7 +513,128 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
             mOnDone.setDoneCode(Utils.DONE_REVERT);
             mOnDone.run();
         }
-        return true;
+        return itemId == R.id.action_done || itemId == R.id.action_cancel;
+    }
+
+    // An invitation/readonly calendar may allow personal reminders, response or color,
+    // but none of these operations should rewrite the event title, dates or recurrence.
+    private void saveViewerChanges() {
+        if (!mView.fillModelFromReadOnlyUi()) return;
+        boolean responseChanged = EditEventHelper.canRespond(mModel) && mModel.mOwnerAttendeeId != -1
+                && mModel.mSelfAttendeeStatus != Attendees.ATTENDEE_STATUS_NONE
+                && mModel.mSelfAttendeeStatus != mOriginalModel.mSelfAttendeeStatus;
+        if (responseChanged && mModel.hasRecurrence()) {
+            new MaterialAlertDialogBuilder(mActivity).setTitle(R.string.change_response_title)
+                    .setItems(new CharSequence[]{getString(R.string.modify_event), getString(R.string.modify_all)},
+                            (dialog, which) -> finishViewerSave(true, which == 0))
+                    .setNegativeButton(android.R.string.cancel, null).show();
+        } else finishViewerSave(responseChanged, false);
+    }
+
+    private void finishViewerSave(boolean responseChanged, boolean single) {
+        if (EditEventHelper.canAddReminders(mModel)) saveReminders();
+        if (responseChanged) {
+            ArrayList<ContentProviderOperation> operations = new ArrayList<>();
+            ContentValues values = new ContentValues();
+            if (single) {
+                values.put(Events.ORIGINAL_INSTANCE_TIME, mBegin);
+                values.put(Events.SELF_ATTENDEE_STATUS, mModel.mSelfAttendeeStatus);
+                values.put(Events.STATUS, Events.STATUS_CONFIRMED);
+                operations.add(ContentProviderOperation.newInsert(
+                        Uri.withAppendedPath(Events.CONTENT_EXCEPTION_URI, Long.toString(mModel.mId)))
+                        .withValues(values).build());
+            } else {
+                values.put(Attendees.EVENT_ID, mModel.mId);
+                values.put(Attendees.ATTENDEE_STATUS, mModel.mSelfAttendeeStatus);
+                if (!TextUtils.isEmpty(mModel.mOwnerAccount)) values.put(Attendees.ATTENDEE_EMAIL, mModel.mOwnerAccount);
+                operations.add(ContentProviderOperation.newUpdate(
+                        ContentUris.withAppendedId(Attendees.CONTENT_URI, mModel.mOwnerAttendeeId))
+                        .withValues(values).build());
+            }
+            new AsyncQueryService(mActivity).startBatch(0, null,
+                    android.provider.CalendarContract.AUTHORITY, operations, 0);
+        }
+        if (EditEventHelper.canModifyCalendar(mModel) && mModel.isEventColorInitialized()
+                && mModel.getEventColor() != mOriginalModel.getEventColor()) {
+            ContentValues values = new ContentValues();
+            values.put(Events.EVENT_COLOR_KEY, mModel.getEventColorKey());
+            new AsyncQueryService(mActivity).startUpdate(0, null,
+                    ContentUris.withAppendedId(Events.CONTENT_URI, mModel.mId),
+                    values, null, null, 0);
+        }
+        mSaveOnDetach = false;
+        mActivity.finish();
+    }
+
+    private void duplicateExisting() {
+        CalendarEventModel source = mOriginalModel;
+        Intent intent = new Intent(mActivity, EditEventActivity.class);
+        intent.setType("vnd.android.cursor.item/event");
+        if (EditEventHelper.canModifyCalendar(source)) intent.putExtra(Events.CALENDAR_ID, source.mCalendarId);
+        intent.putExtra(Events.TITLE, source.mTitle);
+        intent.putExtra(Events.DESCRIPTION, source.mDescription);
+        intent.putExtra(Events.EVENT_LOCATION, source.mLocation);
+        intent.putExtra(Events.ORGANIZER, source.mOrganizer);
+        intent.putExtra(Events.RRULE, source.mRrule);
+        intent.putExtra(Events.ACCESS_LEVEL, source.mAccessLevel);
+        intent.putExtra(Events.AVAILABILITY, source.mAvailability);
+        intent.putExtra(Events.ALL_DAY, source.mAllDay);
+        intent.putExtra(android.provider.CalendarContract.EXTRA_EVENT_ALL_DAY, source.mAllDay);
+        intent.putExtra(Events.EVENT_TIMEZONE, source.mTimezone);
+        intent.putExtra(android.provider.CalendarContract.EXTRA_EVENT_BEGIN_TIME, mBegin);
+        intent.putExtra(android.provider.CalendarContract.EXTRA_EVENT_END_TIME, mEnd);
+        intent.putExtra(EditEventActivity.EXTRA_EVENT_REMINDERS, source.mReminders);
+        intent.putExtra(EditEventActivity.EXTRA_EVENT_COLOR, source.getEventColor());
+        intent.putExtra(ExtendedProperty.URL, source.mUrl);
+        ArrayList<String> emails = new ArrayList<>();
+        for (Attendee attendee : source.mAttendeesList.values()) if (!TextUtils.isEmpty(attendee.mEmail)) emails.add(attendee.mEmail);
+        intent.putExtra(Intent.EXTRA_EMAIL, TextUtils.join(",", emails));
+        startActivity(intent);
+    }
+
+    private void shareExisting(boolean export) {
+        CalendarEventModel source = mOriginalModel;
+        com.android.calendar.icalendar.VCalendar calendar = new com.android.calendar.icalendar.VCalendar();
+        calendar.addProperty(com.android.calendar.icalendar.VCalendar.VERSION, "2.0");
+        calendar.addProperty(com.android.calendar.icalendar.VCalendar.PRODID,
+                com.android.calendar.icalendar.VCalendar.PRODUCT_IDENTIFIER);
+        calendar.addProperty(com.android.calendar.icalendar.VCalendar.CALSCALE, "GREGORIAN");
+        calendar.addProperty(com.android.calendar.icalendar.VCalendar.METHOD, "REQUEST");
+        com.android.calendar.icalendar.VEvent event = new com.android.calendar.icalendar.VEvent();
+        String tz = source.mAllDay || TextUtils.isEmpty(source.mTimezone) ? "UTC" : source.mTimezone;
+        event.addEventStart(mBegin, tz);
+        event.addEventEnd(mEnd, tz);
+        event.addProperty(com.android.calendar.icalendar.VEvent.SUMMARY, source.mTitle);
+        event.addProperty(com.android.calendar.icalendar.VEvent.LOCATION, source.mLocation);
+        event.addProperty(com.android.calendar.icalendar.VEvent.DESCRIPTION, source.mDescription);
+        if (!TextUtils.isEmpty(source.mOrganizer)) event.addOrganizer(
+                new com.android.calendar.icalendar.Organizer(source.mOrganizerDisplayName, source.mOrganizer));
+        for (Attendee attendee : source.mAttendeesList.values())
+            com.android.calendar.icalendar.IcalendarUtils.addAttendeeToEvent(attendee, event);
+        calendar.addEvent(event);
+        String prefix = source.mTitle == null ? "invite" : source.mTitle.replaceAll("[\\\\/:*?\"<>|]", "_").trim();
+        if (prefix.length() < 3) prefix = "invite";
+        if (prefix.length() > 80) prefix = prefix.substring(0,80);
+        if (export) {
+            mExportText = calendar.getICalFormattedString();
+            Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+                    .setType("text/calendar").putExtra(Intent.EXTRA_TITLE, prefix + ".ics");
+            mExportLauncher.launch(intent);
+            return;
+        }
+        try {
+            java.io.File file = java.io.File.createTempFile(prefix, ".ics", mActivity.getExternalCacheDir());
+            if (!com.android.calendar.icalendar.IcalendarUtils.writeCalendarToFile(calendar, file))
+                throw new java.io.IOException("Failed to write calendar");
+            Uri uri = androidx.core.content.FileProvider.getUriForFile(mActivity,
+                    ws.xsoh.etar.BuildConfig.APPLICATION_ID + ".provider", file);
+            Intent send = new Intent(Intent.ACTION_SEND).setType("text/calendar")
+                    .putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            send.setClipData(android.content.ClipData.newRawUri("calendar", uri));
+            startActivity(Intent.createChooser(send, getString(R.string.cal_share_intent_title)));
+        } catch (java.io.IOException | IllegalArgumentException error) {
+            Toast.makeText(mActivity, R.string.error_generating_ics, Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void saveReminders() {
@@ -581,12 +772,25 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
     }
 
     public void onBackPressed() {
+        if (mExistingEvent && (!existingReady() || !EditEventHelper.canModifyEvent(mModel))) {
+            if (existingReady() && mView.fillModelFromReadOnlyUi()
+                    && (!mModel.mReminders.equals(mOriginalModel.mReminders)
+                    || mModel.mSelfAttendeeStatus != mOriginalModel.mSelfAttendeeStatus
+                    || mModel.getEventColor() != mOriginalModel.getEventColor())) {
+                showDiscardConfirmAlert();
+            } else {
+                mSaveOnDetach = false;
+                mActivity.finish();
+            }
+            return;
+        }
         if (canSave()) {
             showDiscardConfirmAlert();
             return;
         }
 
-        Utils.returnToCalendarHome(getActivity());
+        if (mExistingEvent) mActivity.finish();
+        else Utils.returnToCalendarHome(getActivity());
     }
 
     private boolean canSave() {
@@ -601,7 +805,8 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
                 .setCancelable(true)
                 .setPositiveButton(R.string.discard, ((dialog, which) -> {
                     revertEventChanges();
-                    Utils.returnToCalendarHome(getActivity());
+                    if (mExistingEvent) mActivity.finish();
+                    else Utils.returnToCalendarHome(getActivity());
                     dialog.cancel();
                 }))
                 .setNegativeButton(R.string.cancel, ((dialog, which) -> dialog.cancel()))
@@ -632,7 +837,10 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
 
     @Override
     public void onSaveInstanceState(Bundle outState) {
-        mView.prepareForSave();
+        if (mExistingEvent && existingReady() && !EditEventHelper.canModifyEvent(mModel))
+            mView.fillModelFromReadOnlyUi();
+        else mView.prepareForSave();
+        outState.putString("event_export_text", mExportText);
         outState.putSerializable(BUNDLE_KEY_MODEL, mModel);
         outState.putInt(BUNDLE_KEY_EDIT_STATE, mModification);
         if (mEventBundle == null && mEvent != null) {
@@ -642,7 +850,7 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
                 mEventBundle.start = mEvent.startTime.toMillis();
             }
             if (mEvent.endTime != null) {
-                mEventBundle.end = mEvent.startTime.toMillis();
+                mEventBundle.end = mEvent.endTime.toMillis();
             }
         }
         outState.putBoolean(BUNDLE_KEY_EDIT_ON_LAUNCH, mShowModifyDialogOnLaunch);
@@ -727,6 +935,21 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
 
                     mOriginalModel.mUri = mUri.toString();
 
+                    if (mBegin <= 0) mBegin = mOriginalModel.mStart;
+                    if (mEnd < mBegin) {
+                        if (mOriginalModel.hasRecurrence() && !TextUtils.isEmpty(mOriginalModel.mDuration)) {
+                            try {
+                                com.android.calendar.calendarcommon2.Duration duration = new com.android.calendar.calendarcommon2.Duration();
+                                duration.parse(mOriginalModel.mDuration);
+                                mEnd = mBegin + duration.getMillis();
+                            } catch (com.android.calendar.calendarcommon2.DateException ignored) {
+                                mEnd = mBegin;
+                            }
+                        } else {
+                            mEnd = Math.max(mBegin, mOriginalModel.mEnd);
+                        }
+                    }
+                    if (mEnd < mBegin) mEnd = mBegin;
                     mModel.mUri = mUri.toString();
                     mModel.mOriginalStart = mBegin;
                     mModel.mOriginalEnd = mEnd;
@@ -791,8 +1014,9 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
                         selectionArgs = new String[] { Long.toString(mModel.mCalendarId) };
                     } else {
                         // non recurring event. enable changing calendars to all calendars.
-                        selection = EditEventHelper.CALENDARS_WHERE_WRITEABLE_VISIBLE;
-                        selectionArgs = null;
+                        selection = "(" + EditEventHelper.CALENDARS_WHERE + ") OR ("
+                                + EditEventHelper.CALENDARS_WHERE_WRITEABLE_VISIBLE + ")";
+                        selectionArgs = new String[] { Long.toString(mModel.mCalendarId) };
                     }
 
                     // TOKEN_CALENDARS
@@ -894,6 +1118,9 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
                         }
                         if (mModel.mId != -1) {
                             // Populate model for an existing event
+                            // Missing source calendars must never inherit a writable default.
+                            mModel.mCalendarAccessLevel = Calendars.CAL_ACCESS_NONE;
+                            mOriginalModel.mCalendarAccessLevel = Calendars.CAL_ACCESS_NONE;
                             EditEventHelper.setModelFromCalendarCursor(mModel, cursor, activity);
                             EditEventHelper.setModelFromCalendarCursor(mOriginalModel, cursor, activity);
                         }
@@ -983,8 +1210,7 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
             }
 
             if ((mCode & Utils.DONE_SAVE) != 0 && mModel != null
-                    && (EditEventHelper.canRespond(mModel)
-                    || EditEventHelper.canModifyEvent(mModel))
+                    && EditEventHelper.canModifyEvent(mModel)
                     && mView.prepareForSave()
                     && !isEmptyNewEvent()
                     && mModel.normalizeReminders()
@@ -1033,7 +1259,7 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
                 // This will exit the edit event screen, should be called
                 // when we want to return to the main calendar views
                 if ((mCode & Utils.DONE_SAVE) != 0) {
-                    if (mActivity != null) {
+                    if (mActivity != null && !mExistingEvent) {
                         long start = mModel.mStart;
                         long end = mModel.mEnd;
                         if (mModel.mAllDay) {
