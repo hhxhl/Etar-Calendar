@@ -321,7 +321,7 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
             item.setPadding(dp(8),0,dp(16),0);
             item.setMinimumHeight(dp(64));
             item.setBackgroundResource(android.R.color.transparent);
-            CheckBox done=new CheckBox(context);
+            CheckBox done=ReminderCompletion.create(context);
             done.setChecked(task.done);
             done.setContentDescription(getString(R.string.tasks_complete)+" "+task.title);
             done.setOnCheckedChangeListener((button,checked)->store.complete(task.id,checked,task.due));

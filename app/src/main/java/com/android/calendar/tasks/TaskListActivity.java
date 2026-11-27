@@ -161,7 +161,8 @@ public final class TaskListActivity extends AppCompatActivity {
         LinearLayout form=new LinearLayout(this);form.setOrientation(LinearLayout.VERTICAL);form.setPadding(dp(20),0,dp(20),dp(8));
         EditText title=new EditText(this);title.setHint(R.string.tasks_task_name);title.setSingleLine();title.setText(task.title);form.addView(title);
         EditText notes=new EditText(this);notes.setHint(R.string.tasks_notes);notes.setText(task.notes);form.addView(notes);
-        CheckBox completed=new CheckBox(this);completed.setText(R.string.tasks_complete);completed.setChecked(task.done);
+        CheckBox completed=reminder?ReminderCompletion.create(this):new CheckBox(this);
+        completed.setText(R.string.tasks_complete);completed.setChecked(task.done);
         if(task.id!=0)form.addView(completed);
         List<TaskStore.TaskList> available=store.lists();ArrayList<String> names=new ArrayList<>();int listPos=0;
         for(int i=0;i<available.size();i++){names.add(name(available.get(i)));if(available.get(i).id==task.listId)listPos=i;}
