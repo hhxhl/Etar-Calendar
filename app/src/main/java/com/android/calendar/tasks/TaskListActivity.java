@@ -66,8 +66,9 @@ public final class TaskListActivity extends AppCompatActivity {
             TaskStore.Task task=id==0?newTask():store.find(id);
             if(task==null){finish();return;}
             if(id==0){
-                long date=getIntent().getLongExtra("date",0);
-                if(date>0){
+                boolean reminder = getIntent().getBooleanExtra("new_reminder", false) || getIntent().hasExtra("date");
+                long date=getIntent().getLongExtra("date",System.currentTimeMillis());
+                if(reminder){
                     task.allDay=!getIntent().getBooleanExtra("timed_task",false);
                     String calendarZone=getIntent().getStringExtra("calendar_zone");
                     ZoneId selectedZone=calendarZone==null?ZoneId.systemDefault():ZoneId.of(calendarZone);
@@ -156,6 +157,7 @@ public final class TaskListActivity extends AppCompatActivity {
     }
     private void label(LinearLayout parent,int text){TextView v=new TextView(this);v.setText(text);v.setPadding(0,dp(10),0,0);parent.addView(v);}
     private void edit(TaskStore.Task task){
+        final boolean reminder = task.due != null;
         LinearLayout form=new LinearLayout(this);form.setOrientation(LinearLayout.VERTICAL);form.setPadding(dp(20),0,dp(20),dp(8));
         EditText title=new EditText(this);title.setHint(R.string.tasks_task_name);title.setSingleLine();title.setText(task.title);form.addView(title);
         EditText notes=new EditText(this);notes.setHint(R.string.tasks_notes);notes.setText(task.notes);form.addView(notes);
@@ -164,17 +166,17 @@ public final class TaskListActivity extends AppCompatActivity {
         List<TaskStore.TaskList> available=store.lists();ArrayList<String> names=new ArrayList<>();int listPos=0;
         for(int i=0;i<available.size();i++){names.add(name(available.get(i)));if(available.get(i).id==task.listId)listPos=i;}
         label(form,R.string.tasks_lists);Spinner list=new Spinner(this);list.setAdapter(adapter(names));list.setSelection(listPos);form.addView(list);
-        CheckBox hasDate=new CheckBox(this);hasDate.setText(R.string.tasks_date);hasDate.setChecked(task.due!=null);form.addView(hasDate);
-        CheckBox hasTime=new CheckBox(this);hasTime.setText(R.string.tasks_time);hasTime.setChecked(task.due!=null&&!task.allDay);form.addView(hasTime);
+        CheckBox hasDate=new CheckBox(this);hasDate.setText(R.string.tasks_date);hasDate.setChecked(reminder);hasDate.setEnabled(false);
+        CheckBox hasTime=new CheckBox(this);hasTime.setText(R.string.tasks_time);hasTime.setChecked(reminder&&!task.allDay);
         ZoneId zone=task.tz==null||task.allDay?ZoneId.systemDefault():ZoneId.of(task.tz);ZonedDateTime initial=task.due==null?ZonedDateTime.now(zone):Instant.ofEpochMilli(task.due).atZone(task.allDay?ZoneOffset.UTC:zone);
         LocalDate[] date={initial.toLocalDate()};LocalTime[] time={initial.toLocalTime().withSecond(0).withNano(0)};
         Button dateButton=new Button(this);Button timeButton=new Button(this);
         Runnable update=()->{dateButton.setText(date[0].format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)));timeButton.setText(time[0].format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)));};
         dateButton.setOnClickListener(v->new DatePickerDialog(this,(p,y,m,d)->{date[0]=LocalDate.of(y,m+1,d);update.run();},date[0].getYear(),date[0].getMonthValue()-1,date[0].getDayOfMonth()).show());
         timeButton.setOnClickListener(v->new TimePickerDialog(this,(p,h,m)->{time[0]=LocalTime.of(h,m);update.run();},time[0].getHour(),time[0].getMinute(),android.text.format.DateFormat.is24HourFormat(this)).show());
-        form.addView(dateButton);form.addView(timeButton);update.run();
-        CheckBox alarm=new CheckBox(this);alarm.setText(R.string.tasks_notify);alarm.setChecked(task.alarm);form.addView(alarm);
-        label(form,R.string.tasks_repeat);Spinner repeat=new Spinner(this);repeat.setAdapter(adapter(java.util.Arrays.asList(getResources().getStringArray(R.array.tasks_repeat_options))));for(int i=0;i<RULES.length;i++)if(java.util.Objects.equals(task.rule,RULES[i]))repeat.setSelection(i);form.addView(repeat);
+        if(reminder){form.addView(dateButton);form.addView(hasTime);form.addView(timeButton);}update.run();
+        CheckBox alarm=new CheckBox(this);alarm.setText(R.string.tasks_notify);alarm.setChecked(task.alarm);if(reminder)form.addView(alarm);
+        if(reminder)label(form,R.string.tasks_repeat);Spinner repeat=new Spinner(this);repeat.setAdapter(adapter(java.util.Arrays.asList(getResources().getStringArray(R.array.tasks_repeat_options))));for(int i=0;i<RULES.length;i++)if(java.util.Objects.equals(task.rule,RULES[i]))repeat.setSelection(i);if(reminder)form.addView(repeat);
         label(form,R.string.tasks_priority);Spinner priority=new Spinner(this);priority.setAdapter(adapter(java.util.Arrays.asList(getResources().getStringArray(R.array.tasks_priority_options))));priority.setSelection(task.priority==1?1:task.priority==5?2:task.priority==9?3:0);form.addView(priority);
         Runnable enabled=()->{dateButton.setEnabled(hasDate.isChecked());hasTime.setEnabled(hasDate.isChecked());timeButton.setEnabled(hasDate.isChecked()&&hasTime.isChecked());alarm.setEnabled(hasDate.isChecked()&&hasTime.isChecked());repeat.setEnabled(hasDate.isChecked());};
         hasDate.setOnCheckedChangeListener((b,c)->enabled.run());hasTime.setOnCheckedChangeListener((b,c)->enabled.run());
@@ -191,8 +193,8 @@ public final class TaskListActivity extends AppCompatActivity {
             for (int i = 0; i < available.size(); i++) {
                 if (available.get(i).id == selectedList) list.setSelection(i);
             }
-            hasDate.setChecked(draft.getBoolean("has_date", initialHasDate));
-            hasTime.setChecked(draft.getBoolean("has_time", initialHasTime));
+            hasDate.setChecked(reminder);
+            hasTime.setChecked(reminder && draft.getBoolean("has_time", initialHasTime));
             date[0] = LocalDate.ofEpochDay(draft.getLong("date", initialDate.toEpochDay()));
             time[0] = LocalTime.ofSecondOfDay(draft.getLong("time", initialTime.toSecondOfDay()));
             alarm.setChecked(draft.getBoolean("alarm", task.alarm));
@@ -217,7 +219,7 @@ public final class TaskListActivity extends AppCompatActivity {
             return draft;
         };
         ScrollView scroll=new ScrollView(this);scroll.addView(form);
-        AlertDialog.Builder builder=new AlertDialog.Builder(this).setTitle(task.id==0?R.string.tasks_add:R.string.tasks_edit).setView(scroll).setNegativeButton(android.R.string.cancel,null).setPositiveButton(android.R.string.ok,null);
+        AlertDialog.Builder builder=new AlertDialog.Builder(this).setTitle(reminder ? (task.id==0?R.string.reminders_add:R.string.reminders_edit) : (task.id==0?R.string.tasks_add:R.string.tasks_edit)).setView(scroll).setNegativeButton(android.R.string.cancel,null).setPositiveButton(android.R.string.ok,null);
         if(task.id!=0)builder.setNeutralButton(R.string.tasks_delete,null);
         AlertDialog dialog=builder.create();
         dialog.setOnDismissListener(d->{
@@ -226,7 +228,7 @@ public final class TaskListActivity extends AppCompatActivity {
         });
         dialog.setOnShowListener(v->{
             if(task.id!=0)dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(b->
-                new AlertDialog.Builder(this).setMessage(R.string.tasks_delete_confirm)
+                new AlertDialog.Builder(this).setMessage(reminder ? R.string.reminders_delete_confirm : R.string.tasks_delete_confirm)
                     .setNegativeButton(android.R.string.cancel,null)
                     .setPositiveButton(R.string.tasks_delete,(dd,ww)->{
                         store.delete(task.id);dialog.dismiss();
@@ -249,7 +251,8 @@ public final class TaskListActivity extends AppCompatActivity {
                 task.anchor=task.due;
                 task.repeatMinute=task.due==null||task.allDay?null:time[0].getHour()*60+time[0].getMinute();
             }
-            task.priority=new int[]{0,1,5,9}[priority.getSelectedItemPosition()];task.alarm=alarm.isChecked()&&alarm.isEnabled();
+            task.priority=new int[]{0,1,5,9}[priority.getSelectedItemPosition()];task.alarm=reminder&&alarm.isChecked()&&alarm.isEnabled();
+            if(!reminder){task.due=null;task.anchor=null;task.repeatMinute=null;task.tz=null;task.allDay=false;task.rule=null;}
             long saved = store.save(task, completed.isChecked());
             finishAfterPermission=saved>0&&editorOnly&&task.alarm&&!task.done;
             dialog.dismiss();

@@ -76,7 +76,8 @@ class WidgetMenuActivity : Activity() {
 
         addItem(R.string.widget_menu_settings) { WidgetUtils.getConfigureIntent(this, widgetId) }
         addItem(R.string.widget_menu_add_event) { WidgetUtils.getAddEventIntent(this) }
-        addItem(R.string.tasks_title) { WidgetUtils.getAddReminderIntent(this) }
+        addItem(R.string.reminders_title) { WidgetUtils.getAddReminderIntent(this) }
+        addItem(R.string.tasks_title) { WidgetUtils.getAddTaskIntent(this) }
 
         root.addView(menu, FrameLayout.LayoutParams(dp(200),
             FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.LEFT))

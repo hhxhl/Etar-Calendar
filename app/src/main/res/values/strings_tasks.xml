@@ -15,7 +15,7 @@
     <string name="tasks_new_list">New list</string>
     <string name="tasks_rename">Rename</string>
     <string name="tasks_delete">Delete</string>
-    <string name="tasks_delete_list_confirm">Delete this list and all its tasks?</string>
+    <string name="tasks_delete_list_confirm">Delete this list and all its reminders and tasks?</string>
     <string name="tasks_delete_confirm">Delete this task?</string>
     <string name="tasks_required">Required</string>
     <string name="tasks_task_name">Title</string>
@@ -44,5 +44,14 @@
     <string name="tasks_show_scheduled">Show dated tasks</string>
     <string name="tasks_manage_lists">Task lists</string>
     <string name="tasks_new_item">New item</string>
-    <string name="tasks_choose_item">Choose event or task</string>
+    <string name="tasks_choose_item">Choose item</string>
+    <string name="reminders_title">Reminders</string>
+    <string name="reminders_add">New reminder</string>
+    <string name="reminders_edit">Edit reminder</string>
+    <string name="reminders_delete_confirm">Delete this reminder?</string>
+    <string name="reminders_all">All reminders</string>
+    <string name="reminders_empty">No reminders</string>
+    <string name="reminders_overdue">Overdue</string>
+    <string name="reminders_completed">Completed (%1$d)</string>
+    <string name="reminders_all_day">All day</string>
 </resources>

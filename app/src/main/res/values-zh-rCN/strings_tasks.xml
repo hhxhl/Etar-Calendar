@@ -15,7 +15,7 @@
     <string name="tasks_new_list">新建列表</string>
     <string name="tasks_rename">重命名</string>
     <string name="tasks_delete">删除</string>
-    <string name="tasks_delete_list_confirm">删除此列表及其中全部任务？</string>
+    <string name="tasks_delete_list_confirm">删除此列表及其中全部提醒和任务？</string>
     <string name="tasks_delete_confirm">删除此任务？</string>
     <string name="tasks_required">不能为空</string>
     <string name="tasks_task_name">标题</string>
@@ -44,5 +44,14 @@
     <string name="tasks_show_scheduled">显示有日期的任务</string>
     <string name="tasks_manage_lists">任务列表</string>
     <string name="tasks_new_item">新建</string>
-    <string name="tasks_choose_item">选择日程或任务</string>
+    <string name="tasks_choose_item">选择事项</string>
+    <string name="reminders_title">提醒</string>
+    <string name="reminders_add">新建提醒</string>
+    <string name="reminders_edit">编辑提醒</string>
+    <string name="reminders_delete_confirm">删除此提醒？</string>
+    <string name="reminders_all">全部提醒</string>
+    <string name="reminders_empty">没有提醒</string>
+    <string name="reminders_overdue">已逾期</string>
+    <string name="reminders_completed">已完成（%1$d）</string>
+    <string name="reminders_all_day">全天</string>
 </resources>

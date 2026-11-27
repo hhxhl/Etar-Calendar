@@ -201,6 +201,12 @@ object WidgetUtils {
     }
 
     fun getAddReminderIntent(context: Context): Intent =
+        getAddTaskIntent(context).apply {
+            putExtra("new_reminder", true)
+            putExtra("calendar_zone", com.android.calendar.Utils.getTimeZone(context, null))
+        }
+
+    fun getAddTaskIntent(context: Context): Intent =
         Intent(context, com.android.calendar.tasks.TaskListActivity::class.java).apply {
             putExtra("new_task", true)
         }

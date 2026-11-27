@@ -171,7 +171,7 @@ class CalendarWidgetConfigureActivity : AppCompatActivity() {
             val name = list.name.ifEmpty { getString(R.string.tasks_default_list) }
             val color = if (list.color == 0) getColor(R.color.event_center)
                 else Utils.getDisplayColorFromColor(this, list.color)
-            calendarItems.add(CalendarItem(list.id, name, getString(R.string.tasks_title),
+            calendarItems.add(CalendarItem(list.id, name, getString(R.string.reminders_title),
                 color, selectedTasks?.contains(list.id.toString()) ?: true, true))
         }
     }

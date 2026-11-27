@@ -54,16 +54,23 @@ public final class TaskCalendarUi {
     public static void create(Context context, CalendarController controller, long millis,
             boolean allDay, boolean timedReminder, boolean reminder) {
         if (reminder) {
-            Intent intent = new Intent(context, TaskListActivity.class);
-            intent.putExtra("new_task", true);
-            intent.putExtra("date", millis);
-            intent.putExtra("timed_task", timedReminder && !allDay);
-            intent.putExtra("calendar_zone", Utils.getTimeZone(context, null));
-            context.startActivity(intent);
+            createReminder(context, millis, timedReminder && !allDay, 0);
         } else {
             controller.sendEventRelatedEventWithExtra(context, EventType.CREATE_EVENT, -1,
                     millis, 0, 0, 0, allDay ? CalendarController.EXTRA_CREATE_ALL_DAY : 0, -1);
         }
+    }
+
+    public static void createTask(Context context, long listId) {
+        context.startActivity(new Intent(context, TaskListActivity.class)
+                .putExtra("new_task", true).putExtra("list_id", listId));
+    }
+
+    public static void createReminder(Context context, long millis, boolean timed, long listId) {
+        context.startActivity(new Intent(context, TaskListActivity.class)
+                .putExtra("new_task", true).putExtra("new_reminder", true)
+                .putExtra("date", millis).putExtra("timed_task", timed)
+                .putExtra("list_id", listId).putExtra("calendar_zone", Utils.getTimeZone(context, null)));
     }
 
     public static void showCreate(Context context, CalendarController controller, long millis,
@@ -71,8 +78,11 @@ public final class TaskCalendarUi {
         new MaterialAlertDialogBuilder(context)
                 .setTitle(R.string.tasks_new_item)
                 .setItems(new CharSequence[]{context.getString(R.string.tasks_create_event_type),
-                        context.getString(R.string.tasks_title)},
-                        (dialog, which) -> create(context, controller, millis, allDay, timedReminder, which == 1))
+                        context.getString(R.string.reminders_title), context.getString(R.string.tasks_title)},
+                        (dialog, which) -> {
+                            if (which == 2) createTask(context, 0);
+                            else create(context, controller, millis, allDay, timedReminder, which == 1);
+                        })
                 .show();
     }
 

@@ -15,11 +15,6 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import androidx.fragment.app.Fragment;
 import com.android.calendar.CalendarController;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.List;
 import ws.xsoh.etar.R;
@@ -27,11 +22,9 @@ import ws.xsoh.etar.R;
 /** The reminders navigation destination, sharing the calendar's toolbar and drawer. */
 public final class UndatedTasksFragment extends Fragment implements CalendarController.EventHandler {
     private Spinner filter;
-    private CheckBox scheduled;
     private LinearLayout rows;
     private ScrollView scroll;
     private long listId;
-    private boolean showScheduled;
     private List<TaskStore.TaskList> lists;
     private TaskStore store;
 
@@ -40,21 +33,12 @@ public final class UndatedTasksFragment extends Fragment implements CalendarCont
         store = TaskStore.get(context);
         if (state != null) {
             listId = state.getLong("list_id");
-            showScheduled = state.getBoolean("show_scheduled");
         }
         LinearLayout root = new LinearLayout(context);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(16), dp(8), dp(16), dp(8));
         filter = new Spinner(context);
         root.addView(filter, new LinearLayout.LayoutParams(-1, -2));
-        scheduled = new CheckBox(context);
-        scheduled.setText(R.string.tasks_show_scheduled);
-        scheduled.setChecked(showScheduled);
-        scheduled.setOnCheckedChangeListener((button, checked) -> {
-            showScheduled = checked;
-            refresh();
-        });
-        root.addView(scheduled);
         scroll = new ScrollView(context);
         rows = new LinearLayout(context);
         rows.setOrientation(LinearLayout.VERTICAL);
@@ -80,7 +64,6 @@ public final class UndatedTasksFragment extends Fragment implements CalendarCont
 
     @Override public void onSaveInstanceState(Bundle out) {
         out.putLong("list_id", listId);
-        out.putBoolean("show_scheduled", showScheduled);
         super.onSaveInstanceState(out);
     }
 
@@ -88,7 +71,6 @@ public final class UndatedTasksFragment extends Fragment implements CalendarCont
         rows = null;
         scroll = null;
         filter = null;
-        scheduled = null;
         super.onDestroyView();
     }
 
@@ -115,6 +97,8 @@ public final class UndatedTasksFragment extends Fragment implements CalendarCont
         refresh();
     }
 
+    public long getListId() { return listId; }
+
     public void createTask() {
         if (!isAdded()) return;
         Intent intent = new Intent(requireContext(), TaskListActivity.class)
@@ -127,7 +111,7 @@ public final class UndatedTasksFragment extends Fragment implements CalendarCont
         Context context = requireContext();
         rows.removeAllViews();
         for (TaskStore.Task task : store.tasks(listId)) {
-            if (showScheduled != (task.due != null)) continue;
+            if (task.due != null) continue;
             LinearLayout row = new LinearLayout(context);
             row.setGravity(Gravity.CENTER_VERTICAL);
             CheckBox done = new CheckBox(context);
@@ -146,14 +130,6 @@ public final class UndatedTasksFragment extends Fragment implements CalendarCont
             title.setTextSize(18);
             if (task.done) title.setPaintFlags(title.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
             details.addView(title);
-            if (showScheduled && task.due != null) {
-                TextView date = new TextView(context);
-                java.time.ZonedDateTime value = Instant.ofEpochMilli(task.due)
-                        .atZone(task.allDay ? ZoneOffset.UTC : ZoneId.systemDefault());
-                date.setText(task.allDay ? value.toLocalDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
-                        : value.format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)));
-                details.addView(date);
-            }
             details.setOnClickListener(v -> TaskCalendarUi.openTask(context, task.id));
             row.addView(details, new LinearLayout.LayoutParams(0, -2, 1));
             rows.addView(row);

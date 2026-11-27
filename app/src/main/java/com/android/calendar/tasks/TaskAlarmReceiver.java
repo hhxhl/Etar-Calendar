@@ -45,7 +45,7 @@ public final class TaskAlarmReceiver extends BroadcastReceiver {
         } else if(FIRE.equals(intent.getAction())){
             if(Build.VERSION.SDK_INT<33 || context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)==PackageManager.PERMISSION_GRANTED){
                 NotificationManager nm=(NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
-                if(Build.VERSION.SDK_INT>=26)nm.createNotificationChannel(new NotificationChannel(CHANNEL,context.getString(R.string.tasks_title),NotificationManager.IMPORTANCE_HIGH));
+                if(Build.VERSION.SDK_INT>=26)nm.createNotificationChannel(new NotificationChannel(CHANNEL,context.getString(R.string.reminders_title),NotificationManager.IMPORTANCE_HIGH));
                 for(TaskStore.Task t:store.dueAlarms(System.currentTimeMillis())){
                     Intent open=new Intent(context,TaskListActivity.class).setData(Uri.parse("etar-task:"+t.id)).putExtra("task_id",t.id);
                     PendingIntent view=PendingIntent.getActivity(context,0,open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
