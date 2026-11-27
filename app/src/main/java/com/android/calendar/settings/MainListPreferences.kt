@@ -206,6 +206,8 @@ class MainListPreferences : PreferenceFragmentCompat() {
         val categoryKey = "offline_task_lists"
         val old = screen.findPreference<PreferenceCategory>(categoryKey)
         if (old != null) screen.removePreference(old)
+        val lists = TaskStore.get(requireContext()).lists()
+        if (lists.isEmpty()) return
         val category = PreferenceCategory(requireContext()).apply {
             key = categoryKey
             title = getString(R.string.tasks_offline_lists)
@@ -213,8 +215,10 @@ class MainListPreferences : PreferenceFragmentCompat() {
             order = 12
             isOrderingAsAdded = false
         }
-        val store = TaskStore.get(requireContext())
-        for (list in store.lists()) {
+        // A PreferenceGroup must be attached to the screen before adding children,
+        // otherwise AndroidX has no PreferenceManager to allocate their IDs.
+        screen.addPreference(category)
+        for (list in lists) {
             category.addPreference(Preference(requireContext()).apply {
                 key = "task_list_${list.id}"
                 title = list.name.ifBlank { getString(R.string.tasks_default_list) }
@@ -228,7 +232,6 @@ class MainListPreferences : PreferenceFragmentCompat() {
                 }
             })
         }
-        if (category.preferenceCount > 0) screen.addPreference(category)
     }
 
     private fun addOfflineCalendar() {
