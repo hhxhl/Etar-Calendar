@@ -25,24 +25,16 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
 
-    <ImageView
-            android:id="@+id/agenda_item_color"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_marginStart="4dp"
-            android:layout_marginEnd="4dp"
-            android:scaleType="fitXY" />
-
-    <!-- Independent indicator in the existing start margin of a timed event. -->
+    <!-- Calendar or reminder source color; the rest of the row stays transparent. -->
     <FrameLayout
-        android:id="@+id/widget_ongoing_indicator"
+        android:id="@+id/agenda_item_color"
         android:layout_width="2dp"
         android:layout_height="match_parent"
         android:layout_gravity="start"
-        android:layout_marginStart="1dp"
+        android:layout_marginStart="2dp"
         android:layout_marginTop="4dp"
-        android:layout_marginBottom="4dp"
-        android:visibility="gone" />
+        android:layout_marginBottom="4dp" />
+
 
     <LinearLayout
             android:layout_width="match_parent"

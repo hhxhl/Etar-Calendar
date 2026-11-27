@@ -24,7 +24,6 @@ import android.content.Context;
 import android.content.CursorLoader;
 import android.content.Intent;
 import android.content.Loader;
-import android.content.res.Resources;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.graphics.Paint;
@@ -137,7 +136,6 @@ public class CalendarAppWidgetService extends RemoteViewsService {
         private final Handler mHandler = new Handler();
         private final ExecutorService executor = Executors.newSingleThreadExecutor();
         private Context mContext;
-        private Resources mResources;
         private int mLastSerialNum = -1;
         private CursorLoader mLoader;
         private final Runnable mTimezoneChanged = new Runnable() {
@@ -149,19 +147,12 @@ public class CalendarAppWidgetService extends RemoteViewsService {
             }
         };
         private int mAppWidgetId;
-        private int mDeclinedColor;
-        private int mStandardColor;
-        private int mAllDayColor;
 
         protected CalendarFactory(Context context, Intent intent) {
             mContext = context;
-            mResources = context.getResources();
             mAppWidgetId = intent.getIntExtra(
                     AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID);
 
-            mDeclinedColor = mResources.getColor(R.color.appwidget_item_declined_color);
-            mStandardColor = DynamicThemeKt.getColor(mContext, "widget_text");
-            mAllDayColor = mResources.getColor(R.color.appwidget_item_allday_color);
         }
 
         public CalendarFactory() {
@@ -336,73 +327,27 @@ public class CalendarAppWidgetService extends RemoteViewsService {
                     views = new RemoteViews(mContext.getPackageName(), R.layout.widget_item);
                 }
                 int displayColor = Utils.getDisplayColorFromColor(mContext, eventInfo.color);
-                int adaptiveTextColor = Utils.getAdaptiveTextColor(mContext, mStandardColor, displayColor);
-                int adaptiveAllDayTextColor = Utils.getAdaptiveTextColor(mContext, mAllDayColor, displayColor);
+                boolean declined = eventInfo.selfAttendeeStatus == Attendees.ATTENDEE_STATUS_DECLINED;
+                int markerColor = declined ? Utils.getDeclinedColorFromColor(displayColor) : displayColor;
+                int textColor = DynamicThemeKt.getColor(mContext, "widget_text");
 
-                // All rows inherit the widget surface, including its opacity.
+                // Keep the widget surface visible; only the narrow leading bar is tinted.
                 views.setInt(R.id.widget_row, "setBackgroundColor", android.graphics.Color.TRANSPARENT);
+                views.setInt(R.id.agenda_item_color, "setBackgroundColor", markerColor);
+                WidgetUtils.setThemeText(mContext, views, R.id.title, R.color.widget_live_text, textColor);
+                views.setFloat(R.id.title, "setAlpha", declined ? 0.4f : 1f);
 
                 if (!eventInfo.allDay) {
-                    long now = System.currentTimeMillis();
-                    boolean ongoing = eventInfo.start <= now && now < eventInfo.end
-                            && eventInfo.status != Events.STATUS_CANCELED;
-                    views.setViewVisibility(R.id.widget_ongoing_indicator,
-                            ongoing ? View.VISIBLE : View.GONE);
-                    views.setInt(R.id.widget_ongoing_indicator, "setBackgroundColor",
-                            DynamicThemeKt.getColor(mContext, "widget_text"));
                     updateTextView(views, R.id.when, eventInfo.visibWhen, eventInfo.when);
                     updateTextView(views, R.id.where, eventInfo.visibWhere, eventInfo.where);
+                    WidgetUtils.setThemeText(mContext, views, R.id.when, R.color.widget_live_text, textColor);
+                    WidgetUtils.setThemeText(mContext, views, R.id.where, R.color.widget_live_text, textColor);
+                    views.setFloat(R.id.when, "setAlpha", declined ? 0.4f : 1f);
+                    views.setFloat(R.id.where, "setAlpha", declined ? 0.4f : 1f);
                 }
                 String countdown = eventInfo.id < -1 ? "" : com.android.calendar.EventCountdown.widgetLabel(mContext, eventInfo.id, eventInfo.start);
                 String displayTitle = countdown.isEmpty() ? eventInfo.title : eventInfo.title + " · " + countdown;
                 updateTextView(views, R.id.title, eventInfo.visibTitle, displayTitle);
-
-                views.setViewVisibility(R.id.agenda_item_color, View.VISIBLE);
-
-                int selfAttendeeStatus = eventInfo.selfAttendeeStatus;
-                if (eventInfo.allDay) {
-                    if (selfAttendeeStatus == Attendees.ATTENDEE_STATUS_INVITED) {
-                        views.setInt(R.id.agenda_item_color, "setImageResource",
-                                R.drawable.widget_chip_not_responded_bg);
-                        views.setInt(R.id.title, "setTextColor", displayColor);
-                    } else {
-                        views.setInt(R.id.agenda_item_color, "setImageResource",
-                                R.drawable.widget_chip_responded_bg);
-                        views.setInt(R.id.title, "setTextColor", adaptiveAllDayTextColor);
-                    }
-                    if (selfAttendeeStatus == Attendees.ATTENDEE_STATUS_DECLINED) {
-                        // 40% opacity
-                        views.setInt(R.id.agenda_item_color, "setColorFilter",
-                                Utils.getDeclinedColorFromColor(displayColor));
-                    } else {
-                        views.setInt(R.id.agenda_item_color, "setColorFilter", displayColor);
-                    }
-                } else if (selfAttendeeStatus == Attendees.ATTENDEE_STATUS_DECLINED) {
-                    views.setInt(R.id.title, "setTextColor", mDeclinedColor);
-                    views.setInt(R.id.when, "setTextColor", mDeclinedColor);
-                    views.setInt(R.id.where, "setTextColor", mDeclinedColor);
-
-                    views.setInt(R.id.agenda_item_color, "setImageResource",
-                            R.drawable.widget_chip_responded_bg);
-                    // 40% opacity
-                    views.setInt(R.id.agenda_item_color, "setColorFilter",
-                            Utils.getDeclinedColorFromColor(displayColor));
-                } else {
-                    if (selfAttendeeStatus == Attendees.ATTENDEE_STATUS_INVITED) {
-                        views.setInt(R.id.agenda_item_color, "setImageResource",
-                                R.drawable.widget_chip_not_responded_bg);
-                        views.setInt(R.id.title, "setTextColor", displayColor);
-                        views.setInt(R.id.when, "setTextColor", displayColor);
-                        views.setInt(R.id.where, "setTextColor", displayColor);
-                    } else {
-                        views.setInt(R.id.agenda_item_color, "setImageResource",
-                                R.drawable.widget_chip_responded_bg);
-                        views.setInt(R.id.title, "setTextColor", adaptiveTextColor);
-                        views.setInt(R.id.when, "setTextColor", adaptiveTextColor);
-                        views.setInt(R.id.where, "setTextColor", adaptiveTextColor);
-                    }
-                    views.setInt(R.id.agenda_item_color, "setColorFilter", displayColor);
-                }
 
                 if (eventInfo.status == Events.STATUS_CANCELED) {
                     views.setInt(R.id.title, "setPaintFlags", Paint.STRIKE_THRU_TEXT_FLAG);
