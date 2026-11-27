@@ -122,6 +122,8 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
     private static final String BUNDLE_KEY_RESTORE_VIEW = "key_restore_view";
     private static final String BUNDLE_KEY_AGENDA_STATE = "key_agenda_state";
     private Bundle mAgendaRestoreState;
+    private Bundle mTaskRestoreState;
+    private boolean calendarObserverRegistered;
     private static final int HANDLER_KEY = 0;
     private boolean taskReceiverRegistered;
     private final Handler refreshHandler = new Handler(android.os.Looper.getMainLooper());
@@ -312,6 +314,7 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
             timeMillis = icicle.getLong(BUNDLE_KEY_RESTORE_TIME);
             viewType = icicle.getInt(BUNDLE_KEY_RESTORE_VIEW, -1);
             mAgendaRestoreState = icicle.getBundle(BUNDLE_KEY_AGENDA_STATE);
+            mTaskRestoreState = icicle.getBundle("task_view_state");
         } else {
             String action = intent.getAction();
             if (Intent.ACTION_VIEW.equals(action)) {
@@ -681,14 +684,10 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
             startActivity(intent);
         }
 
-        if (!Utils.isCalendarPermissionGranted(this, true)) {
-            //If permission is not granted then just return.
-            Log.d(TAG, "Manifest.permission.READ_CALENDAR is not granted");
-            return;
+        if (Utils.isCalendarPermissionGranted(this, !isTaskView(mCurrentView))) {
+            mContentResolver.registerContentObserver(CalendarContract.Events.CONTENT_URI, true, mObserver);
+            calendarObserverRegistered = true;
         }
-
-        mContentResolver.registerContentObserver(CalendarContract.Events.CONTENT_URI,
-                true, mObserver);
         if (mUpdateOnResume) {
             initFragments(mController.getTime(), mController.getViewType(), null);
             mUpdateOnResume = false;
@@ -703,7 +702,7 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         }
         mPaused = false;
 
-        if (mViewEventId != -1 && mIntentEventStartMillis != -1 && mIntentEventEndMillis != -1) {
+        if (calendarObserverRegistered && mViewEventId != -1 && mIntentEventStartMillis != -1 && mIntentEventEndMillis != -1) {
             long currentMillis = System.currentTimeMillis();
             long selectedTime = -1;
             if (currentMillis > mIntentEventStartMillis && currentMillis < mIntentEventEndMillis) {
@@ -741,13 +740,10 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         refreshHandler.removeCallbacks(refreshEvents);
         mHomeTime.removeCallbacks(mHomeTimeUpdater);
 
-        if (!Utils.isCalendarPermissionGranted(this, false)) {
-            //If permission is not granted then just return.
-            Log.d(TAG, "Manifest.permission.WRITE_CALENDAR is not granted");
-            return;
+        if (calendarObserverRegistered) {
+            mContentResolver.unregisterContentObserver(mObserver);
+            calendarObserverRegistered = false;
         }
-
-        mContentResolver.unregisterContentObserver(mObserver);
         if (isFinishing()) {
             // Stop listening for changes that would require this to be refreshed
             SharedPreferences prefs = GeneralPreferences.Companion.getSharedPreferences(this);
@@ -775,6 +771,12 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         outState.putInt(BUNDLE_KEY_RESTORE_VIEW, mCurrentView);
         if (mCurrentView == ViewType.EDIT) {
             outState.putLong(BUNDLE_KEY_EVENT_ID, mController.getEventId());
+        } else if (isTaskView(mCurrentView)) {
+            Fragment f = getSupportFragmentManager().findFragmentById(R.id.main_pane);
+            if (f instanceof com.android.calendar.tasks.DatedRemindersFragment reminders)
+                outState.putBundle("task_view_state", reminders.saveViewState());
+            else if (f instanceof com.android.calendar.tasks.UndatedTasksFragment tasks)
+                outState.putBundle("task_view_state", tasks.saveViewState());
         } else if (mCurrentView == ViewType.AGENDA) {
             FragmentManager fm = getSupportFragmentManager();
             Fragment f = fm.findFragmentById(R.id.main_pane);
@@ -1167,9 +1169,13 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         switch (viewType) {
             case ViewType.REMINDERS:
                 frag = new com.android.calendar.tasks.DatedRemindersFragment();
+                frag.setArguments(mTaskRestoreState);
+                mTaskRestoreState = null;
                 break;
             case ViewType.TASKS:
                 frag = new com.android.calendar.tasks.UndatedTasksFragment();
+                frag.setArguments(mTaskRestoreState);
+                mTaskRestoreState = null;
                 if (mIsTabletConfig) {
                     mToolbar.setTitle(R.string.tasks_title);
                     mToolbar.setSubtitle(null);

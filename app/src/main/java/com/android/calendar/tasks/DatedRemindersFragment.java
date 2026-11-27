@@ -60,6 +60,7 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
         controller = CalendarController.getInstance(requireActivity());
         firstResume = true;
         initialDate = Instant.ofEpochMilli(controller.getTime()).atZone(zone()).toLocalDate();
+        if (state == null) state = getArguments();
         if (state != null) {
             listId = state.getLong("list_id");
             showCompleted = state.getBoolean("completed");
@@ -98,10 +99,16 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
         refresh(true);
     }
 
+    public Bundle saveViewState() {
+        Bundle state = new Bundle();
+        state.putLong("list_id", listId);
+        state.putBoolean("completed", showCompleted);
+        return state;
+    }
+
     @Override public void onSaveInstanceState(Bundle state) {
-        state.putLong("list_id",listId);
-        state.putBoolean("completed",showCompleted);
         super.onSaveInstanceState(state);
+        state.putAll(saveViewState());
     }
 
     @Override public void onPause() {

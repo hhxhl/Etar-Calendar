@@ -1,7 +1,6 @@
 package com.android.calendar.tasks;
 
 import android.content.Context;
-import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -33,6 +32,7 @@ public final class UndatedTasksFragment extends Fragment implements CalendarCont
         Context context = requireContext();
         store = TaskStore.get(context);
         loader = new TaskListLoader<>(store);
+        if (state == null) state = getArguments();
         if (state != null) listId = state.getLong("list_id");
         LinearLayout root = new LinearLayout(context);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -50,9 +50,15 @@ public final class UndatedTasksFragment extends Fragment implements CalendarCont
         refresh(true);
     }
 
+    public Bundle saveViewState() {
+        Bundle state = new Bundle();
+        state.putLong("list_id", listId);
+        return state;
+    }
+
     @Override public void onSaveInstanceState(Bundle out) {
-        out.putLong("list_id", listId);
         super.onSaveInstanceState(out);
+        out.putAll(saveViewState());
     }
 
     @Override public void onPause() {
@@ -74,8 +80,7 @@ public final class UndatedTasksFragment extends Fragment implements CalendarCont
 
     public void createTask() {
         if (!isAdded()) return;
-        startActivity(new Intent(requireContext(), TaskListActivity.class)
-                .putExtra("new_task", true).putExtra("list_id", listId));
+        TaskCalendarUi.createTask(requireContext(), listId);
     }
 
     private void refresh(boolean preservePosition) {
