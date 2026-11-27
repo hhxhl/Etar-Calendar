@@ -248,6 +248,9 @@ public class CalendarAppWidgetService extends RemoteViewsService {
             Cursor cursor = null;
             try {
                 cursor = mContext.getContentResolver().query(uri, EVENT_PROJECTION, selection, null, EVENT_SORT_ORDER);
+                // A failed provider query is not an empty calendar. Keep the last
+                // complete snapshot until a new query succeeds.
+                if (cursor == null && mModel != null) return;
                 mModel = buildWidgetModelWithTasks(cursor, tz);
             } catch (Exception e) {
                 Log.e(TAG, "Error loading events for widget " + mAppWidgetId, e);
