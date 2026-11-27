@@ -980,10 +980,6 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
 
     private static final int REQUEST_CODE_IMPORT = 101;
 
-    /**
-     * Shows, in the toolbar, one button for each of the day, week and month views other than
-     * the current one, when the "View buttons in the toolbar" setting is enabled
-     */
     private static boolean isTaskView(int viewType) {
         return viewType == ViewType.REMINDERS || viewType == ViewType.TASKS;
     }
@@ -1000,30 +996,52 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
     }
 
     private void updateViewSwitchButtons() {
-        if (mOptionsMenu == null) {
-            return;
-        }
+        if (mOptionsMenu == null) return;
+
         boolean enabled = Utils.getSharedPreference(this,
                 GeneralPreferences.KEY_VIEW_SWITCH_BUTTONS, false);
-        setViewSwitchButton(R.id.action_view_day, enabled && mCurrentView != ViewType.DAY);
-        setViewSwitchButton(R.id.action_view_week, enabled && mCurrentView != ViewType.WEEK);
-        setViewSwitchButton(R.id.action_view_month, enabled && mCurrentView != ViewType.MONTH);
+        MenuItem switchItem = mOptionsMenu.findItem(R.id.action_view_switch);
+        int selectedId;
+        int iconRes;
+        int titleRes;
+        switch (mCurrentView) {
+            case ViewType.DAY:
+                selectedId = R.id.action_view_day;
+                iconRes = R.drawable.ic_toolbar_view_day;
+                titleRes = R.string.day_view;
+                break;
+            case ViewType.WEEK:
+                selectedId = R.id.action_view_week;
+                iconRes = R.drawable.ic_toolbar_view_week;
+                titleRes = R.string.week_view;
+                break;
+            case ViewType.MONTH:
+                selectedId = R.id.action_view_month;
+                iconRes = R.drawable.ic_toolbar_view_month;
+                titleRes = R.string.month_view;
+                break;
+            default:
+                selectedId = 0;
+                iconRes = 0;
+                titleRes = 0;
+                break;
+        }
 
-        // On phones, Android only keeps two "if room" icons next to the overflow menu : force the
-        // "Today" icon so that it is not pushed into the overflow menu by the view buttons
+        boolean showSwitch = enabled && selectedId != 0;
+        if (switchItem != null) {
+            switchItem.setVisible(showSwitch);
+            if (showSwitch) {
+                switchItem.setIcon(iconRes);
+                switchItem.setTitle(titleRes);
+                switchItem.getSubMenu().findItem(selectedId).setChecked(true);
+            }
+        }
+
         MenuItem today = mOptionsMenu.findItem(R.id.action_today);
         if (today != null) {
             today.setVisible(true);
-            today.setShowAsAction(enabled || isTaskView(mCurrentView)
+            today.setShowAsAction(showSwitch || isTaskView(mCurrentView)
                     ? MenuItem.SHOW_AS_ACTION_ALWAYS : MenuItem.SHOW_AS_ACTION_IF_ROOM);
-        }
-    }
-
-    private void setViewSwitchButton(int itemId, boolean visible) {
-        MenuItem item = mOptionsMenu.findItem(itemId);
-        if (item != null) {
-            item.setVisible(visible);
-            item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
         }
     }
 
@@ -1043,13 +1061,19 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
             mController.sendEvent(this, EventType.GO_TO, t, null, t, -1, viewType, extras, null, null);
             return true;
         } else if (itemId == R.id.action_view_day) {
-            mController.sendEvent(this, EventType.GO_TO, null, null, -1, ViewType.DAY);
+            if (mCurrentView != ViewType.DAY) {
+                mController.sendEvent(this, EventType.GO_TO, null, null, -1, ViewType.DAY);
+            }
             return true;
         } else if (itemId == R.id.action_view_week) {
-            mController.sendEvent(this, EventType.GO_TO, null, null, -1, ViewType.WEEK);
+            if (mCurrentView != ViewType.WEEK) {
+                mController.sendEvent(this, EventType.GO_TO, null, null, -1, ViewType.WEEK);
+            }
             return true;
         } else if (itemId == R.id.action_view_month) {
-            mController.sendEvent(this, EventType.GO_TO, null, null, -1, ViewType.MONTH);
+            if (mCurrentView != ViewType.MONTH) {
+                mController.sendEvent(this, EventType.GO_TO, null, null, -1, ViewType.MONTH);
+            }
             return true;
         } else if (itemId == R.id.action_goto) {
             goToDate();
