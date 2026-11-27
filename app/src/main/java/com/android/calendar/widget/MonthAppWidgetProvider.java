@@ -53,6 +53,7 @@ public class MonthAppWidgetProvider extends BaseGridWidgetProvider {
     @Override
     protected String computeTitle(Context context, long nowMillis) {
         SimpleDateFormat sdf = new SimpleDateFormat("MMMM yyyy", Locale.getDefault());
+        sdf.setTimeZone(java.util.TimeZone.getTimeZone(com.android.calendar.Utils.getTimeZone(context, null)));
         return sdf.format(new Date(nowMillis));
     }
 }

@@ -45,8 +45,15 @@ class MonthAppWidgetModel {
     static MonthAppWidgetModel buildFromCalendar(int year, int month, int todayYear,
             int todayMonth, int todayDay, int firstDayOfWeek,
             Map<Integer, List<EventChip>> eventsByDay) {
+        return buildFromCalendar(year, month, todayYear, todayMonth, todayDay, firstDayOfWeek,
+                eventsByDay, java.util.TimeZone.getDefault());
+    }
 
-        Calendar cal = Calendar.getInstance();
+    static MonthAppWidgetModel buildFromCalendar(int year, int month, int todayYear,
+            int todayMonth, int todayDay, int firstDayOfWeek,
+            Map<Integer, List<EventChip>> eventsByDay, java.util.TimeZone zone) {
+
+        Calendar cal = Calendar.getInstance(zone);
         cal.clear();
         cal.set(Calendar.YEAR, year);
         cal.set(Calendar.MONTH, month);
@@ -84,7 +91,7 @@ class MonthAppWidgetModel {
         List<EventChip> emptyChips = Collections.emptyList();
 
         // Calendar for getTimeMillis — mutated in-place to avoid repeated allocations
-        Calendar calCell = Calendar.getInstance();
+        Calendar calCell = Calendar.getInstance(zone);
         calCell.clear();
         calCell.set(Calendar.HOUR_OF_DAY, 0);
         calCell.set(Calendar.MINUTE, 0);

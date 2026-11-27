@@ -46,8 +46,13 @@ class WeekAppWidgetModel {
      */
     static WeekAppWidgetModel buildWeek(int todayYear, int todayMonth, int todayDay,
             int firstDayOfWeek) {
+        return buildWeek(todayYear, todayMonth, todayDay, firstDayOfWeek, java.util.TimeZone.getDefault());
+    }
 
-        Calendar cal = Calendar.getInstance();
+    static WeekAppWidgetModel buildWeek(int todayYear, int todayMonth, int todayDay,
+            int firstDayOfWeek, java.util.TimeZone zone) {
+
+        Calendar cal = Calendar.getInstance(zone);
         cal.clear();
         cal.set(Calendar.YEAR, todayYear);
         cal.set(Calendar.MONTH, todayMonth);

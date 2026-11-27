@@ -151,7 +151,7 @@ public class MonthAppWidgetService extends RemoteViewsService {
             views.setInt(R.id.month_cell_root, "setMinimumHeight", mCellHeightPx);
 
             WidgetHeaderUtils.bindGridDate(mContext, views, R.id.month_cell_day, R.id.month_cell_localized,
-                    Instant.ofEpochMilli(cell.timeMillis).atZone(ZoneId.systemDefault()).toLocalDate(),
+                    Instant.ofEpochMilli(cell.timeMillis).atZone(ZoneId.of(Utils.getTimeZone(mContext, null))).toLocalDate(),
                     cell.isToday, cell.isCurrentMonth);
 
             // Event chip row/bar/text IDs
@@ -232,7 +232,7 @@ public class MonthAppWidgetService extends RemoteViewsService {
         private void loadData() {
             mGridHeightPx = BaseGridWidgetProvider.resolveGridHeight(mContext, mAppWidgetId, mGridHeightPx);
 
-            Calendar now = Calendar.getInstance();
+            Calendar now = Calendar.getInstance(java.util.TimeZone.getTimeZone(Utils.getTimeZone(mContext, null)));
             int year = now.get(Calendar.YEAR);
             int month = now.get(Calendar.MONTH);
             int todayDay = now.get(Calendar.DAY_OF_MONTH);
@@ -244,7 +244,7 @@ public class MonthAppWidgetService extends RemoteViewsService {
             // year/month passed twice: displayed month = current month
             // (separated to support future month navigation)
             mModel = MonthAppWidgetModel.buildFromCalendar(year, month,
-                    year, month, todayDay, firstDayOfWeek, eventsByDay);
+                    year, month, todayDay, firstDayOfWeek, eventsByDay, now.getTimeZone());
 
             // Calculate cell height to fill available grid space
             if (mGridHeightPx > 0 && mModel.mCells.size() > 0) {
@@ -271,7 +271,7 @@ public class MonthAppWidgetService extends RemoteViewsService {
             Map<Integer, List<MonthAppWidgetModel.EventChip>> eventsByDay = new HashMap<>();
 
             // Compute the time range for the month
-            Calendar start = Calendar.getInstance();
+            Calendar start = Calendar.getInstance(java.util.TimeZone.getTimeZone(Utils.getTimeZone(mContext, null)));
             start.clear();
             start.set(Calendar.YEAR, year);
             start.set(Calendar.MONTH, month);

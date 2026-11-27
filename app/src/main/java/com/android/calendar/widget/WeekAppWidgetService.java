@@ -243,13 +243,13 @@ public class WeekAppWidgetService extends RemoteViewsService {
         private void loadData() {
             mGridHeightPx = BaseGridWidgetProvider.resolveGridHeight(mContext, mAppWidgetId, mGridHeightPx);
 
-            Calendar now = Calendar.getInstance();
+            Calendar now = Calendar.getInstance(java.util.TimeZone.getTimeZone(Utils.getTimeZone(mContext, null)));
             int todayYear = now.get(Calendar.YEAR);
             int todayMonth = now.get(Calendar.MONTH);
             int todayDay = now.get(Calendar.DAY_OF_MONTH);
             int firstDayOfWeek = Utils.getFirstDayOfWeekAsCalendar(mContext);
 
-            mModel = WeekAppWidgetModel.buildWeek(todayYear, todayMonth, todayDay, firstDayOfWeek);
+            mModel = WeekAppWidgetModel.buildWeek(todayYear, todayMonth, todayDay, firstDayOfWeek, now.getTimeZone());
 
             // Calculate cell height
             if (mGridHeightPx > 0) {
@@ -278,7 +278,7 @@ public class WeekAppWidgetService extends RemoteViewsService {
             // Compute time range for the week
             long startMillis = mModel.mDays.get(0).timeMillis;
             // End of week: start of the day after last day
-            Calendar endCal = Calendar.getInstance();
+            Calendar endCal = Calendar.getInstance(java.util.TimeZone.getTimeZone(Utils.getTimeZone(mContext, null)));
             endCal.setTimeInMillis(mModel.mDays.get(BaseGridWidgetProvider.DAYS_PER_WEEK - 1).timeMillis);
             endCal.add(Calendar.DAY_OF_MONTH, 1);
             long endMillis = endCal.getTimeInMillis();

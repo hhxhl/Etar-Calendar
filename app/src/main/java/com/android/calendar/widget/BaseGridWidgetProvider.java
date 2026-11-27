@@ -216,7 +216,7 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
 
     @Override
     public void onEnabled(Context context) {
-        WidgetHeaderUtils.scheduleMidnight(context, getUpdateIntent(context), java.time.ZoneId.systemDefault());
+        WidgetHeaderUtils.scheduleMidnight(context, getUpdateIntent(context), java.time.ZoneId.of(Utils.getTimeZone(context, null)));
     }
 
     @Override
@@ -294,6 +294,6 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
             appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId, getGridViewId());
         }
 
-        WidgetHeaderUtils.scheduleMidnight(context, getUpdateIntent(context), java.time.ZoneId.systemDefault());
+        WidgetHeaderUtils.scheduleMidnight(context, getUpdateIntent(context), java.time.ZoneId.of(Utils.getTimeZone(context, null)));
     }
 }
