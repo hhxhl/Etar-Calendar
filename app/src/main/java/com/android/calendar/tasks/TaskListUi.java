@@ -10,9 +10,6 @@ import com.android.calendar.ItemStateSymbols;
 import com.android.calendar.ItemAppearance;
 import com.android.calendar.EventCountdown;
 import android.text.format.DateUtils;
-import java.time.Instant;
-import java.time.ZoneOffset;
-import java.time.LocalDate;
 import com.android.calendar.DatedListUi;
 import com.android.calendar.Utils;
 import java.time.ZoneId;
@@ -69,16 +66,12 @@ public final class TaskListUi {
         if (task.due == null) return "";
         String time = task.allDay ? context.getString(R.string.reminders_all_day)
                 : Utils.formatDateRange(context, task.due, task.due, DateUtils.FORMAT_SHOW_TIME);
-        boolean overdue = !task.done && (task.allDay
-                ? Instant.ofEpochMilli(task.due).atZone(ZoneOffset.UTC).toLocalDate()
-                    .isBefore(Instant.ofEpochMilli(now).atZone(zone).toLocalDate())
-                : task.due < now);
+        boolean overdue = ItemStateSymbols.isReminderOverdue(task.done, task.due, task.allDay, zone, now);
         return overdue ? time + " · " + context.getString(R.string.reminders_overdue) : time;
     }
 
     public static String countdownLabel(Context context, TaskStore.Task task) {
-        return task.due != null && task.countdown && !task.done
-                ? EventCountdown.dateLabel(context, task.due, task.allDay) : "";
+        return EventCountdown.reminderLabel(context, task.countdown, task.done, task.due, task.allDay);
     }
 
     static int bindRow(View root, CheckBox done, TextView title, TaskStore.Task task,

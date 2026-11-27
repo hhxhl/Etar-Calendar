@@ -32,11 +32,14 @@ public final class ItemStateSymbols {
 
     public static String reminder(boolean done, long due, boolean allDay, ZoneId zone, long now) {
         if (done) return REMINDER_DONE;
-        boolean overdue = allDay
-                ? Instant.ofEpochMilli(due).atZone(ZoneOffset.UTC).toLocalDate()
-                    .isBefore(Instant.ofEpochMilli(now).atZone(zone).toLocalDate())
-                : due < now;
-        return overdue ? REMINDER_OVERDUE : REMINDER_PENDING;
+        return isReminderOverdue(false, due, allDay, zone, now) ? REMINDER_OVERDUE : REMINDER_PENDING;
+    }
+
+    /** All-day due values are UTC calendar dates, not local instants. */
+    public static boolean isReminderOverdue(boolean done, long due, boolean allDay, ZoneId zone, long now) {
+        if (done) return false;
+        return allDay ? EventCountdown.targetDate(due, true, zone)
+                .isBefore(EventCountdown.targetDate(now, false, zone)) : due < now;
     }
 
     public static String task(boolean done) {

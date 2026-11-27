@@ -67,6 +67,12 @@ public final class EventCountdown {
         return dateLabel(context, start, allDay);
     }
 
+    /** Common reminder policy; completed reminders never display a countdown. */
+    public static String reminderLabel(Context context, boolean enabled, boolean done,
+            Long due, boolean allDay) {
+        return enabled && !done && due != null ? dateLabel(context, due, allDay) : "";
+    }
+
     /** Shared calendar-date formatting; the caller owns the enabled flag. */
     public static String dateLabel(Context context, long start, boolean allDay) {
         ZoneId zone = calendarZone(context);

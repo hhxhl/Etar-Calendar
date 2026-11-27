@@ -81,6 +81,7 @@ class CalendarAppWidgetModel {
                     && cursor.getInt(taskCompletedColumn) == 0;
             final boolean allDay = cursor.getInt(CalendarAppWidgetService.INDEX_ALL_DAY) != 0;
             long start = cursor.getLong(CalendarAppWidgetService.INDEX_BEGIN);
+            final long rawStart = start;
             long end = cursor.getLong(CalendarAppWidgetService.INDEX_END);
             final String title = cursor.getString(CalendarAppWidgetService.INDEX_TITLE);
             final String location =
@@ -110,15 +111,18 @@ class CalendarAppWidgetModel {
             if (end < mNow && !pendingTask) {
                 continue;
             }
-            boolean overdue = pendingTask && (allDay ? end <= mNow : start < mNow);
+            boolean overdue = pendingTask && com.android.calendar.ItemStateSymbols.isReminderOverdue(
+                    false, rawStart, allDay, java.time.ZoneId.of(tz), mNow);
             String displayTitle = title;
             if (overdue && startDay < mTodayJulianDay && allDay) {
                 displayTitle = title + " · " + Utils.formatDateRange(mContext, start, start,
                         DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_ABBREV_ALL);
             }
-            if (pendingTask && taskCountdownColumn >= 0 && cursor.getInt(taskCountdownColumn) != 0) {
-                // All-day instants have already been converted into the calendar zone.
-                displayTitle += " · " + com.android.calendar.EventCountdown.dateLabel(mContext, start, false);
+            if (eventId < -1) {
+                String countdown = com.android.calendar.EventCountdown.reminderLabel(mContext,
+                        taskCountdownColumn >= 0 && cursor.getInt(taskCountdownColumn) != 0,
+                        !pendingTask, rawStart, allDay);
+                if (!countdown.isEmpty()) displayTitle += " · " + countdown;
             }
 
             int i = mEventInfos.size();
