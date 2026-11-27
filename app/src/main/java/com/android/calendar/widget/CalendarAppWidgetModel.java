@@ -71,10 +71,13 @@ class CalendarAppWidgetModel {
         }
 
         cursor.moveToPosition(-1);
+        int taskCompletedColumn = cursor.getColumnIndex(WidgetTaskRows.TASK_COMPLETED);
         String tz = Utils.getTimeZone(mContext, null);
         while (cursor.moveToNext()) {
             final int rowId = cursor.getPosition();
             final long eventId = cursor.getLong(CalendarAppWidgetService.INDEX_EVENT_ID);
+            final boolean pendingTask = eventId < -1 && taskCompletedColumn >= 0
+                    && cursor.getInt(taskCompletedColumn) == 0;
             final boolean allDay = cursor.getInt(CalendarAppWidgetService.INDEX_ALL_DAY) != 0;
             long start = cursor.getLong(CalendarAppWidgetService.INDEX_BEGIN);
             long end = cursor.getLong(CalendarAppWidgetService.INDEX_END);
@@ -103,16 +106,26 @@ class CalendarAppWidgetModel {
 
             // we might get some extra events when querying, in order to
             // deal with all-day events
-            if (end < mNow) {
+            if (end < mNow && !pendingTask) {
                 continue;
+            }
+            boolean overdue = pendingTask && (allDay ? end <= mNow : start < mNow);
+            String displayTitle = title;
+            if (overdue && startDay < mTodayJulianDay && allDay) {
+                displayTitle = title + " · " + Utils.formatDateRange(mContext, start, start,
+                        DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_ABBREV_ALL);
             }
 
             int i = mEventInfos.size();
-            mEventInfos.add(populateEventInfo(eventId, allDay, start, end, startDay, endDay, title,
+            mEventInfos.add(populateEventInfo(eventId, allDay, start, end, startDay, endDay, displayTitle,
                     location, color, selfStatus));
             // populate the day buckets that this event falls into
             int from = Math.max(startDay, mTodayJulianDay);
             int to = Math.min(endDay, mMaxJulianDay);
+            if (overdue && endDay < mTodayJulianDay) {
+                // Keep the original task due date; only its widget bucket moves to today.
+                from = to = mTodayJulianDay;
+            }
             for (int day = from; day <= to; day++) {
                 LinkedList<RowInfo> bucket = mBuckets.get(day - mTodayJulianDay);
                 RowInfo rowInfo = new RowInfo(RowInfo.TYPE_MEETING, i);
@@ -166,7 +179,7 @@ class CalendarAppWidgetModel {
             if (DateFormat.is24HourFormat(mContext)) {
                 flags |= DateUtils.FORMAT_24HOUR;
             }
-            if (endDay > startDay) {
+            if (endDay > startDay || (eventId < -1 && startDay < mTodayJulianDay)) {
                 flags |= DateUtils.FORMAT_SHOW_DATE;
             }
             whenString.append(Utils.formatDateRange(mContext, start, eventId < -1 ? start : end, flags));

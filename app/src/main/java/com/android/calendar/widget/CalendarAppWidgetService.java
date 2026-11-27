@@ -180,7 +180,7 @@ public class CalendarAppWidgetService extends RemoteViewsService {
         private CalendarAppWidgetModel buildWidgetModelWithTasks(Cursor cursor, String timeZone) {
             CalendarAppWidgetModel model = new CalendarAppWidgetModel(mContext, timeZone);
             try (MatrixCursor merged = WidgetTaskRows.merge(mContext, mAppWidgetId, cursor,
-                    EVENT_PROJECTION, model.mTodayJulianDay, model.mMaxJulianDay, false)) {
+                    EVENT_PROJECTION, model.mTodayJulianDay, model.mMaxJulianDay, false, true)) {
                 model.buildFromCursor(merged, timeZone);
             }
             return model;

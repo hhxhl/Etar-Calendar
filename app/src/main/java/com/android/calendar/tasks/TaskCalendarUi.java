@@ -98,6 +98,11 @@ public final class TaskCalendarUi {
 
     public static void append(Context context, ArrayList<Event> events, int firstDay, int lastDay,
             java.util.Set<String> listIds, boolean rawColor) {
+        append(context, events, firstDay, lastDay, listIds, rawColor, false);
+    }
+
+    public static void append(Context context, ArrayList<Event> events, int firstDay, int lastDay,
+            java.util.Set<String> listIds, boolean rawColor, boolean includeOverdue) {
         if (lastDay < firstDay) return;
         ZoneId zone = ZoneId.of(Utils.getTimeZone(context, null));
         LocalDate first = LocalDate.ofEpochDay(firstDay - JULIAN_EPOCH);
@@ -109,10 +114,13 @@ public final class TaskCalendarUi {
         TaskStore store = TaskStore.get(context);
         HashMap<Long, Integer> colors = new HashMap<>();
         for (TaskStore.TaskList list : store.lists()) colors.put(list.id, list.color);
-        for (TaskStore.Task task : store.datedTasks(from, until, utcFrom, utcUntil)) {
+        java.util.List<TaskStore.Task> tasks = store.datedTasks(from, until, utcFrom, utcUntil);
+        if (includeOverdue) tasks.addAll(store.overdueTasks(from, utcFrom));
+        for (TaskStore.Task task : tasks) {
             if (listIds != null && !listIds.contains(Long.toString(task.listId))) continue;
             Event item = Event.newInstance();
             item.taskId = task.id;
+            item.taskCompleted = task.done;
             // Negative identity is reserved for tasks in the display model only.
             item.id = -task.id - 1;
             item.title = (task.done ? "☑ " : "☐ ") + task.title;

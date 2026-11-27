@@ -12,15 +12,23 @@ import java.util.Comparator;
 
 /** Merge read-only task rows into widget instance projections without writing CalendarProvider. */
 final class WidgetTaskRows {
+    static final String TASK_COMPLETED = "etar_widget_task_completed";
     private WidgetTaskRows() {}
 
     static MatrixCursor merge(Context context, int widgetId, Cursor source, String[] projection,
             int firstDay, int lastDay, boolean allDayFirst) {
+        return merge(context, widgetId, source, projection, firstDay, lastDay, allDayFirst, false);
+    }
+
+    static MatrixCursor merge(Context context, int widgetId, Cursor source, String[] projection,
+            int firstDay, int lastDay, boolean allDayFirst, boolean includeOverdue) {
+        String[] columns = java.util.Arrays.copyOf(projection, projection.length + 1);
+        columns[projection.length] = TASK_COMPLETED;
         ArrayList<Object[]> rows = new ArrayList<>();
         if (source != null) {
             source.moveToPosition(-1);
             while (source.moveToNext()) {
-                Object[] row = new Object[projection.length];
+                Object[] row = new Object[columns.length];
                 for (int i = 0; i < projection.length; i++) {
                     switch (source.getType(i)) {
                         case Cursor.FIELD_TYPE_INTEGER: row[i] = source.getLong(i); break;
@@ -35,9 +43,10 @@ final class WidgetTaskRows {
         }
         ArrayList<Event> tasks = new ArrayList<>();
         TaskCalendarUi.append(context, tasks, firstDay, lastDay,
-                WidgetUtils.getWidgetTaskListIds(context, widgetId), true);
+                WidgetUtils.getWidgetTaskListIds(context, widgetId), true, includeOverdue);
         for (Event task : tasks) {
-            Object[] row = new Object[projection.length];
+            Object[] row = new Object[columns.length];
+            row[projection.length] = task.taskCompleted ? 1 : 0;
             for (int i = 0; i < projection.length; i++) {
                 String field = projection[i];
                 if (Instances.ALL_DAY.equals(field)) row[i] = task.allDay ? 1 : 0;
@@ -66,7 +75,7 @@ final class WidgetTaskRows {
         comparator = comparator.thenComparingLong(row -> number(row, minute >= 0 ? minute : begin))
                 .thenComparing(row -> title < 0 || row[title] == null ? "" : row[title].toString());
         rows.sort(comparator);
-        MatrixCursor result = new MatrixCursor(projection, rows.size());
+        MatrixCursor result = new MatrixCursor(columns, rows.size());
         for (Object[] row : rows) result.addRow(row);
         return result;
     }
