@@ -14,6 +14,7 @@
     <!-- Inherit base theme to allow overriding Light Theme as per API levels -->
     <style name="Theme.Etar" parent="BaseTheme">
         <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
     </style>
 
     <style name="CalendarAppThemeLightTeal" parent="Theme.AppCompat.Light.NoActionBar">
