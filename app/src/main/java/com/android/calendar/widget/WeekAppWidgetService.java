@@ -300,7 +300,8 @@ public class WeekAppWidgetService extends RemoteViewsService {
 
             try (Cursor cursor = WidgetTaskRows.queryGrid(mContext, mAppWidgetId,
                     startMillis, endMillis, INSTANCES_PROJECTION, SORT_ORDER,
-                    weekStartJulianDay, weekStartJulianDay + BaseGridWidgetProvider.DAYS_PER_WEEK - 1)) {
+                    weekStartJulianDay, weekStartJulianDay + BaseGridWidgetProvider.DAYS_PER_WEEK - 1,
+                    new WeekAppWidgetProvider())) {
                 if (cursor != null) {
                     while (cursor.moveToNext()) {
                         String title = cursor.getString(INDEX_TITLE);

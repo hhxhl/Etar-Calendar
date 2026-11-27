@@ -69,11 +69,31 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
     }
 
     protected PendingIntent getUpdateIntent(Context context) {
+        return getUpdateIntent(context, AppWidgetManager.INVALID_APPWIDGET_ID);
+    }
+
+    private PendingIntent getUpdateIntent(Context context, int widgetId) {
         Intent intent = new Intent(getScheduledUpdateAction());
         intent.setClass(context, getClass());
+        intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
         intent.setDataAndType(CalendarContract.CONTENT_URI, Utils.APPWIDGET_DATA_TYPE);
-        return PendingIntent.getBroadcast(context, 0, intent,
+        return PendingIntent.getBroadcast(context,
+                widgetId == AppWidgetManager.INVALID_APPWIDGET_ID ? 0 : widgetId, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    void scheduleStateUpdate(Context context, int widgetId, long next) {
+        if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return;
+        AppWidgetManager manager = AppWidgetManager.getInstance(context);
+        boolean active = false;
+        for (int id : manager.getAppWidgetIds(getComponentName(context))) {
+            if (id == widgetId) { active = true; break; }
+        }
+        if (!active) return;
+        AlarmManager alarm = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        PendingIntent intent = getUpdateIntent(context, widgetId);
+        if (next == Long.MAX_VALUE) alarm.cancel(intent);
+        else alarm.set(AlarmManager.RTC, next, intent);
     }
     protected abstract int getWidgetLayoutId();
     protected abstract Class<?> getServiceClass();
@@ -164,6 +184,17 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
     @Override
     public void onReceive(Context context, Intent intent) {
         final String action = intent.getAction();
+        if (getScheduledUpdateAction().equals(action)) {
+            int requested = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,
+                    AppWidgetManager.INVALID_APPWIDGET_ID);
+            if (requested != AppWidgetManager.INVALID_APPWIDGET_ID) {
+                AppWidgetManager manager = AppWidgetManager.getInstance(context);
+                for (int id : manager.getAppWidgetIds(getComponentName(context))) {
+                    if (id == requested) manager.notifyAppWidgetViewDataChanged(id, getGridViewId());
+                }
+                return;
+            }
+        }
         if (getUpdateAction().equals(action)
                 || getScheduledUpdateAction().equals(action)
                 || Intent.ACTION_TIMEZONE_CHANGED.equals(action)
@@ -204,6 +235,8 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
     public void onDeleted(Context context, int[] appWidgetIds) {
         super.onDeleted(context, appWidgetIds);
         for (int appWidgetId : appWidgetIds) {
+            ((AlarmManager) context.getSystemService(Context.ALARM_SERVICE))
+                    .cancel(getUpdateIntent(context, appWidgetId));
             WidgetUtils.INSTANCE.deleteWidgetCalendarIds(context, appWidgetId);
         }
     }

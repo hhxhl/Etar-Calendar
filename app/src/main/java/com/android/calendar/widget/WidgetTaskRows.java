@@ -23,10 +23,45 @@ final class WidgetTaskRows {
 
     /** Shared grid query: the source cursor is closed before the merged snapshot is returned. */
     static MatrixCursor queryGrid(Context context, int widgetId, long start, long end,
-            String[] projection, String sortOrder, int firstDay, int lastDay) {
+            String[] projection, String sortOrder, int firstDay, int lastDay,
+            BaseGridWidgetProvider provider) {
+        long now = System.currentTimeMillis();
         try (Cursor source = queryCalendar(context, widgetId, start, end, projection, sortOrder)) {
-            return merge(context, widgetId, source, projection, firstDay, lastDay, true);
+            MatrixCursor snapshot = merge(context, widgetId, source, projection, firstDay, lastDay, true);
+            try {
+                provider.scheduleStateUpdate(context, widgetId, nextTimedTransition(snapshot, now));
+                return snapshot;
+            } catch (RuntimeException error) {
+                snapshot.close();
+                throw error;
+            }
+        } catch (RuntimeException error) {
+            provider.scheduleStateUpdate(context, widgetId, now + 15 * 60_000L);
+            throw error;
         }
+    }
+
+    /** All-day status changes are handled by the provider's midnight update. */
+    private static long nextTimedTransition(Cursor cursor, long now) {
+        int begin = cursor.getColumnIndexOrThrow(Instances.BEGIN);
+        int end = cursor.getColumnIndexOrThrow(Instances.END);
+        int id = cursor.getColumnIndexOrThrow(Instances.EVENT_ID);
+        int allDay = cursor.getColumnIndexOrThrow(Instances.ALL_DAY);
+        int done = cursor.getColumnIndexOrThrow(TASK_COMPLETED);
+        long next = Long.MAX_VALUE;
+        while (cursor.moveToNext()) {
+            if (cursor.getInt(allDay) != 0) continue;
+            boolean task = cursor.getLong(id) < -1;
+            if (task && cursor.getInt(done) != 0) continue;
+            long start = cursor.getLong(begin);
+            long finish = cursor.getLong(end);
+            if (task) {
+                if (start >= now && start < Long.MAX_VALUE) next = Math.min(next, start + 1);
+            } else if (start > now) next = Math.min(next, start);
+            else if (finish > now) next = Math.min(next, finish);
+        }
+        cursor.moveToPosition(-1);
+        return next;
     }
 
     /** The local task source does not require CalendarProvider permission. */

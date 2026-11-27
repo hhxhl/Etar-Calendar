@@ -300,7 +300,7 @@ public class MonthAppWidgetService extends RemoteViewsService {
 
             try (Cursor cursor = WidgetTaskRows.queryGrid(mContext, mAppWidgetId,
                     startMillis, endMillis, INSTANCES_PROJECTION, SORT_ORDER,
-                    monthStartJulianDay, monthEndJulianDay)) {
+                    monthStartJulianDay, monthEndJulianDay, new MonthAppWidgetProvider())) {
                 if (cursor != null) {
                     while (cursor.moveToNext()) {
                         int eventStartDay = cursor.getInt(INDEX_START_DAY);
