@@ -80,9 +80,10 @@ public class EditEventActivity extends AbstractCalendarActivity {
     @Override
     protected void onCreate(Bundle icicle) {
         DynamicThemeKt.applyTheme(this);
-        super.onCreate(icicle);
-
+        // Restored fragments attach during super.onCreate(), so initialize the
+        // event identity first to keep the same toolbar and permission mode.
         mEventInfo = getEventInfoFromIntent(icicle);
+        super.onCreate(icicle);
         if (icicle == null && isExistingEvent()) {
             int notificationId = getIntent().getIntExtra(
                     com.android.calendar.alerts.AlertUtils.NOTIFICATION_ID_KEY, -1);

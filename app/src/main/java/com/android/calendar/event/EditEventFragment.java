@@ -211,8 +211,17 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
         synchronized (this) {
             mOutstandingQueries &= ~queryType;
             if (mOutstandingQueries == 0) {
-                if (mRestoreModel != null) {
+                if (mRestoreModel != null && (!mExistingEvent || (mOriginalModel != null
+                        && mRestoreModel.mId == mOriginalModel.mId
+                        && EditEventHelper.canModifyEvent(mOriginalModel)))) {
                     mModel = mRestoreModel;
+                } else if (mExistingEvent && mRestoreModel != null && mOriginalModel != null
+                        && mRestoreModel.mId == mOriginalModel.mId) {
+                    // Restore only separately permitted fields, never stale event write permissions.
+                    if (EditEventHelper.canAddReminders(mModel)) mModel.mReminders = mRestoreModel.mReminders;
+                    if (EditEventHelper.canRespond(mModel)) mModel.mSelfAttendeeStatus = mRestoreModel.mSelfAttendeeStatus;
+                    if (EditEventHelper.canModifyCalendar(mModel) && mRestoreModel.isEventColorInitialized())
+                        mModel.setEventColor(mRestoreModel.getEventColor());
                 }
                 boolean editable = EditEventHelper.canModifyEvent(mModel);
                 if (!editable) mModification = Utils.MODIFY_UNINITIALIZED;
@@ -557,7 +566,9 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
         if (EditEventHelper.canModifyCalendar(mModel) && mModel.isEventColorInitialized()
                 && mModel.getEventColor() != mOriginalModel.getEventColor()) {
             ContentValues values = new ContentValues();
-            values.put(Events.EVENT_COLOR_KEY, mModel.getEventColorKey());
+            String colorKey = mModel.getEventColorKey();
+            values.put(Events.EVENT_COLOR_KEY, mModel.getEventColor() == mModel.getCalendarColor()
+                    || colorKey == null ? "" : colorKey);
             new AsyncQueryService(mActivity).startUpdate(0, null,
                     ContentUris.withAppendedId(Events.CONTENT_URI, mModel.mId),
                     values, null, null, 0);
@@ -782,6 +793,12 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
                 mSaveOnDetach = false;
                 mActivity.finish();
             }
+            return;
+        }
+        if (mExistingEvent && existingReady() && mView.prepareForSave()
+                && mModel.isUnchanged(mOriginalModel)) {
+            mSaveOnDetach = false;
+            mActivity.finish();
             return;
         }
         if (canSave()) {

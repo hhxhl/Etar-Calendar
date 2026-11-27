@@ -1433,7 +1433,7 @@ public class EditEventHelper {
 
     public static boolean canModifyCalendar(CalendarEventModel model) {
         return model.mCalendarAccessLevel >= Calendars.CAL_ACCESS_CONTRIBUTOR
-                || model.mCalendarId == -1;
+                || (model.mId == -1 && model.mCalendarId == -1);
     }
 
     public static boolean canAddReminders(CalendarEventModel model) {
@@ -1453,6 +1453,9 @@ public class EditEventHelper {
         // for simplicity).
 
         if (!canModifyCalendar(model)) {
+            return false;
+        }
+        if (model.mId != -1 && (!model.mHasAttendeeData || model.mOwnerAttendeeId == -1)) {
             return false;
         }
 

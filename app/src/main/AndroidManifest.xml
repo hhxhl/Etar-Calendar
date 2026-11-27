@@ -120,6 +120,7 @@
         </activity>
 
         <activity android:name="com.android.calendar.EventInfoActivity"
+            android:theme="@android:style/Theme.NoDisplay"
             android:exported="true"
             android:parentActivityName="com.android.calendar.AllInOneActivity">
             <intent-filter>

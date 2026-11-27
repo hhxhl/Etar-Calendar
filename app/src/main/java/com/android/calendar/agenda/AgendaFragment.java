@@ -74,6 +74,67 @@ public class AgendaFragment extends Fragment implements CalendarController.Event
     private EventInfoFragment mEventFragment;
     private String mQuery;
     private boolean mUsedForSearch = false;
+    private static final String ARG_CALENDAR_FILTER = "agenda_calendar_filter";
+    private long mCalendarFilterId = -1;
+    private long mWritableCalendarId = -1;
+    private android.widget.Spinner mCalendarFilter;
+    private boolean mBindingCalendarFilter;
+    private final java.util.ArrayList<Long> mCalendarFilterIds = new java.util.ArrayList<>();
+    private final java.util.HashSet<Long> mWritableCalendarIds = new java.util.HashSet<>();
+
+    public static AgendaFragment withCalendarFilter(long timeMillis) {
+        AgendaFragment fragment = new AgendaFragment(timeMillis, false);
+        Bundle args = new Bundle();
+        args.putBoolean(ARG_CALENDAR_FILTER, true);
+        fragment.setArguments(args);
+        return fragment;
+    }
+
+    public long getSelectedWritableCalendarId() { return mWritableCalendarId; }
+
+    private void reloadCalendarFilter() {
+        if (mCalendarFilter == null || mAgendaListView == null) return;
+        mBindingCalendarFilter = true;
+        try {
+            mCalendarFilterIds.clear();
+            mWritableCalendarIds.clear();
+            java.util.ArrayList<String> names = new java.util.ArrayList<>();
+            names.add(getString(R.string.agenda_all_calendars));
+            mCalendarFilterIds.add(-1L);
+            android.content.ContentResolver resolver = requireContext().getContentResolver();
+            if (Utils.isCalendarPermissionGranted(requireContext(), false)) {
+                try (android.database.Cursor cursor = resolver.query(
+                        android.provider.CalendarContract.Calendars.CONTENT_URI,
+                        new String[]{android.provider.CalendarContract.Calendars._ID,
+                                android.provider.CalendarContract.Calendars.CALENDAR_DISPLAY_NAME,
+                                android.provider.CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL},
+                        android.provider.CalendarContract.Calendars.VISIBLE + "=1",
+                        null, android.provider.CalendarContract.Calendars.CALENDAR_DISPLAY_NAME)) {
+                    if (cursor != null) while (cursor.moveToNext()) {
+                        long id = cursor.getLong(0);
+                        mCalendarFilterIds.add(id);
+                        names.add(cursor.isNull(1) ? Long.toString(id) : cursor.getString(1));
+                        if (cursor.getInt(2) >= android.provider.CalendarContract.Calendars.CAL_ACCESS_CONTRIBUTOR)
+                            mWritableCalendarIds.add(id);
+                    }
+                } catch (SecurityException ignored) { }
+            }
+            int position = mCalendarFilterIds.indexOf(mCalendarFilterId);
+            if (position < 0) {
+                position = 0;
+                mCalendarFilterId = -1;
+            }
+            mWritableCalendarId = mWritableCalendarIds.contains(mCalendarFilterId) ? mCalendarFilterId : -1;
+            android.widget.ArrayAdapter<String> adapter = new android.widget.ArrayAdapter<>(requireContext(),
+                    android.R.layout.simple_spinner_item, names);
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            mCalendarFilter.setAdapter(adapter);
+            mCalendarFilter.setSelection(position);
+            mAgendaListView.setCalendarFilter(mCalendarFilterId);
+        } finally {
+            mBindingCalendarFilter = false;
+        }
+    }
     private boolean mIsTabletConfig;
     private EventInfo mOnAttachedInfo = null;
     private boolean mOnAttachAllDay = false;
@@ -124,6 +185,7 @@ public class AgendaFragment extends Fragment implements CalendarController.Event
         mIsTabletConfig =
             Utils.getConfigBool(mActivity, R.bool.tablet_config);
         if (icicle != null) {
+            mCalendarFilterId = icicle.getLong("calendar_filter_id", -1);
             long prevTime = icicle.getLong(BUNDLE_KEY_RESTORE_TIME, -1);
             if (prevTime != -1) {
                 mTime.set(prevTime);
@@ -200,12 +262,44 @@ public class AgendaFragment extends Fragment implements CalendarController.Event
             detailsParams.width = screenWidth - listParams.width;
             eventView.setLayoutParams(detailsParams);
         }
+        if (getArguments() != null && getArguments().getBoolean(ARG_CALENDAR_FILTER)) {
+            android.widget.LinearLayout root = new android.widget.LinearLayout(requireContext());
+            root.setOrientation(android.widget.LinearLayout.VERTICAL);
+            mCalendarFilter = new android.widget.Spinner(requireContext());
+            root.addView(mCalendarFilter, new android.widget.LinearLayout.LayoutParams(-1, -2));
+            root.addView(v, new android.widget.LinearLayout.LayoutParams(-1, 0, 1));
+            ViewGroup.LayoutParams listParams = topListView.getLayoutParams();
+            listParams.width = ViewGroup.LayoutParams.MATCH_PARENT;
+            topListView.setLayoutParams(listParams);
+            reloadCalendarFilter();
+            mCalendarFilter.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+                @Override public void onNothingSelected(android.widget.AdapterView<?> parent) {}
+                @Override public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                    if (mBindingCalendarFilter || position < 0 || position >= mCalendarFilterIds.size()) return;
+                    long selected = mCalendarFilterIds.get(position);
+                    if (selected == mCalendarFilterId) return;
+                    long visible = mAgendaListView.getFirstVisibleTime(null);
+                    if (visible > 0) mTime.set(visible);
+                    mCalendarFilterId = selected;
+                    mWritableCalendarId = mWritableCalendarIds.contains(selected) ? selected : -1;
+                    if (mAgendaListView.setCalendarFilter(selected))
+                        mAgendaListView.goTo(mTime, -1, mQuery, true, false);
+                }
+            });
+            return root;
+        }
         return v;
+    }
+
+    @Override public void onDestroyView() {
+        mCalendarFilter = null;
+        super.onDestroyView();
     }
 
     @Override
     public void onResume() {
         super.onResume();
+        reloadCalendarFilter();
         if (DEBUG) {
             Log.v(TAG, "OnResume to " + mTime.toString());
         }
@@ -238,6 +332,7 @@ public class AgendaFragment extends Fragment implements CalendarController.Event
     @Override
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
+        outState.putLong("calendar_filter_id", mCalendarFilterId);
         if (mAgendaListView == null) {
             return;
         }

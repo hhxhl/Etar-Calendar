@@ -206,6 +206,8 @@ public class AgendaWindowAdapter extends BaseAdapter
     };
     private boolean mShuttingDown;
     private boolean mHideDeclined;
+    private long mCalendarFilter = -1;
+    private int mFilterGeneration;
     /** The current search query, or null if none */
     private String mSearchQuery;
     private long mSelectedInstanceId = -1;
@@ -699,15 +701,31 @@ public class AgendaWindowAdapter extends BaseAdapter
     }
 
     private String buildQuerySelection() {
-        // Respect the preference to show/hide declined events
+        String selection = Calendars.VISIBLE + "=1";
+        if (mHideDeclined) selection += " AND " + Instances.SELF_ATTENDEE_STATUS
+                + "!=" + Attendees.ATTENDEE_STATUS_DECLINED;
+        if (mCalendarFilter >= 0) selection += " AND " + Instances.CALENDAR_ID + "=?";
+        return selection;
+    }
 
-        if (mHideDeclined) {
-            return Calendars.VISIBLE + "=1 AND "
-                    + Instances.SELF_ATTENDEE_STATUS + "!="
-                    + Attendees.ATTENDEE_STATUS_DECLINED;
-        } else {
-            return Calendars.VISIBLE + "=1";
+    /** Invalidate only this agenda's query window; never change global calendar visibility. */
+    public boolean setCalendarFilter(long calendarId) {
+        if (mCalendarFilter == calendarId) return false;
+        mCalendarFilter = calendarId;
+        mFilterGeneration++;
+        synchronized (mQueryQueue) {
+            mQueryHandler.cancelOperation(0);
+            mQueryQueue.clear();
         }
+        pruneAdapterInfo(QUERY_TYPE_CLEAN);
+        mLastUsedInfo = null;
+        mEmptyCursorCount = 0;
+        mCleanQueryInitiated = false;
+        mOlderRequests = mOlderRequestsProcessed = 0;
+        mNewerRequests = mNewerRequestsProcessed = 0;
+        setSelectedInstanceId(-1);
+        notifyDataSetChanged();
+        return true;
     }
 
     private Uri buildQueryUri(int start, int end, String searchQuery) {
@@ -761,6 +779,7 @@ public class AgendaWindowAdapter extends BaseAdapter
 
     private boolean queueQuery(QuerySpec queryData) {
         queryData.searchQuery = mSearchQuery;
+        queryData.filterGeneration = mFilterGeneration;
         Boolean queuedQuery;
         synchronized (mQueryQueue) {
             queuedQuery = false;
@@ -827,8 +846,8 @@ public class AgendaWindowAdapter extends BaseAdapter
         Uri queryUri = buildQueryUri(
                 queryData.start, queryData.end, queryData.searchQuery);
         mQueryHandler.startQuery(0, queryData, queryUri,
-                PROJECTION, buildQuerySelection(), null,
-                AGENDA_SORT_ORDER);
+                PROJECTION, buildQuerySelection(), mCalendarFilter < 0 ? null
+                        : new String[]{Long.toString(mCalendarFilter)}, AGENDA_SORT_ORDER);
     }
 
     private String formatDateString(int julianDay) {
@@ -962,6 +981,7 @@ public class AgendaWindowAdapter extends BaseAdapter
 
     private static class QuerySpec {
         long queryStartMillis;
+        int filterGeneration;
         Time goToTime;
         int start;
         int end;
@@ -1075,6 +1095,10 @@ public class AgendaWindowAdapter extends BaseAdapter
                 Log.d(TAG, "(+)onQueryComplete");
             }
             QuerySpec data = (QuerySpec)cookie;
+            if (mShuttingDown || data.filterGeneration != mFilterGeneration) {
+                if (cursor != null) cursor.close();
+                return;
+            }
 
             if (cursor == null) {
                 if (mAgendaListView != null && mAgendaListView.getContext() instanceof Activity) {

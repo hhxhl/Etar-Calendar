@@ -54,4 +54,5 @@
     <string name="reminders_overdue">Overdue</string>
     <string name="reminders_completed">Completed (%1$d)</string>
     <string name="reminders_all_day">All day</string>
+    <string name="agenda_all_calendars">All calendars</string>
 </resources>

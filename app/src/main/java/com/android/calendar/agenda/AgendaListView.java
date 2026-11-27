@@ -227,6 +227,10 @@ public class AgendaListView extends ListView implements OnItemClickListener {
         mWindowAdapter.refresh(mTime, -1, null, forced, false);
     }
 
+    public boolean setCalendarFilter(long calendarId) {
+        return mWindowAdapter.setCalendarFilter(calendarId);
+    }
+
     public void deleteSelectedEvent() {
         int position = getSelectedItemPosition();
         AgendaItem agendaItem = mWindowAdapter.getAgendaItemByPosition(position);

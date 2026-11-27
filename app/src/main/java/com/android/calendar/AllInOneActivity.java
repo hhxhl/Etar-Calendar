@@ -614,8 +614,14 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
                                         ? System.currentTimeMillis() : mController.getTime()) : millis,
                                 timed && !allDay, listId);
                     } else {
-                        com.android.calendar.tasks.TaskCalendarUi.create(AllInOneActivity.this,
-                                mController, millis, allDay, timed, false);
+                        long calendarId = mCurrentView == ViewType.AGENDA && fragment instanceof AgendaFragment
+                                ? ((AgendaFragment) fragment).getSelectedWritableCalendarId() : -1;
+                        if (calendarId >= 0) {
+                            startActivity(mController.generateCreateEventIntent(millis, -1, allDay, null, calendarId));
+                        } else {
+                            com.android.calendar.tasks.TaskCalendarUi.create(AllInOneActivity.this,
+                                    mController, millis, allDay, timed, false);
+                        }
                     }
                     return true;
                 });
@@ -1242,7 +1248,7 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
                 break;
             case ViewType.AGENDA:
                 mNavigationView.getMenu().findItem(R.id.agenda_menu_item).setChecked(true);
-                frag = new AgendaFragment(timeMillis, false);
+                frag = AgendaFragment.withCalendarFilter(timeMillis);
                 if (mIsTabletConfig) {
                     mToolbar.setTitle(R.string.agenda_view);
                 }
