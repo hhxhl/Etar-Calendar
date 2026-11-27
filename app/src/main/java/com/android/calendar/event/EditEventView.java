@@ -1468,45 +1468,13 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
         int flags = DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_SHOW_YEAR
                 | DateUtils.FORMAT_SHOW_WEEKDAY | DateUtils.FORMAT_ABBREV_MONTH
                 | DateUtils.FORMAT_ABBREV_WEEKDAY;
-
-        // Unfortunately, DateUtils doesn't support a timezone other than the
-        // default timezone provided by the system, so we have this ugly hack
-        // here to trick it into formatting our time correctly. In order to
-        // prevent all sorts of craziness, we synchronize on the TimeZone class
-        // to prevent other threads from reading an incorrect timezone from
-        // calls to TimeZone#getDefault()
-        // TODO fix this if/when DateUtils allows for passing in a timezone
-        String dateString;
-        synchronized (TimeZone.class) {
-            TimeZone.setDefault(TimeZone.getTimeZone(mTimezone));
-            dateString = DateUtils.formatDateTime(mActivity, millis, flags);
-            // setting the default back to null restores the correct behavior
-            TimeZone.setDefault(null);
-        }
-        view.setText(dateString);
+        view.setText(com.android.calendar.ItemEditorUi.formatDateTime(mActivity, millis, flags, mTimezone));
     }
 
     private void setTime(TextView view, long millis) {
-        int flags = DateUtils.FORMAT_SHOW_TIME;
-        flags |= DateUtils.FORMAT_CAP_NOON_MIDNIGHT;
-        if (DateFormat.is24HourFormat(mActivity)) {
-            flags |= DateUtils.FORMAT_24HOUR;
-        }
-
-        // Unfortunately, DateUtils doesn't support a timezone other than the
-        // default timezone provided by the system, so we have this ugly hack
-        // here to trick it into formatting our time correctly. In order to
-        // prevent all sorts of craziness, we synchronize on the TimeZone class
-        // to prevent other threads from reading an incorrect timezone from
-        // calls to TimeZone#getDefault()
-        // TODO fix this if/when DateUtils allows for passing in a timezone
-        String timeString;
-        synchronized (TimeZone.class) {
-            TimeZone.setDefault(TimeZone.getTimeZone(mTimezone));
-            timeString = DateUtils.formatDateTime(mActivity, millis, flags);
-            TimeZone.setDefault(null);
-        }
-        view.setText(timeString);
+        int flags = DateUtils.FORMAT_SHOW_TIME | DateUtils.FORMAT_CAP_NOON_MIDNIGHT;
+        if (DateFormat.is24HourFormat(mActivity)) flags |= DateUtils.FORMAT_24HOUR;
+        view.setText(com.android.calendar.ItemEditorUi.formatDateTime(mActivity, millis, flags, mTimezone));
     }
 
     protected void resetToDefaultDuration() {

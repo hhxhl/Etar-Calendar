@@ -319,10 +319,10 @@ public final class TaskListActivity extends AppCompatActivity {
 
         Runnable update = () -> {
             long dateMillis = date[0].atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
-            dateButton.setText(android.text.format.DateUtils.formatDateRange(this, new java.util.Formatter(),
-                    dateMillis, dateMillis, android.text.format.DateUtils.FORMAT_SHOW_DATE
+            dateButton.setText(com.android.calendar.ItemEditorUi.formatDateTime(this, dateMillis,
+                    android.text.format.DateUtils.FORMAT_SHOW_DATE
                             | android.text.format.DateUtils.FORMAT_SHOW_YEAR
-                            | android.text.format.DateUtils.FORMAT_SHOW_WEEKDAY, "UTC").toString());
+                            | android.text.format.DateUtils.FORMAT_SHOW_WEEKDAY, "UTC"));
             String pattern = android.text.format.DateFormat.getBestDateTimePattern(
                     java.util.Locale.getDefault(),
                     android.text.format.DateFormat.is24HourFormat(this) ? "Hm" : "hm");

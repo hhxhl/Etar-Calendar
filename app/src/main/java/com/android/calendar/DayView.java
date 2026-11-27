@@ -2725,49 +2725,34 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
     }
 
     private boolean getEventTextRect(Rect r, Event event) {
-        r.top = (int) event.textTop + EVENT_RECT_TOP_MARGIN;
-        r.bottom = (int) event.bottom - EVENT_RECT_BOTTOM_MARGIN;
-        r.left = (int) event.left + EVENT_RECT_LEFT_MARGIN;
-        r.right = (int) event.right - EVENT_RECT_RIGHT_MARGIN;
-
-        if (r.bottom <= r.top || r.right <= r.left) {
-            r.bottom = r.top;
-            r.right = r.left;
-            return false;
-        }
-
-        // Add margin if there is enough space
-        if (r.bottom - r.top > EVENT_TEXT_TOP_MARGIN + EVENT_TEXT_BOTTOM_MARGIN) {
-            r.top += EVENT_TEXT_TOP_MARGIN;
-            r.bottom -= EVENT_TEXT_BOTTOM_MARGIN;
-        }
-        if (r.right - r.left > EVENT_TEXT_LEFT_MARGIN + EVENT_TEXT_RIGHT_MARGIN) {
-            r.left += EVENT_TEXT_LEFT_MARGIN;
-            r.right -= EVENT_TEXT_RIGHT_MARGIN;
-        }
-        return true;
+        return getEventTextRect(r, event, false);
     }
 
     private boolean getAllDayEventTextRect(Rect r, Event event) {
-        r.top = (int) event.top + EVENT_RECT_TOP_MARGIN;
+        return getEventTextRect(r, event, true);
+    }
+
+    private boolean getEventTextRect(Rect r, Event event, boolean allDay) {
+        r.top = (int) (allDay ? event.top : event.textTop) + EVENT_RECT_TOP_MARGIN;
         r.bottom = (int) event.bottom - EVENT_RECT_BOTTOM_MARGIN;
         r.left = (int) event.left + EVENT_RECT_LEFT_MARGIN;
         r.right = (int) event.right - EVENT_RECT_RIGHT_MARGIN;
-
         if (r.bottom <= r.top || r.right <= r.left) {
             r.bottom = r.top;
             r.right = r.left;
             return false;
         }
-
-        // Add margin if there is enough space
-        if (r.bottom - r.top > EVENT_ALL_DAY_TEXT_TOP_MARGIN + EVENT_ALL_DAY_TEXT_BOTTOM_MARGIN) {
-            r.top += EVENT_ALL_DAY_TEXT_TOP_MARGIN;
-            r.bottom -= EVENT_ALL_DAY_TEXT_BOTTOM_MARGIN;
+        int top = allDay ? EVENT_ALL_DAY_TEXT_TOP_MARGIN : EVENT_TEXT_TOP_MARGIN;
+        int bottom = allDay ? EVENT_ALL_DAY_TEXT_BOTTOM_MARGIN : EVENT_TEXT_BOTTOM_MARGIN;
+        int left = allDay ? EVENT_ALL_DAY_TEXT_LEFT_MARGIN : EVENT_TEXT_LEFT_MARGIN;
+        int right = allDay ? EVENT_ALL_DAY_TEXT_RIGHT_MARGIN : EVENT_TEXT_RIGHT_MARGIN;
+        if (r.height() > top + bottom) {
+            r.top += top;
+            r.bottom -= bottom;
         }
-        if (r.right - r.left > EVENT_ALL_DAY_TEXT_LEFT_MARGIN + EVENT_ALL_DAY_TEXT_RIGHT_MARGIN) {
-            r.left += EVENT_ALL_DAY_TEXT_LEFT_MARGIN;
-            r.right -= EVENT_ALL_DAY_TEXT_RIGHT_MARGIN;
+        if (r.width() > left + right) {
+            r.left += left;
+            r.right -= right;
         }
         return true;
     }
