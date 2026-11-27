@@ -213,20 +213,8 @@
     <skip/>
     <!-- The list of choices displayed in a dialog box when the user wants to
     respond to an invitation that repeats. -->
-    <string-array name="change_response_labels">
-        <!-- The choice for responding to only one instance of a repeating event -->
-        <item>Only this event</item>
-        <!-- The choice for responding to all instances of a repeating event -->
-        <item>All events in the series</item>
-    </string-array>
 
     <!-- Strings for buttons in drop down menu -->
-    <string-array name="buttons_list">
-        <item>Day</item>
-        <item>Week</item>
-        <item>Month</item>
-        <item>Agenda</item>
-    </string-array>
 
     <!-- Experimental options for skipping reminders. [CHAR LIMIT = 37] -->
     <string-array name="preferences_skip_reminders_labels">

@@ -35,7 +35,6 @@
     <string name="edit_event_all_day_label">هەموو ڕۆژێک</string>
     <string name="edit_event_calendar_label">ساڵنامە</string>
     <string name="add_calendar">زیادکردنی ساڵنامە</string>
-    <string name="view_event_calendar_label">ساڵنامە:</string>
     <string name="view_event_organizer_label">ڕێکخەر:</string>
     <string name="choose_event_color_label">ڕەنگی بۆنەکە هەڵبژێرە</string>
     <string name="event_color_picker_dialog_title">ڕەنگی بۆنە</string>
@@ -55,12 +54,8 @@
     <string name="preferences_title">ڕێکخستنەکان</string>
     <string name="preferences_light_theme">ڕۆشن</string>
     <string name="preferences_dark_theme">تاریک</string>
-    <string name="preferences_black_theme">ڕەش</string>
-    <string name="preferences_color">ڕەنگی سەرەکی</string>
-    <string name="preferences_color_pick">ڕەنگی سەرەکی</string>
     <string name="preferences_default_reminder_default">١٠</string>
     <string name="new_event_dialog_label">بۆنەی نوێ</string>
-    <string name="new_event_dialog_option">بۆنەی نوێ</string>
     <string name="quick_response_settings_edit_title">وەڵامی خێرا</string>
     <string name="quick_response_dialog_title">وەڵامێکی خێرا هەڵبژێرە</string>
     <string name="quick_response_settings">وەڵامە خێراکان</string>
@@ -102,10 +97,8 @@
     <string name="rsvp_tentative">بە لەوانەیە وەڵامدرایەوە.</string>
     <string name="rsvp_declined">بە نەخێر وەڵامدرایەوە.</string>
     <string name="event_info_title">بینینی بۆنە</string>
-    <string name="event_info_title_invite">بانگهێشتی چاوپێکەوتن</string>
     <string name="call_label">پەیوەندی</string>
     <string name="quick_response_custom_msg">وەڵامەکەت بنووسە…</string>
-    <string name="event_info_organizer">ڕێکخەر:</string>
     <string name="agenda_today">ئەمڕۆ، <xliff:g id="date">%1$s</xliff:g></string>
     <string name="agenda_yesterday">دوێنێ، <xliff:g id="date">%1$s</xliff:g></string>
     <string name="agenda_tomorrow">سبەی، <xliff:g id="date">%1$s</xliff:g></string>
@@ -196,10 +189,6 @@
     <string name="accessibility_pick_end_time">کاتی کۆتاییهاتن</string>
     <string name="accessibility_pick_time_zone">ناوچەی کات</string>
     <string name="accessibility_reminder_privacy">تایبەتمەندێتی</string>
-    <string name="day_view_new_event_hint">+ بۆنەیەکی نوێ</string>
     <string name="visibility_default">بنەڕەت</string>
-    <string name="preferences_calendar_synchronize">ئەم ساڵنامەیە هاودەم بکە</string>
-    <string name="copy_email">ئیمێڵەکە لەبەربگرەوە</string>
-    <string name="copy_number">ژمارەی پەیوەندییەکە لەبەربگرەوە</string>
     <string name="action_label">گەڕانەوە</string>
 </resources>

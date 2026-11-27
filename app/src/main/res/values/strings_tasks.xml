@@ -3,25 +3,15 @@
     <string name="tasks_title">Tasks</string>
     <string name="tasks_add">New task</string>
     <string name="tasks_edit">Edit task</string>
-    <string name="tasks_manage">Manage tasks</string>
-    <string name="tasks_new_event">New event</string>
-    <string name="tasks_back">Back</string>
     <string name="tasks_complete">Complete</string>
     <string name="tasks_lists">Lists</string>
     <string name="tasks_default_list">Personal</string>
     <string name="tasks_all">All tasks</string>
     <string name="tasks_empty">No tasks</string>
-    <string name="tasks_no_date">No date</string>
-    <string name="tasks_new_list">New list</string>
-    <string name="tasks_rename">Rename</string>
     <string name="tasks_delete">Delete</string>
     <string name="tasks_delete_list_confirm">Delete this list and all its reminders and tasks?</string>
     <string name="tasks_delete_confirm">Delete this task?</string>
     <string name="tasks_required">Required</string>
-    <string name="tasks_task_name">Title</string>
-    <string name="tasks_notes">Notes</string>
-    <string name="tasks_date">Date</string>
-    <string name="tasks_time">Time</string>
     <string name="tasks_notify">Notify at scheduled time</string>
     <string name="tasks_repeat">Repeat</string>
     <string name="tasks_priority">Priority</string>
@@ -41,10 +31,7 @@
         <item>Low</item>
     </string-array>
     <string name="tasks_create_event_type">Event</string>
-    <string name="tasks_show_scheduled">Show dated tasks</string>
-    <string name="tasks_manage_lists">Task lists</string>
     <string name="tasks_new_item">New item</string>
-    <string name="tasks_choose_item">Choose item</string>
     <string name="reminders_title">Reminders</string>
     <string name="reminders_add">New reminder</string>
     <string name="reminders_edit">Edit reminder</string>
@@ -60,7 +47,6 @@
     <string name="tasks_add_offline_list">Add offline list</string>
     <string name="tasks_add_caldav_list">Add CalDAV list</string>
     <string name="tasks_offline_lists">Offline lists</string>
-    <string name="tasks_edit_list">Edit list</string>
     <string name="tasks_add_list_button">Add list</string>
     <string name="tasks_offline_list_message">Offline lists are not synchronized to a cloud service and are only available on your phone.</string>
     <string name="tasks_caldav_list_unavailable">CalDAV list synchronization is not implemented yet.</string>

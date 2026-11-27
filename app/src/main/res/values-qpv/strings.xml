@@ -84,11 +84,9 @@
     <string name="accessibility_remove_reminder">Keshte deposta</string>
     <string name="accessibility_add_attendee">Anta mik</string>
     <string name="accessibility_all_day">Hel dag slutsazma</string>
-    <string name="accessibility_reminder_time">Tid f deposta</string>
     <string name="accessibility_reminder_type">Deposta fal</string>
     <string name="accessibility_reminder_showmeas">Seoze n lik</string>
     <string name="accessibility_reminder_privacy">Tajnazma</string>
-    <string name="acessibility_selected_marker_description">Sentakena slutsazma</string>
     <string name="acessibility_recurrence_choose_end_date_description">kavari dag f ovari</string>
     <string name="calendar_permission_not_granted">Trengena lakjazma najsentakena, da kavari Settings app wa pr kavari slutsazma</string>
     <string name="cal_share_intent_title">Posta slutsazma pashn made:</string>

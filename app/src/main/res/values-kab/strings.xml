@@ -27,7 +27,6 @@
     <string name="response_no">Uhu</string>
     <string name="map_label">Takarḍa</string>
     <string name="call_label">Siwel</string>
-    <string name="event_info_reminders_label">Ismektiyen</string>
     <string name="loading">Yessalay-d…</string>
     <string name="edit_event_label">Talqayt</string>
     <string name="edit_label">Ẓreg</string>
@@ -41,8 +40,6 @@
     <string name="preferences_theme">Asentel</string>
     <string name="preferences_light_theme">Aceɛlal</string>
     <string name="preferences_dark_theme">Ubrik</string>
-    <string name="preferences_black_theme">Aberkan</string>
-    <string name="preferences_alerts_vibrateWhen_title">Argigi</string>
     <string name="preferences_default_reminder_default">10</string>
     <string name="authors">Imeskaren</string>
     <string name="license">Turagt</string>
@@ -70,7 +67,6 @@
         <item quantity="one">Every <xliff:g id="count">%d</xliff:g> n useggas</item>
         <item quantity="other">Every <xliff:g id="count">%d</xliff:g> n iseggasen</item>
     </plurals>
-    <string name="view_event_calendar_label">Awitay:</string>
     <string name="visibility_private">Uslig</string>
     <string name="visibility_public">Azayaz</string>
     <string name="chips_action_copy">Nɣel</string>
@@ -89,13 +85,10 @@
     <string name="preferences_menu_about">Ɣef Etar</string>
     <string name="offline_account_name">Awitay bu war tuqqna</string>
     <string name="preferences_list_add_remote">Rnu yiwen n uwitay n CalDAV</string>
-    <string name="preferences_list_add_remote_etesync">Rnu yiwen n uwitay n EteSync</string>
     <string name="preferences_list_add_offline">Rnu yiwen n uwitay bu war tuqqna</string>
     <string name="preferences_list_add_offline_title">Rnu yiwen n uwitay bu war tuqqna</string>
     <string name="hint_time_zone_search">Aru isem n tmurt</string>
     <string name="no_results_found">Ulac igmaḍ yettwafen</string>
-    <string name="copy_email">Nɣel tansa n yimayl</string>
-    <string name="copy_number">Nɣel uṭṭun n tiliɣri</string>
     <string name="today_at_time_fmt">Ass-a ɣef <xliff:g id="time_interval">%s</xliff:g></string>
     <string name="tomorrow_at_time_fmt">Azekka ɣef <xliff:g id="time_interval">%s</xliff:g></string>
     <string name="date_time_fmt"><xliff:g id="date">%1$s</xliff:g>, <xliff:g id="time_interval">%2$s</xliff:g></string>

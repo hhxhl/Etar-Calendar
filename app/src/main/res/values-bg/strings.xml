@@ -69,14 +69,12 @@
     <string name="create_event_dialog_save" msgid="1080859798521717414">"Запазване"</string>
     <string name="alert_title" msgid="7869592820853066853">"Известия от Календар"</string>
     <string name="event_info_title" msgid="56024222340421620">"Преглед на събитие"</string>
-    <string name="event_info_title_invite" msgid="9160326363769403865">"Покана за среща"</string>
     <string name="edit_event_all_day_label" msgid="6200181113992136073">"Цял ден"</string>
     <string name="edit_event_calendar_label" msgid="4556498359505856900">"Календар"</string>
     <string name="presence_label" msgid="6169724148441175862">"Показване като"</string>
     <string name="privacy_label" msgid="9215031965259597335">"Поверителност"</string>
     <string name="reminders_label" msgid="7292389181815525676">"Добавяне: Напомняне"</string>
     <string name="no_syncable_calendars" msgid="7019488867045436129">"Няма календари"</string>
-    <string name="view_event_calendar_label" msgid="6126231656338241140">"Календар:"</string>
     <string name="view_event_organizer_label" msgid="2753151795647402277">"Организатор:"</string>
     <string name="choose_event_color_label" msgid="2192923501857428854">"Избиране на цвят на събитието"</string>
     <string name="event_color_picker_dialog_title" msgid="4631938661655159511">"Цвят на събитието"</string>
@@ -88,7 +86,6 @@
     <string name="response_maybe" msgid="7791500973627841695">"Може би"</string>
     <string name="response_no" msgid="561911691884148136">"Не"</string>
     <string name="email_guests_label" msgid="8772030932155305903">"Изпращане на имейл до гостите"</string>
-    <string name="email_organizer_label" msgid="7178059542798074813">"Имейл до организатора"</string>
     <string name="email_picker_label" msgid="4808253965057791781">"Изпращане на имейл посредством"</string>
     <string name="event_not_found" msgid="8356864185947582727">"Събитието не бе намерено."</string>
     <string name="map_label" msgid="8795383535586556038">"Карта"</string>
@@ -105,14 +102,10 @@
         <item msgid="8036557974294987511">"За съжаление няма да успея. Ще трябва да пренасрочим събитието."</item>
     </string-array>
     <string name="quick_response_custom_msg" msgid="8792374208224108798">"Напишете свой собствен…"</string>
-    <string name="event_info_organizer" msgid="9138683335394832629">"Организатор:"</string>
-    <string name="event_info_reminders_label" msgid="8913097552956388972">"Напомняния"</string>
     <string name="agenda_today" msgid="5965841338467422191">Днес, <xliff:g id="date">%1$s</xliff:g></string>
     <string name="agenda_yesterday" msgid="4170964206728599693">Вчера, <xliff:g id="date">%1$s</xliff:g></string>
     <string name="agenda_tomorrow" msgid="3893625470780723605">Утре, <xliff:g id="date">%1$s</xliff:g></string>
     <string name="loading" msgid="3772533493214331230">"Зарежда се…"</string>
-    <string name="show_older_events" msgid="5140647493681439926">Докоснете, за да видите събитията преди <xliff:g id="oldest_search_range">%1$s</xliff:g></string>
-    <string name="show_newer_events" msgid="2604638815440163080">Докоснете, за да видите събитията след <xliff:g id="newest_search_range">%1$s</xliff:g></string>
     <string name="search_title" msgid="8898015280250716254">"Търсене в моите календари"</string>
     <string name="edit_event_label" msgid="7413222956349977161">"Подробности"</string>
     <string name="edit_label" msgid="8934331258435656534">Променяне</string>
@@ -143,7 +136,6 @@
     <string name="modify_all" msgid="4421657265864209041">"Промяна на всички събития в поредицата"</string>
     <string name="modify_all_following" msgid="3017428541066390380">"Промяна на това и всички бъдещи събития"</string>
     <string name="new_event_dialog_label" msgid="7553105224561147916">"Ново събитие"</string>
-    <string name="new_event_dialog_option" msgid="6154657379574669371">"Ново събитие"</string>
     <string name="delete_this_event_title" msgid="518402946676919384">"Да се изтрие ли това събитие?"</string>
     <string name="delete_recurring_event_title" msgid="5609046778422180206">Да се изтрие ли „<xliff:g id="eventtitle">%s</xliff:g>“?</string>
     <string name="change_response_title" msgid="7704714776070974984">"Промяна на отговор"</string>
@@ -157,9 +149,6 @@
     <string name="preferences_clear_search_history_summary" msgid="7864674093455778158">"Премахване на всички извършени от вас търсения"</string>
     <string name="search_history_cleared" msgid="1536707558435227567">"Историята на търсенията е изчистена."</string>
     <string name="preferences_alerts_title" msgid="6636088008103904020">"Известия"</string>
-    <string name="preferences_alerts_vibrateWhen_title" msgid="8731372580674292759">"Вибриране"</string>
-    <string name="preferences_alerts_ringtone_title" msgid="1849706055052358346">"Звук"</string>
-    <string name="preferences_alerts_popup_title" msgid="6643468203670475296">"Изскачащо известие"</string>
     <string name="preferences_default_reminder_title" msgid="5188861433342733905">Време за напомняне</string>
     <string name="preferences_default_reminder_dialog" msgid="2490348857239323412">Напомняне</string>
     <string name="preferences_default_reminder_default" msgid="2903884416749959435">"10"</string>
@@ -189,11 +178,9 @@
     <string name="accessibility_remove_reminder" msgid="5261609343259665139">"Премахване на напомнянето"</string>
     <string name="accessibility_add_attendee" msgid="5654014177472600916">"Добавяне на участник"</string>
     <string name="accessibility_all_day" msgid="4146955438811915282">"Целодневно събитие"</string>
-    <string name="accessibility_reminder_time" msgid="3594100545814579575">"Час за напомняне"</string>
     <string name="accessibility_reminder_type" msgid="5339120699701437227">"Тип напомняне"</string>
     <string name="accessibility_reminder_showmeas" msgid="6669129015980006570">"Показване като"</string>
     <string name="accessibility_reminder_privacy" msgid="8669288484484022771">"Поверителност"</string>
-    <string name="day_view_new_event_hint" msgid="2131483437911536229">"+ Ново събитие"</string>
     <string name="template_announce_item_index" msgid="4067877800670753110">Събитие <xliff:g id="item_index">%1$s</xliff:g> от <xliff:g id="item_count">%2$s</xliff:g>.</string>
     <plurals name="Nevents">
         <item quantity="one">1 събитие</item>
@@ -203,7 +190,6 @@
         <item quantity="one">+ 1 събитие</item>
         <item quantity="other">+ <xliff:g id="count">%d</xliff:g> събития</item>
     </plurals>
-    <string name="acessibility_selected_marker_description" msgid="3010149843148810768">"Избрано събитие"</string>
     <plurals name="recurrence_interval_daily">
         <item quantity="one">На <xliff:g id="count">%d</xliff:g> ден</item>
         <item quantity="other">На <xliff:g id="count">%d</xliff:g> дни</item>
@@ -262,8 +248,6 @@
     <string name="preferences_system_theme">Система по подразбиране</string>
     <string name="preferences_light_theme">Светла</string>
     <string name="preferences_dark_theme">Тъмна</string>
-    <string name="preferences_black_theme">Черна</string>
-    <string name="preferences_color">Основен цвят</string>
     <string name="default_start_title">Изглед по подразбиране</string>
     <string name="display_location">Показване на местоположението</string>
     <string name="maximum_number_of_lines">Максимален брой редове в събитието</string>
@@ -285,7 +269,6 @@
     <string name="user_rejected_calendar_write_permission">Etar изисква разрешения за четене и запис на календара, за да работи правилно. Моля, опитайте отново.</string>
     <string name="preferences_alerts_custom_snooze_delay_summary_on">Питане за периода на повторно напомняне</string>
     <string name="display_time">Показване на часа</string>
-    <string name="preferences_color_pick">Основен цвят</string>
     <string name="preferences_theme">Тема</string>
     <string name="preferences_real_event_colors">Използване истинските цветове на събитието</string>
     <string name="display_options">Оформление</string>
@@ -294,9 +277,7 @@
     <string name="preferences_month_view_portrait">Оформление на месечен изглед (портрет)</string>
     <string name="preferences_days_per_week_title">Дни в седмицата</string>
     <string name="one_and_a_half_hours">1.5 часа</string>
-    <string name="cal_export_succ_msg">Събитието е изнесено</string>
     <string name="preferences_calendar_account">%1$s акаунт</string>
-    <string name="cal_pick_ics">Изберете файл за импортиране</string>
     <string name="preferences_calendar_color_warning_title">Внимание</string>
     <string name="preferences_list_add_offline">Добавяне на календар извън линия</string>
     <string name="preferences_list_add_offline_error_empty">Въведи име на календара!</string>
@@ -306,13 +287,11 @@
     <string name="one_hour">1 час</string>
     <string name="two_hours">2 часа</string>
     <string name="error_generating_ics">Проблеми, възникнали при споделяне на събитията</string>
-    <string name="cal_import_error_time_zone_msg">Не мога да разбера дадената часова зона:%s</string>
     <string name="cal_share_intent_title">Изпрати събитие до:</string>
     <string name="cal_export_event_title">Изнасяне на събитие</string>
     <string name="cal_import_menu_title">Импортиране на събитие</string>
     <string name="cal_nothing_to_import">Нищо за импортиране</string>
     <string name="cal_import_error_msg">Импортирането в календара е неуспешно</string>
-    <string name="cal_import_error_date_msg">Не мога да разбера дадената дата:%s</string>
     <string name="show_time_no">Без показване на часове</string>
     <string name="show_time_start">Само началния час</string>
     <string name="show_time_start_end">Началния и крайния час</string>
@@ -325,7 +304,6 @@
     <string name="preferences_calendar_display_name">Смяна на името</string>
     <string name="preferences_calendar_color">Цвят</string>
     <string name="preferences_calendar_visible">Показване на събития</string>
-    <string name="preferences_calendar_synchronize">Синхронизация на календара</string>
     <string name="preferences_calendar_color_warning_button">разбирам</string>
     <string name="preferences_calendar_delete_delete">Изтриване на календара</string>
     <string name="preferences_calendar_delete_cancel">Отмяна</string>
@@ -336,7 +314,6 @@
     <string name="preferences_list_add_offline_cancel">Отмяна</string>
     <string name="preferences_menu_about">Относно за Etar</string>
     <string name="offline_account_name">Календар извън линия</string>
-    <string name="preferences_list_add_remote_etesync">Добавяне на EteSync календар</string>
     <string name="preferences_list_general">Основни настройки</string>
     <string name="preferences_calendar_delete_message">Наистина ли искате да изтриете този календар\?</string>
     <string name="preferences_calendar_info_category">информация за календара</string>
@@ -361,8 +338,6 @@
     <string name="no_results_found" msgid="5475293015394772651">"Няма намерени резултати"</string>
     <string name="palestine_display_name" msgid="3485026339977302148">"Палестина"</string>
     <string name="more_string" msgid="643992135011109762">+ <xliff:g id="count">%1$d</xliff:g></string>
-    <string name="copy_email" msgid="1084563757174121331">"Копиране на имейл адреса"</string>
-    <string name="copy_number" msgid="8860802152973030914">"Копиране на телефонния номер"</string>
     <string name="action_label" msgid="7172664623795021857">"Enter"</string>
     <string name="accessbility_suggestion_dropdown_opened" msgid="9015267358421989409">"Предложенията за контакти са отворени"</string>
     <string name="accessbility_suggestion_dropdown_closed" msgid="91481373431329121">"Няма налични предложения"</string>
@@ -377,5 +352,4 @@
     <string name="preferences_staggered_display_title">Шахматно разположение</string>
     <string name="cal_export_calendar_title">Изнасяне</string>
     <string name="cal_export_calendar_summary">Изнасяне на всички събития от календара във файл ICS</string>
-    <string name="cal_export_select_calendar_title">Изберете календар, който да бъде изнесен</string>
 </resources>

@@ -15,8 +15,6 @@
     <string name="palestine_display_name" msgid="3485026339977302148">"প্যালেস্তাইন"</string>
 
     <string name="more_string" msgid="643992135011109762">"+<xliff:g id="COUNT">%1$d</xliff:g>টি"</string>
-    <string name="copy_email" msgid="1084563757174121331">"ইমেল ঠিকানা কপি করুন"</string>
-    <string name="copy_number" msgid="8860802152973030914">"ফোন নম্বর কপি করুন"</string>
     <string name="action_label" msgid="7172664623795021857">"ফেরত যান"</string>
     <string name="accessbility_suggestion_dropdown_opened" msgid="9015267358421989409">"যোগাযোগের পরামর্শগুলি খোলা হয়েছে"</string>
     <string name="accessbility_suggestion_dropdown_closed" msgid="91481373431329121">"কোনো প্রস্তাবনা উপলব্ধ নেই"</string>

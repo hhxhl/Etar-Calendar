@@ -28,7 +28,6 @@
     <string name="hint_attendees">पहुनाहरु</string>
     <string name="alert_title">पात्रोको सुचनाहरु</string>
     <string name="event_info_title">घटना हेर्नुहोस्</string>
-    <string name="event_info_title_invite">भेटघातको निम्तो</string>
     <string name="edit_event_all_day_label">पुरा दिन</string>
     <string name="edit_event_calendar_label">पात्रो</string>
     <string name="privacy_label">गोपनीयता</string>
@@ -65,8 +64,6 @@
     <string name="palestine_display_name" msgid="3485026339977302148">"प्यालेस्टाइन"</string>
 
     <string name="more_string" msgid="643992135011109762">"+<xliff:g id="COUNT">%1$d</xliff:g>"</string>
-    <string name="copy_email" msgid="1084563757174121331">"इमेल ठेगाना कपी गर्नुहोस्"</string>
-    <string name="copy_number" msgid="8860802152973030914">"फोन नम्बरको कपी गर्नुहोस्"</string>
     <string name="action_label" msgid="7172664623795021857">"फर्कनुहोस्"</string>
     <string name="accessbility_suggestion_dropdown_opened" msgid="9015267358421989409">"सम्पर्क सुझाव खोलियो"</string>
     <string name="accessbility_suggestion_dropdown_closed" msgid="91481373431329121">"कुनै पनि सुझाव उपलब्ध छैन"</string>

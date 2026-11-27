@@ -222,7 +222,6 @@
     <string name="event_info_title">View event</string>
     <!-- This is the title of the screen used to view the details of an invitation
          to a meeting or event -->
-    <string name="event_info_title_invite">Meeting invitation</string>
 
     <!-- EditEventActivity specific strings: -->
     <skip/>
@@ -250,7 +249,6 @@
     <!-- View Event -->
     <skip/>
     <!-- Label for which calendar an event is part of -->
-    <string name="view_event_calendar_label">Calendar:</string>
     <!-- Label for the event organizer -->
     <string name="view_event_organizer_label">Organizer:</string>
     <!-- Label for showing event color picker -->
@@ -278,7 +276,6 @@
     <!-- Label for emailing attendees -->
     <string name="email_guests_label">Email guests</string>
     <!-- Label for emailing the organizer (when there are no attendees) -->
-    <string name="email_organizer_label">Email organizer</string>
     <!-- This is shown in the popup picker when emailing attendees -->
     <string name="email_picker_label">Email with</string>
     <!-- The is shown in the email subject as the prefix appended to the event title -->
@@ -318,9 +315,7 @@
     <!-- Event Info strings-->
 
     <!-- Organizer Label [CHAR LIMIT=12]-->
-    <string name="event_info_organizer">Organizer:</string>
     <!-- Reminders label [CHAR LIMIT=15]-->
-    <string name="event_info_reminders_label">Reminders</string>
 
     <!-- Agenda View strings -->
     <skip/>
@@ -333,9 +328,7 @@
     <!-- This is shown while the calendar events are being loading to the screen. -->
     <string name="loading">Loading\u2026</string>
     <!-- This is shown at the top of the agenda view showing the beginning of the searched range. If the user taps on this string and Calendar will find events older than what is visible and display them to the user -->
-    <string name="show_older_events">Touch to view events before <xliff:g id="oldest_search_range">%1$s</xliff:g></string>
     <!-- This is shown at the bottom of the agenda view showing the end of the searched range. If the user taps on this string and Calendar will find events later/newer than what is visible and display them to the user -->
-    <string name="show_newer_events">Touch to view events after <xliff:g id="newest_search_range">%1$s</xliff:g></string>
 
     <!-- Search activity strings -->
     <skip/>
@@ -431,7 +424,6 @@
     <!-- This is a label on the dialog for creating a new event. [CHAR LIMIT=30] -->
     <string name="new_event_dialog_label">"New event"</string>
     <!-- This is the button to create a new event in a dialog window. [CHAR LIMIT=30] -->
-    <string name="new_event_dialog_option">"New event"</string>
     <!-- Confirmation dialog message -->
     <skip/>
     <!-- This is a confirmation message in a popup dialog that appears when the
@@ -464,16 +456,7 @@
     <string name="preferences_system_theme">System default</string>
     <string name="preferences_light_theme">Light</string>
     <string name="preferences_dark_theme">Dark</string>
-    <string name="preferences_black_theme">Black</string>
 
-    <string name="preferences_color">Primary color</string>
-    <string name="preferences_color_teal" translatable="false">Teal</string>
-    <string name="preferences_color_blue" translatable="false">Blue</string>
-    <string name="preferences_color_orange" translatable="false">Orange</string>
-    <string name="preferences_color_green" translatable="false">Green</string>
-    <string name="preferences_color_red" translatable="false">Red</string>
-    <string name="preferences_color_purple" translatable="false">Purple</string>
-    <string name="preferences_color_pick">Primary color</string>
 
     <string name="preferences_real_event_colors">Use real event colors</string>
 
@@ -516,11 +499,8 @@
     <!-- Settings check box label to enable or disable notifications -->
     <string name="preferences_alerts_title">Notifications</string>
     <!-- Settings dialog label that specifies when the phone should vibrate -->
-    <string name="preferences_alerts_vibrateWhen_title">Vibrate</string>
     <!-- Title of ringtone selector dialog -->
-    <string name="preferences_alerts_ringtone_title">Sound</string>
     <!-- Title of check box label to enable or disable pop-up notifications -->
-    <string name="preferences_alerts_popup_title">Pop-up notification</string>
     <!-- List item label for setting the default number of reminder minutes -->
     <string name="preferences_default_reminder_title">Default reminder time</string>
     <!-- Title of dialog for setting the default number of reminder minutes -->
@@ -636,7 +616,6 @@
 
     <!-- Choose the type of repetition for the event (daily, weekly, etc.[CHAR LIMIT = NONE]-->
     <!-- Set the time for the reminder[CHAR LIMIT = NONE]-->
-    <string name="accessibility_reminder_time">Reminder time</string>
     <!-- Set the type of the reminder (popup/email/sms)[CHAR LIMIT = NONE]-->
     <string name="accessibility_reminder_type">Reminder type</string>
     <!-- Select the way you are visible for the event (busy/free) [CHAR LIMIT = NONE]-->
@@ -644,7 +623,6 @@
     <!-- Set the event as private/public/default [CHAR LIMIT = NONE]-->
     <string name="accessibility_reminder_privacy">Privacy</string>
     <!-- A "new event" hint for the user when selecting a specific hour in the day view [CHAR LIMIT = 30]-->
-    <string name="day_view_new_event_hint">+ New event</string>
 
     <!--
       Source: A value for announcing the current event index (example: "Event 2 of 6").
@@ -669,7 +647,6 @@
     </plurals>
 
     <!-- Description of the selected marker for accessibility support [CHAR LIMIT = NONE]-->
-    <string name="acessibility_selected_marker_description">Selected event</string>
 
     <!-- Tell user not to check a checkbox [CHAR LIMIT=30] -->
 
@@ -759,16 +736,11 @@
     <string name="cal_export_event_title">Export event</string>
     <string name="cal_export_calendar_title">Export calendar</string>
     <string name="cal_export_calendar_summary">Export all events from a calendar to an .ics file</string>
-    <string name="cal_export_select_calendar_title">Select calendar to export</string>
     <string name="cal_export_success">Event exported successfully</string>
     <string name="cal_export_error">Failed to export event</string>
-    <string name="cal_export_succ_msg">Event exported successfully</string>
     <string name="cal_import_menu_title">Import event</string>
     <string name="cal_nothing_to_import">Nothing to import</string>
     <string name="cal_import_error_msg">Importing to calendar failed</string>
-    <string name="cal_import_error_time_zone_msg">Unable to understand given time zone: %s</string>
-    <string name="cal_import_error_date_msg">Unable to understand given date: %s</string>
-    <string name="cal_pick_ics">Pick file to import</string>
 
     <!-- Strings to describe view details array -->
     <string name="show_time_no">Don\'t show time</string>
@@ -789,7 +761,6 @@
     <string name="preferences_calendar_visible">Display events</string>
     <!-- Button to access system notification preference for a given calendar -->
     <string name="preferences_manage_notifications">Manage notifications</string>
-    <string name="preferences_calendar_synchronize">Synchronize this calendar</string>
     <string name="preferences_calendar_color_warning_title">Warning</string>
     <string name="preferences_calendar_color_warning_message">Changing the color may be reverted when the calendar is synchronized again.\n\nIn DAVx⁵ \'Manage calendar colors\' can be disabled to prevent this.</string>
     <string name="preferences_calendar_color_warning_button">I understand</string>
@@ -800,7 +771,6 @@
     <string name="preferences_list_calendar_summary_invisible">Events are not displayed</string>
     <string name="preferences_list_general">General settings</string>
     <string name="preferences_list_add_remote">Add CalDAV calendar</string>
-    <string name="preferences_list_add_remote_etesync">Add EteSync calendar</string>
     <string name="preferences_list_add_offline">Add offline calendar</string>
     <string name="preferences_list_add_offline_title">Add offline calendar</string>
     <string name="preferences_list_add_offline_error_empty">Enter a calendar name!</string>
@@ -851,9 +821,7 @@
     <!-- Text displayed when the recipientedittextview is not focused. Displays the total number of recipients since the field is shrunk to just display a portion -->
     <string name="more_string">\u002B<xliff:g id="count">%1$d</xliff:g></string>
     <!-- Text displayed when the user long presses on a chip to copy the recipients email address [CHAR LIMIT=200] -->
-    <string name="copy_email">Copy email address</string>
     <!-- Text displayed when the user long presses on a chip to copy the recipient's phone number [CHAR LIMIT=200] -->
-    <string name="copy_number">Copy phone number</string>
     <!-- Text displayed in the enter key slot when the recipientedittextview has focus [CHAR LIMIT=12] -->
     <string name="action_label">Return</string>
     <!-- Announce the number of possible recipient entries that the user can select from for accessibility purposes [CHAR LIMIT=200] -->
@@ -871,11 +839,9 @@
 
     <!-- Widget labels -->
     <!-- Label for the month view widget in the widget picker -->
-    <string name="month_widget_label">Calendar Month View</string>
     <!-- Description for the month view widget shown in the widget picker on Android 12+ -->
     <string name="month_widget_description">Displays the current month with event indicators</string>
     <!-- Label for the week view widget in the widget picker -->
-    <string name="week_widget_label">Calendar Week View</string>
     <!-- Description for the week view widget shown in the widget picker on Android 12+ -->
     <string name="week_widget_description">Displays the current week with event times and details</string>
     <!-- Widget configure strings -->

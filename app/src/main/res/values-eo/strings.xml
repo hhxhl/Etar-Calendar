@@ -3,7 +3,6 @@
     <string name="preferences_title">Agordoj</string>
     <string name="delete_recurring_event_title">Ĉu forigi <xliff:g id="eventtitle">%s</xliff:g>?</string>
     <string name="delete_this_event_title">Ĉu forigi ĉi tiun okazaĵon\?</string>
-    <string name="new_event_dialog_option">Nova okazaĵo</string>
     <string name="new_event_dialog_label">Nova okazaĵo</string>
     <string name="every_weekday">Ĉiu labortago (lun - ven)</string>
     <string name="discard_label">Nuligi</string>
@@ -14,14 +13,12 @@
     <string name="agenda_tomorrow">Morgaŭ, <xliff:g id="date">%1$s</xliff:g></string>
     <string name="agenda_yesterday">Hieraŭ, <xliff:g id="date">%1$s</xliff:g></string>
     <string name="agenda_today">Hodiaŭ, <xliff:g id="date">%1$s</xliff:g></string>
-    <string name="event_info_reminders_label">Memorigiloj</string>
     <string name="map_label">Mapo</string>
     <string name="response_no">Ne</string>
     <string name="response_maybe">Eble</string>
     <string name="response_yes">Jes</string>
     <string name="calendar_color_picker_dialog_title">Kalendara koloro</string>
     <string name="event_color_picker_dialog_title">Okazaĵa koloro</string>
-    <string name="view_event_calendar_label">Kalendaro:</string>
     <string name="no_syncable_calendars">Ne estas kalendaroj</string>
     <string name="reminders_label">Aldoni memorigilon</string>
     <string name="privacy_label">Privateco</string>
@@ -113,7 +110,6 @@
     <string name="visibility_default">Defaŭlte</string>
     <string name="recurrence_end_date">Ĝis <xliff:g id="date">%s</xliff:g></string>
     <string name="recurrence_end_date_label">Ĝis dato</string>
-    <string name="acessibility_selected_marker_description">Elektita okazaĵo</string>
     <plurals name="N_remaining_events">
         <item quantity="one">+1 okazaĵo</item>
         <item quantity="other">+<xliff:g id="count">%d</xliff:g> okazaĵoj</item>
@@ -123,7 +119,6 @@
         <item quantity="other"><xliff:g id="count">%d</xliff:g> okazaĵoj</item>
     </plurals>
     <string name="template_announce_item_index">Okazaĵo <xliff:g id="item_index">%1$s</xliff:g> de <xliff:g id="item_count">%2$s</xliff:g>.</string>
-    <string name="day_view_new_event_hint">+ Nova okazaĵo</string>
     <string name="accessibility_reminder_privacy">Privateco</string>
     <string name="accessibility_reminder_showmeas">Montri min kiel</string>
     <string name="accessibility_reminder_type">Tipo de memorigilo</string>
@@ -134,12 +129,8 @@
     <string name="license">Permesilo</string>
     <string name="changelog">Ŝanĝprotokolo</string>
     <string name="authors">Aŭtoroj</string>
-    <string name="preferences_alerts_ringtone_title">Sono</string>
     <string name="preferences_reminder_title">Sciigoj kaj memorigiloj</string>
     <string name="preferences_pure_black_night_mode">Klara nigra nokta reĝimo</string>
-    <string name="preferences_color_pick">Ĉefa koloro</string>
-    <string name="preferences_color">Ĉefa koloro</string>
-    <string name="preferences_black_theme">Nigra</string>
     <string name="endByDate">; ĝis <xliff:g id="date">%s</xliff:g></string>
     <string name="loading">Ŝarĝado</string>
     <string name="quick_response_custom_msg">Tajpi vian propran…</string>
@@ -159,13 +150,11 @@
     <string name="does_not_repeat">Unu-folia okazaĵo</string>
     <string name="preferences_days_per_week_dialog">Tagoj en semajno</string>
     <string name="preferences_days_per_week_title">Tagoj en semajno</string>
-    <string name="preferences_alerts_popup_title">Ŝprucosciigo</string>
     <string name="preferences_alerts_title">Sciigoj</string>
     <string name="preferences_light_theme">Hela</string>
     <string name="preferences_theme">Etoso</string>
     <string name="preferences_dark_theme">Malhela</string>
     <string name="select_synced_calendars_button">Kalendaroj por sinkronigi</string>
-    <string name="event_info_organizer">Planilo:</string>
     <string name="view_event_organizer_label">Planilo:</string>
     <string name="call_label">Altelefoni</string>
     <string name="calendar_square_color_picker_description">Kolorelektilo</string>
@@ -175,7 +164,6 @@
     <string name="preferences_list_calendar_summary_invisible">Okazaĵoj ne estas montritaj</string>
     <string name="preferences_calendar_visible">Montri okazaĵoj</string>
     <string name="cal_import_menu_title">Enporti okazaĵon</string>
-    <string name="cal_export_succ_msg">Okazaĵo sukcese elportita: %1$s</string>
     <string name="cal_export_event_title">Elport al SD-karto</string>
     <plurals name="recurrence_end_count">
         <item quantity="one">Por <xliff:g id="event_count">%d</xliff:g> okazaĵo</item>
@@ -205,7 +193,6 @@
     <string name="creating_event_with_guest">Invitoj sendiĝos.</string>
     <string name="preferences_system_theme">Sistema implicitaĵo</string>
     <string name="preferences_general_title">Agordoj pri vido de kalendaro</string>
-    <string name="cal_pick_ics">Elektu enportotan dosieron</string>
     <string name="cal_nothing_to_import">Nenio enportebla</string>
     <string name="show_time_no">Ne montri tempon</string>
     <string name="preferences_calendar_no_display_name">Sennoma kalendaro</string>
@@ -216,7 +203,6 @@
         <item quantity="one">1 semajno</item>
         <item quantity="other"><xliff:g id="count">%d</xliff:g> semajnoj</item>
     </plurals>
-    <string name="event_info_title_invite">Invito al renkontiĝo</string>
     <string name="change_response_title">Ŝanĝi respondon</string>
     <string name="no_reminder_label">Nenio</string>
     <string name="email_picker_label">Retmesaĝi per</string>
@@ -237,18 +223,11 @@
     <string name="preferences_week_start_day_title">Semajno komenciĝas je</string>
     <string name="preferences_clear_search_history_summary">Forigi ĉiujn serĉojn kiuj vi faris</string>
     <string name="search_history_cleared">Serĉ-historio viŝigita.</string>
-    <string name="preferences_alerts_vibrateWhen_title">Vibri</string>
     <string name="preferences_home_tz_title">Hejma horzono</string>
     <string name="preferences_show_week_num_title">Montri semajn-numeron</string>
     <string name="preferences_build_version">Versio</string>
     <string name="preferences_issues">Raporti problemojn</string>
-    <string name="show_newer_events">Tuŝi por montri okazaĵojn poste
-\n<xliff:g id="newest_search_range">%1$s
-\n</xliff:g></string>
     <string name="email_guests_label">Retmesaĝi gastojn</string>
-    <string name="email_organizer_label">Retmesaĝi organizanton</string>
-    <string name="show_older_events">Tuŝi por montri okazaĵojn antaŭe
-\n<xliff:g id="oldest_search_range">%1$s</xliff:g></string>
     <string name="custom" product="default">Propre (ne povas adapti telefone)</string>
     <plurals name="weekly">
         <item quantity="one">Ĉiusemajne je <xliff:g id="days_of_week">%2$s</xliff:g></item>

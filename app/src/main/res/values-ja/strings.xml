@@ -64,14 +64,12 @@
     <string name="create_event_dialog_save" msgid="1080859798521717414">"保存"</string>
     <string name="alert_title" msgid="7869592820853066853">"カレンダーの通知"</string>
     <string name="event_info_title" msgid="56024222340421620">"予定を表示"</string>
-    <string name="event_info_title_invite" msgid="9160326363769403865">予定への招待</string>
     <string name="edit_event_all_day_label" msgid="6200181113992136073">"終日"</string>
     <string name="edit_event_calendar_label" msgid="4556498359505856900">"カレンダー"</string>
     <string name="presence_label" msgid="6169724148441175862">"外部向け表示"</string>
     <string name="privacy_label" msgid="9215031965259597335">"公開設定"</string>
     <string name="reminders_label" msgid="7292389181815525676">リマインダーを追加</string>
     <string name="no_syncable_calendars" msgid="7019488867045436129">"カレンダーがありません"</string>
-    <string name="view_event_calendar_label" msgid="6126231656338241140">"カレンダー:"</string>
     <string name="view_event_organizer_label" msgid="2753151795647402277">"主催者:"</string>
     <string name="choose_event_color_label" msgid="2192923501857428854">"予定の色を選択"</string>
     <string name="event_color_picker_dialog_title" msgid="4631938661655159511">"予定の色"</string>
@@ -83,7 +81,6 @@
     <string name="response_maybe" msgid="7791500973627841695">"未定"</string>
     <string name="response_no" msgid="561911691884148136">辞退</string>
     <string name="email_guests_label" msgid="8772030932155305903">参加者にメールを送信</string>
-    <string name="email_organizer_label" msgid="7178059542798074813">"主催者にメールを送信"</string>
     <string name="email_picker_label" msgid="4808253965057791781">メールを送信:</string>
     <string name="event_not_found" msgid="8356864185947582727">予定が見つかりません。</string>
     <string name="map_label" msgid="8795383535586556038">"地図"</string>
@@ -100,14 +97,10 @@
         <item msgid="8036557974294987511">"申し訳ありませんが、行けません。日程を変更する必要があります。"</item>
     </string-array>
     <string name="quick_response_custom_msg" msgid="8792374208224108798">オリジナルの返信…</string>
-    <string name="event_info_organizer" msgid="9138683335394832629">主催者:</string>
-    <string name="event_info_reminders_label" msgid="8913097552956388972">リマインダー</string>
     <string name="agenda_today" msgid="5965841338467422191">"今日: <xliff:g id="DATE">%1$s</xliff:g>"</string>
     <string name="agenda_yesterday" msgid="4170964206728599693">"昨日: <xliff:g id="DATE">%1$s</xliff:g>"</string>
     <string name="agenda_tomorrow" msgid="3893625470780723605">"明日: <xliff:g id="DATE">%1$s</xliff:g>"</string>
     <string name="loading" msgid="3772533493214331230">読み込み中…</string>
-    <string name="show_older_events" msgid="5140647493681439926">タップして <xliff:g id="OLDEST_SEARCH_RANGE">%1$s</xliff:g> より前の予定を表示</string>
-    <string name="show_newer_events" msgid="2604638815440163080">タップして <xliff:g id="NEWEST_SEARCH_RANGE">%1$s</xliff:g> より後の予定を表示</string>
     <string name="search_title" msgid="8898015280250716254">"マイカレンダーを検索"</string>
     <string name="edit_event_label" msgid="7413222956349977161">"詳細"</string>
     <string name="edit_label" msgid="8934331258435656534">"編集"</string>
@@ -135,7 +128,6 @@
     <string name="modify_all" msgid="4421657265864209041">繰り返しの予定すべてを変更</string>
     <string name="modify_all_following" msgid="3017428541066390380">これ以降の予定すべてを変更</string>
     <string name="new_event_dialog_label" msgid="7553105224561147916">"新しい予定"</string>
-    <string name="new_event_dialog_option" msgid="6154657379574669371">"新しい予定"</string>
     <string name="delete_this_event_title" msgid="518402946676919384">"この予定を削除しますか？"</string>
     <string name="delete_recurring_event_title" msgid="5609046778422180206"><xliff:g id="EVENTTITLE">%s</xliff:g> を削除しますか？</string>
     <string name="change_response_title" msgid="7704714776070974984">"出欠状況を変更"</string>
@@ -149,9 +141,6 @@
     <string name="preferences_clear_search_history_summary" msgid="7864674093455778158">"実行したすべての検索を削除する"</string>
     <string name="search_history_cleared" msgid="1536707558435227567">"検索履歴を消去しました。"</string>
     <string name="preferences_alerts_title" msgid="6636088008103904020">"通知"</string>
-    <string name="preferences_alerts_vibrateWhen_title" msgid="8731372580674292759">"バイブレーション"</string>
-    <string name="preferences_alerts_ringtone_title" msgid="1849706055052358346">通知音</string>
-    <string name="preferences_alerts_popup_title" msgid="6643468203670475296">"ポップアップ通知"</string>
     <string name="preferences_default_reminder_title" msgid="5188861433342733905">デフォルトのリマインダー時間</string>
     <string name="preferences_default_reminder_dialog" msgid="2490348857239323412">デフォルトのリマインダー時間</string>
     <string name="preferences_default_reminder_default" msgid="2903884416749959435">"10"</string>
@@ -181,11 +170,9 @@
     <string name="accessibility_remove_reminder" msgid="5261609343259665139">リマインダーを削除</string>
     <string name="accessibility_add_attendee" msgid="5654014177472600916">"参加者を追加"</string>
     <string name="accessibility_all_day" msgid="4146955438811915282">"終日"</string>
-    <string name="accessibility_reminder_time" msgid="3594100545814579575">リマインダーの時間</string>
     <string name="accessibility_reminder_type" msgid="5339120699701437227">リマインダーのタイプ</string>
     <string name="accessibility_reminder_showmeas" msgid="6669129015980006570">"外部向け表示"</string>
     <string name="accessibility_reminder_privacy" msgid="8669288484484022771">"公開設定"</string>
-    <string name="day_view_new_event_hint" msgid="2131483437911536229">"新しい予定を追加"</string>
     <string name="template_announce_item_index" msgid="4067877800670753110">予定 <xliff:g id="item_index">%2$s</xliff:g> 件中 <xliff:g id="item_count">%1$s</xliff:g> 件目</string>
     <plurals name="Nevents">
         <item quantity="other"><xliff:g id="count">%d</xliff:g> 件の予定</item>
@@ -193,7 +180,6 @@
     <plurals name="N_remaining_events">
         <item quantity="other">+<xliff:g id="count">%d</xliff:g> 件の予定</item>
     </plurals>
-    <string name="acessibility_selected_marker_description" msgid="3010149843148810768">"選択した予定"</string>
     <plurals name="recurrence_interval_daily">
         <item quantity="other"><xliff:g id="count">%d</xliff:g> 日ごと</item>
     </plurals>
@@ -224,7 +210,6 @@
     <string name="snooze_delay_dialog_title">スヌーズ遅延を設定</string>
     <string name="preferences_default_snooze_delay_title">デフォルトのスヌーズ遅延時間</string>
     <string name="preferences_default_snooze_delay_dialog">デフォルトのスヌーズ遅延</string>
-    <string name="preferences_black_theme">ブラック</string>
     <string name="preferences_dark_theme">ダーク</string>
     <string name="preferences_light_theme">ライト</string>
     <string name="preferences_system_theme">システムのデフォルト</string>
@@ -252,7 +237,6 @@
     <string name="default_start_last">最後に使用した表示</string>
     <string name="preferences_days_per_week_title">1 週間の日数</string>
     <string name="preferences_default_event_duration_title">デフォルトの予定の期間</string>
-    <string name="preferences_color">メインの色</string>
     <string name="preferences_real_event_colors">実際の予定の色で表示する</string>
     <string name="preferences_pure_black_night_mode">ピュアブラックのナイトモード</string>
     <string name="default_start_title">起動時の表示</string>
@@ -268,7 +252,6 @@
     <string name="source_code">ソースコード</string>
     <string name="fifteen_minutes">15 分</string>
     <string name="preferences_calendar_color">色</string>
-    <string name="preferences_color_pick">カレンダーの色</string>
     <string name="user_rejected_calendar_write_permission">Etar が正常に動作するためにカレンダーの読み書きの権限が必要です。もう一度お試しください。</string>
     <string name="two_days">2 日</string>
     <string name="three_days">3 日</string>
@@ -286,11 +269,7 @@
     <string name="cal_import_error_msg">カレンダーのインポートに失敗しました</string>
     <string name="error_generating_ics">予定の共有中にエラーが発生しました</string>
     <string name="cal_share_intent_title">予定の送信先:</string>
-    <string name="cal_export_succ_msg">予定がエクスポートされました: %1$s</string>
     <string name="cal_import_menu_title">予定をインポート</string>
-    <string name="cal_import_error_time_zone_msg">設定されたタイムゾーンを読み込めませんでした: %s</string>
-    <string name="cal_import_error_date_msg">設定された日付を読み込めませんでした: %s</string>
-    <string name="cal_pick_ics">インポートするファイルを選択</string>
     <string name="show_time_no">時間を表示しない</string>
     <string name="show_time_start">開始時刻のみ</string>
     <string name="show_time_start_end">開始時刻と終了時刻</string>
@@ -309,7 +288,6 @@
     <string name="preferences_list_calendar_summary_sync_off">同期されていません</string>
     <string name="preferences_list_add_remote">CalDAV カレンダーを追加</string>
     <string name="preferences_list_general">全般設定</string>
-    <string name="preferences_list_add_remote_etesync">EteSync カレンダーを追加</string>
     <string name="preferences_list_calendar_summary_invisible">予定は表示されていません</string>
     <string name="preferences_list_add_offline">オフラインのカレンダーを追加</string>
     <string name="preferences_list_add_offline_title">オフラインのカレンダーを追加</string>
@@ -322,7 +300,6 @@
     <string name="offline_account_name">オフラインのカレンダー</string>
     <string name="calendar_permission_not_granted">必要な権限が拒否されました。予定を編集するには、設定アプリから権限を許可してください</string>
     <string name="preferences_calendar_account">%1$s アカウント</string>
-    <string name="preferences_calendar_synchronize">このカレンダーを同期する</string>
     <string name="preferences_calendar_delete">カレンダーを削除</string>
     <string name="preferences_calendar_color_warning_message">カレンダーを再同期すると、色の変更が元に戻ることがあります。
 \n
@@ -345,8 +322,6 @@
     <string name="no_results_found" msgid="5475293015394772651">"一致する検索結果はありません"</string>
     <string name="palestine_display_name" msgid="3485026339977302148">"パレスチナ"</string>
     <string name="more_string" msgid="643992135011109762">"+<xliff:g id="COUNT">%1$d</xliff:g>"</string>
-    <string name="copy_email" msgid="1084563757174121331">"メールアドレスをコピー"</string>
-    <string name="copy_number" msgid="8860802152973030914">"電話番号をコピー"</string>
     <string name="action_label" msgid="7172664623795021857">"Enter"</string>
     <string name="accessbility_suggestion_dropdown_opened" msgid="9015267358421989409">提案する連絡先候補の数</string>
     <string name="accessbility_suggestion_dropdown_closed" msgid="91481373431329121">"候補はありません"</string>

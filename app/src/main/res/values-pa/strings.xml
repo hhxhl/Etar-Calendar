@@ -59,7 +59,6 @@
     <string name="presence_label">ਮੈਨੂੰ ਇੰਝ ਵਿਖਾਓ</string>
     <string name="edit_event_calendar_label">ਜੰਤਰੀ</string>
     <string name="edit_event_all_day_label">ਸਾਰਾ ਦਿਨ</string>
-    <string name="event_info_title_invite">ਸਭਾ ਦਾ ਸੱਦਾ</string>
     <string name="event_info_title">ਵਰਤਾਰਾ ਵੇਖੋ</string>
     <string name="foreground_notification_channel_description">ਅੰਦਰੂਨੀ ਸਮਕਾਲੀਕਰਨ ਲਈ ਸੂਚਨਾਵਾਂ ਦੀ ਲੋੜ ਹੈ। ਤੁਸੀਂ ਬਿਨਾਂ ਫ਼ਿਕਰ ਕੀਤੇ ਇਹ ਚੈਨਲ ਲੁਕਾ ਸਕਦੇ ਹੋ।</string>
     <string name="foreground_notification_channel_name">ਮਗਰ ਹੋਣ ਵਾਲੇ ਕਾਰਜ</string>
@@ -85,8 +84,6 @@
     <string name="palestine_display_name" msgid="3485026339977302148">"ਪੈਲਸਟੀਨ"</string>
 
     <string name="more_string" msgid="643992135011109762">"+<xliff:g id="COUNT">%1$d</xliff:g>"</string>
-    <string name="copy_email" msgid="1084563757174121331">"ਈਮੇਲ ਪਤਾ ਕਾਪੀ ਕਰੋ"</string>
-    <string name="copy_number" msgid="8860802152973030914">"ਫ਼ੋਨ ਨੰਬਰ ਕਾਪੀ ਕਰੋ"</string>
     <string name="action_label" msgid="7172664623795021857">"ਵਾਪਸ ਜਾਓ"</string>
     <string name="accessbility_suggestion_dropdown_opened" msgid="9015267358421989409">"ਸੰਪਰਕ ਸੁਝਾਅ ਖੋਲ੍ਹੇ ਗਏ"</string>
     <string name="accessbility_suggestion_dropdown_closed" msgid="91481373431329121">"ਕੋਈ ਸੁਝਾਅ ਉਪਲਬਧ ਨਹੀਂ"</string>
