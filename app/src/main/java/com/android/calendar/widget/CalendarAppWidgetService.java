@@ -80,27 +80,6 @@ public class CalendarAppWidgetService extends RemoteViewsService {
     private static final long UPDATE_TIME_NO_EVENTS = DateUtils.HOUR_IN_MILLIS * 6;
 
 
-    /**
-     * Format given time for debugging output.
-     *
-     * @param unixTime Target time to report.
-     * @param now Current system time from {@link System#currentTimeMillis()}
-     *            for calculating time difference.
-     */
-    static String formatDebugTime(long unixTime, long now) {
-        Time time = new Time();
-        time.set(unixTime);
-
-        long delta = unixTime - now;
-        if (delta > DateUtils.MINUTE_IN_MILLIS) {
-            delta /= DateUtils.MINUTE_IN_MILLIS;
-            return String.format("[%d] %s (%+d mins)", unixTime, time.format(), delta);
-        } else {
-            delta /= DateUtils.SECOND_IN_MILLIS;
-            return String.format("[%d] %s (%+d secs)", unixTime, time.format(), delta);
-        }
-    }
-
     @Override
     public RemoteViewsFactory onGetViewFactory(Intent intent) {
         return new CalendarFactory(getApplicationContext(), intent);
@@ -347,17 +326,14 @@ public class CalendarAppWidgetService extends RemoteViewsService {
             // Make sure an update happens at midnight or earlier
             long minUpdateTime = getNextMidnightTimeMillis(timeZone);
             for (EventInfo event : model.mEventInfos) {
-                final long start;
-                final long end;
-                start = event.start;
-                end = event.end;
-
-                // We want to update widget when we enter/exit time range of an event.
-                if (now < start) {
-                    minUpdateTime = Math.min(minUpdateTime, start);
-                } else if (now < end) {
-                    minUpdateTime = Math.min(minUpdateTime, end);
-                }
+                if (event.allDay) continue;
+                minUpdateTime = Math.min(minUpdateTime,
+                        com.android.calendar.ItemStateSymbols.nextTimedTransition(
+                                event.start, event.end, event.id < -1, event.taskCompleted, now));
+                // Expired completed reminders and ordinary events also leave the agenda.
+                if ((event.id >= -1 || event.taskCompleted) && event.end >= now
+                        && event.end < Long.MAX_VALUE)
+                    minUpdateTime = Math.min(minUpdateTime, event.end + 1);
             }
             return minUpdateTime;
         }

@@ -126,8 +126,10 @@ class CalendarAppWidgetModel {
             }
 
             int i = mEventInfos.size();
-            mEventInfos.add(populateEventInfo(eventId, allDay, start, end, startDay, endDay, displayTitle,
-                    location, color, selfStatus));
+            EventInfo info = populateEventInfo(eventId, allDay, start, end, startDay, endDay, displayTitle,
+                    location, color, selfStatus);
+            info.taskCompleted = eventId < -1 && !pendingTask;
+            mEventInfos.add(info);
             // populate the day buckets that this event falls into
             int from = Math.max(startDay, mTodayJulianDay);
             int to = Math.min(endDay, mMaxJulianDay);
@@ -297,6 +299,7 @@ class CalendarAppWidgetModel {
         long start;
         long end;
         boolean allDay;
+        boolean taskCompleted;
         int color;
 
         public EventInfo() {

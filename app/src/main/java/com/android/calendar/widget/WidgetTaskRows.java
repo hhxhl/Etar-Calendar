@@ -52,13 +52,8 @@ final class WidgetTaskRows {
         while (cursor.moveToNext()) {
             if (cursor.getInt(allDay) != 0) continue;
             boolean task = cursor.getLong(id) < -1;
-            if (task && cursor.getInt(done) != 0) continue;
-            long start = cursor.getLong(begin);
-            long finish = cursor.getLong(end);
-            if (task) {
-                if (start >= now && start < Long.MAX_VALUE) next = Math.min(next, start + 1);
-            } else if (start > now) next = Math.min(next, start);
-            else if (finish > now) next = Math.min(next, finish);
+            next = Math.min(next, com.android.calendar.ItemStateSymbols.nextTimedTransition(
+                    cursor.getLong(begin), cursor.getLong(end), task, cursor.getInt(done) != 0, now));
         }
         cursor.moveToPosition(-1);
         return next;

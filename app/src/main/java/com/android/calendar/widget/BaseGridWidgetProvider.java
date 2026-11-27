@@ -25,9 +25,6 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.CalendarContract;
-import android.provider.CalendarContract.Attendees;
-import android.provider.CalendarContract.Calendars;
-import android.provider.CalendarContract.Instances;
 import android.util.TypedValue;
 import android.widget.RemoteViews;
 
@@ -43,19 +40,8 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
     public static final String EXTRA_GRID_AVAILABLE_HEIGHT_PX =
             "com.android.calendar.GRID_HEIGHT_PX";
 
-    public static final String SELECTION_VISIBLE = Calendars.VISIBLE + "=1";
-    public static final String SELECTION_HIDE_DECLINED = Calendars.VISIBLE + "=1 AND "
-            + Instances.SELF_ATTENDEE_STATUS + "!="
-            + Attendees.ATTENDEE_STATUS_DECLINED;
-
     static final int HEADER_HEIGHT_DP = 40;
     static final int DOW_ROW_HEIGHT_DP = 24;
-
-    static String getInstancesSelection(Context context) {
-        return Utils.getHideDeclinedEvents(context)
-                ? SELECTION_HIDE_DECLINED
-                : SELECTION_VISIBLE;
-    }
 
     static int getDayOfWeekOffset(int dayOfWeek, int firstDayOfWeek) {
         return (dayOfWeek - firstDayOfWeek + DAYS_PER_WEEK) % DAYS_PER_WEEK;

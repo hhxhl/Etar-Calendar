@@ -42,6 +42,14 @@ public final class ItemStateSymbols {
                 .isBefore(EventCountdown.targetDate(now, false, zone)) : due < now;
     }
 
+    /** Next transition for a timed item; all-day changes are handled at midnight. */
+    public static long nextTimedTransition(long start, long end, boolean reminder, boolean done, long now) {
+        if (reminder) return !done && start >= now && start < Long.MAX_VALUE
+                ? start + 1 : Long.MAX_VALUE;
+        if (start > now) return start;
+        return end > now ? end : Long.MAX_VALUE;
+    }
+
     public static String task(boolean done) {
         return done ? TASK_DONE : TASK_PENDING;
     }
