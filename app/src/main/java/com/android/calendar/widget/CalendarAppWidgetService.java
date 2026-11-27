@@ -33,7 +33,6 @@ import android.widget.RemoteViews;
 import android.widget.RemoteViewsService;
 
 import com.android.calendar.Utils;
-import com.android.calendar.theme.DynamicThemeKt;
 import com.android.calendar.widget.CalendarAppWidgetModel.DayInfo;
 import com.android.calendar.widget.CalendarAppWidgetModel.EventInfo;
 import com.android.calendar.widget.CalendarAppWidgetModel.RowInfo;
@@ -218,11 +217,7 @@ public class CalendarAppWidgetService extends RemoteViewsService {
                         R.layout.appwidget_no_events);
                 final Intent intent = CalendarAppWidgetProvider.getLaunchFillInIntent(mContext, 0,
                         0, 0, false);
-                if (android.os.Build.VERSION.SDK_INT >= 31) {
-                    views.setColorStateList(R.id.no_events, "setTextColor", R.color.widget_live_text);
-                } else {
-                    views.setTextColor(R.id.no_events, DynamicThemeKt.getColor(mContext, "widget_text"));
-                }
+                views.setColorStateList(R.id.no_events, "setTextColor", R.color.widget_live_text);
                 views.setOnClickFillInIntent(R.id.appwidget_no_events, intent);
                 return views;
             }
@@ -233,11 +228,7 @@ public class CalendarAppWidgetService extends RemoteViewsService {
                         R.layout.appwidget_day);
                 DayInfo dayInfo = mModel.mDayInfos.get(rowInfo.mIndex);
                 updateTextView(views, R.id.date, View.VISIBLE, dayInfo.mDayLabel);
-                if (android.os.Build.VERSION.SDK_INT >= 31) {
-                    views.setColorStateList(R.id.date, "setTextColor", R.color.widget_live_text);
-                } else {
-                    views.setTextColor(R.id.date, DynamicThemeKt.getColor(mContext, "widget_text"));
-                }
+                views.setColorStateList(R.id.date, "setTextColor", R.color.widget_live_text);
                 return views;
             } else {
                 RemoteViews views;
