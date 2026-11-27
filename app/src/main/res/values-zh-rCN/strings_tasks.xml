@@ -55,4 +55,6 @@
     <string name="reminders_completed">已完成（%1$d）</string>
     <string name="reminders_all_day">全天</string>
     <string name="agenda_all_calendars">全部日历</string>
+    <string name="agenda_no_events_in_range">此日期范围内没有日程</string>
+    <string name="agenda_load_failed">无法加载日程</string>
 </resources>

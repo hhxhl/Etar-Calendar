@@ -1,0 +1,704 @@
+package com.android.calendar.agenda;
+
+import android.content.ContentResolver;
+import android.content.ContentUris;
+import android.content.Context;
+import android.database.Cursor;
+import android.graphics.Paint;
+import android.graphics.Typeface;
+import android.net.Uri;
+import android.os.Bundle;
+import android.os.CancellationSignal;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.OperationCanceledException;
+import android.provider.CalendarContract.Attendees;
+import android.provider.CalendarContract.Calendars;
+import android.provider.CalendarContract.Events;
+import android.provider.CalendarContract.Instances;
+import android.text.TextUtils;
+import android.text.format.DateFormat;
+import android.text.format.DateUtils;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.AbsListView;
+import android.widget.ArrayAdapter;
+import android.widget.BaseAdapter;
+import android.widget.LinearLayout;
+import android.widget.ListView;
+import android.widget.Spinner;
+import android.widget.TextView;
+
+import androidx.fragment.app.Fragment;
+
+import com.android.calendar.CalendarController;
+import com.android.calendar.CalendarController.EventInfo;
+import com.android.calendar.CalendarController.EventType;
+import com.android.calendar.CalendarController.ViewType;
+import com.android.calendar.ColorChipView;
+import com.android.calendar.EventCountdown;
+import com.android.calendar.Utils;
+import com.android.calendar.calendarcommon2.Time;
+import com.android.calendar.event.EditEventActivity;
+import com.android.calendar.settings.GeneralPreferences;
+import com.android.calendar.theme.DynamicThemeKt;
+
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.TimeZone;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
+import ws.xsoh.etar.R;
+
+/** Main agenda: bounded instance queries, immutable display rows and a single ListView adapter.
+ * Search and the optional tablet month side pane retain their original agenda implementation.
+ */
+public final class DatedAgendaFragment extends Fragment implements CalendarController.EventHandler {
+    private static final String TAG = "DatedAgendaFragment";
+    private static final int BLOCK_DAYS = 90;
+    private static final int MAX_WINDOW_DAYS = 361;
+    private static final long JULIAN_EPOCH = 2440588L;
+    private static final int PREFETCH_ROWS = 5;
+    private static final String[] PROJECTION = {
+            Instances._ID, Instances.EVENT_ID, Instances.TITLE, Instances.EVENT_LOCATION,
+            Instances.ALL_DAY, Instances.DISPLAY_COLOR, Instances.BEGIN, Instances.END,
+            Instances.START_DAY, Instances.END_DAY, Instances.STATUS, Instances.SELF_ATTENDEE_STATUS,
+            Instances.ORGANIZER, Instances.OWNER_ACCOUNT, Instances.CAN_ORGANIZER_RESPOND,
+            Instances.EVENT_TIMEZONE
+    };
+
+    private final Handler main = new Handler(Looper.getMainLooper());
+    private final ArrayList<Row> rows = new ArrayList<>();
+    private final ArrayList<Long> calendarIds = new ArrayList<>();
+    private final HashSet<Long> writableIds = new HashSet<>();
+    private CalendarController controller;
+    private Spinner filter;
+    private ListView list;
+    private TextView status;
+    private AgendaRows adapter;
+    private ExecutorService worker;
+    private Future<?> future;
+    private CancellationSignal cancellation;
+    private int generation;
+    private boolean loading, active, binding, expandedThisGesture;
+    private int scrollState = AbsListView.OnScrollListener.SCROLL_STATE_IDLE;
+    private int lastFirst;
+    private float downY;
+    private boolean touchStarted;
+    private long calendarId = -1;
+    private ZoneId zone;
+    private LocalDate firstDay, lastDay, targetDay, publishedDay;
+    private Long pendingGoToMillis;
+    private Anchor pendingAnchor;
+    private boolean hasLoaded;
+    private final Runnable reload = () -> {
+        if (active && list != null) request(firstDay, lastDay,
+                pendingAnchor != null ? pendingAnchor : currentAnchor(), false);
+    };
+
+    public static DatedAgendaFragment newInstance(long time, Bundle saved) {
+        DatedAgendaFragment fragment = new DatedAgendaFragment();
+        Bundle args = new Bundle();
+        args.putLong("initial_time", time);
+        if (saved != null) args.putBundle("saved_agenda", new Bundle(saved));
+        fragment.setArguments(args);
+        return fragment;
+    }
+
+    private static final class Entry {
+        final long instanceId, id, begin, end;
+        final int startDay, endDay, color, status, response;
+        final String title, location, organizer, owner, timezone;
+        final boolean allDay, organizerCanRespond;
+
+        Entry(Cursor cursor) {
+            instanceId = cursor.getLong(0);
+            id = cursor.getLong(1);
+            title = cursor.getString(2);
+            location = cursor.getString(3);
+            allDay = cursor.getInt(4) != 0;
+            color = cursor.getInt(5);
+            begin = cursor.getLong(6);
+            end = cursor.getLong(7);
+            startDay = cursor.getInt(8);
+            endDay = cursor.getInt(9);
+            status = cursor.getInt(10);
+            response = cursor.getInt(11);
+            organizer = cursor.getString(12);
+            owner = cursor.getString(13);
+            organizerCanRespond = cursor.getInt(14) != 0;
+            timezone = cursor.getString(15);
+        }
+    }
+
+    private static final class Row {
+        final LocalDate day;
+        final Entry event;
+        Row(LocalDate day, Entry event) { this.day = day; this.event = event; }
+    }
+
+    private static final class Anchor {
+        final LocalDate day;
+        final long instance, eventId, begin;
+        final int offset;
+
+        Anchor(LocalDate day, long instance, long eventId, long begin, int offset) {
+            this.day = day;
+            this.instance = instance;
+            this.eventId = eventId;
+            this.begin = begin;
+            this.offset = offset;
+        }
+    }
+
+    private LocalDate date(long millis) { return Instant.ofEpochMilli(millis).atZone(zone).toLocalDate(); }
+    private long millis(LocalDate day) { return day.atStartOfDay(zone).toInstant().toEpochMilli(); }
+    private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
+    private static int julian(LocalDate date) { return (int) (date.toEpochDay() + JULIAN_EPOCH); }
+    private static LocalDate day(int julian) { return LocalDate.ofEpochDay(julian - JULIAN_EPOCH); }
+
+    @Override public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle saved) {
+        Context context = requireContext();
+        controller = CalendarController.getInstance(requireActivity());
+        zone = ZoneId.of(Utils.getTimeZone(context, null));
+        Bundle args = getArguments();
+        Bundle state = saved != null ? saved : args == null ? null : args.getBundle("saved_agenda");
+        long time = args == null ? controller.getTime() : args.getLong("initial_time", controller.getTime());
+        targetDay = date(time);
+        if (state != null) {
+            calendarId = state.getLong("calendar_id", -1);
+            targetDay = date(state.getLong("anchor_time", time));
+            pendingAnchor = new Anchor(targetDay, state.getLong("instance", -1),
+                    state.getLong("event_id", -1), state.getLong("begin", -1), state.getInt("offset", 0));
+            firstDay = LocalDate.ofEpochDay(state.getLong("first_day", targetDay.minusDays(BLOCK_DAYS).toEpochDay()));
+            lastDay = LocalDate.ofEpochDay(state.getLong("last_day", targetDay.plusDays(BLOCK_DAYS).toEpochDay()));
+        }
+        if (pendingGoToMillis != null && !date(pendingGoToMillis).equals(targetDay)) {
+            targetDay = date(pendingGoToMillis);
+            pendingAnchor = null;
+            firstDay = lastDay = null;
+        }
+        pendingGoToMillis = null;
+        if (firstDay == null || lastDay == null || targetDay.isBefore(firstDay) || targetDay.isAfter(lastDay)) {
+            firstDay = targetDay.minusDays(BLOCK_DAYS);
+            lastDay = targetDay.plusDays(BLOCK_DAYS);
+        }
+        if (pendingAnchor == null) pendingAnchor = new Anchor(targetDay, -1, -1, -1, 0);
+        worker = Executors.newSingleThreadExecutor();
+        hasLoaded = false;
+        publishedDay = null;
+
+        LinearLayout root = new LinearLayout(context);
+        root.setOrientation(LinearLayout.VERTICAL);
+        filter = new Spinner(context);
+        root.addView(filter, new LinearLayout.LayoutParams(-1, -2));
+        status = new TextView(context);
+        status.setPadding(dp(16), dp(12), dp(16), dp(12));
+        status.setTextColor(DynamicThemeKt.getColor(context, "agenda_item_where_text_color"));
+        status.setVisibility(View.GONE);
+        root.addView(status, new LinearLayout.LayoutParams(-1, -2));
+        list = new ListView(context);
+        list.setDivider(null);
+        list.setPadding(0, 0, 0, dp(80));
+        list.setClipToPadding(false);
+        adapter = new AgendaRows();
+        list.setAdapter(adapter);
+        root.addView(list, new LinearLayout.LayoutParams(-1, 0, 1));
+        reloadCalendars();
+        filter.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override public void onNothingSelected(android.widget.AdapterView<?> parent) {}
+            @Override public void onItemSelected(android.widget.AdapterView<?> parent, View view, int pos, long id) {
+                if (binding || filter == null || filter.getSelectedItemPosition() != pos
+                        || pos < 0 || pos >= calendarIds.size()) return;
+                long selected = calendarIds.get(pos);
+                if (calendarId == selected) return;
+                calendarId = selected;
+                Anchor anchor = currentAnchor();
+                request(firstDay, lastDay, anchor, true);
+            }
+        });
+        list.setOnItemClickListener((parent, view, position, id) -> {
+            if (position >= rows.size()) return;
+            Entry event = rows.get(position).event;
+            if (event != null) EditEventActivity.openEvent(requireContext(), event.id,
+                    event.begin, event.end, Attendees.ATTENDEE_STATUS_NONE);
+        });
+        list.setOnTouchListener((view, event) -> {
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    touchStarted = true;
+                    expandedThisGesture = false;
+                    downY = event.getY();
+                    break;
+                case MotionEvent.ACTION_UP:
+                    if (touchStarted && !expandedThisGesture) {
+                        float delta = downY - event.getY();
+                        if (Math.abs(delta) > dp(24)) {
+                            int direction = delta > 0 ? 1 : -1;
+                            if (!list.canScrollVertically(direction)) expand(direction);
+                        }
+                    }
+                    touchStarted = false;
+                    break;
+                case MotionEvent.ACTION_CANCEL:
+                    touchStarted = false;
+                    break;
+            }
+            return false;
+        });
+        list.setOnScrollListener(new AbsListView.OnScrollListener() {
+            @Override public void onScrollStateChanged(AbsListView view, int state) {
+                scrollState = state;
+                if (state == SCROLL_STATE_TOUCH_SCROLL) {
+                    expandedThisGesture = false;
+                    lastFirst = view.getFirstVisiblePosition();
+                }
+                if (state == SCROLL_STATE_IDLE && !binding) publishVisibleDay();
+            }
+
+            @Override public void onScroll(AbsListView view, int first, int visible, int total) {
+                if (binding || scrollState == SCROLL_STATE_IDLE || rows.isEmpty()) return;
+                int direction = Integer.compare(first, lastFirst);
+                lastFirst = first;
+                publishVisibleDay();
+                if (direction < 0 && first <= PREFETCH_ROWS) expand(-1);
+                else if (direction > 0 && first + visible >= total - PREFETCH_ROWS) expand(1);
+            }
+        });
+        return root;
+    }
+
+    private void reloadCalendars() {
+        if (filter == null) return;
+        binding = true;
+        try {
+            ArrayList<String> names = new ArrayList<>();
+            names.add(getString(R.string.agenda_all_calendars));
+            calendarIds.clear();
+            writableIds.clear();
+            calendarIds.add(-1L);
+            if (Utils.isCalendarPermissionGranted(requireContext(), false)) {
+                try (Cursor cursor = requireContext().getContentResolver().query(Calendars.CONTENT_URI,
+                        new String[]{Calendars._ID, Calendars.CALENDAR_DISPLAY_NAME, Calendars.CALENDAR_ACCESS_LEVEL},
+                        Calendars.VISIBLE + "=1", null, Calendars.CALENDAR_DISPLAY_NAME)) {
+                    if (cursor != null) {
+                        while (cursor.moveToNext()) {
+                            long id = cursor.getLong(0);
+                            calendarIds.add(id);
+                            names.add(cursor.isNull(1) ? Long.toString(id) : cursor.getString(1));
+                            if (cursor.getInt(2) >= Calendars.CAL_ACCESS_CONTRIBUTOR) writableIds.add(id);
+                        }
+                        if (!calendarIds.contains(calendarId)) calendarId = -1;
+                    }
+                } catch (SecurityException error) {
+                    Log.w(TAG, "Calendar filter unavailable", error);
+                }
+            }
+            ArrayAdapter<String> labels = new ArrayAdapter<>(requireContext(),
+                    android.R.layout.simple_spinner_item, names);
+            labels.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            filter.setAdapter(labels);
+            filter.setSelection(Math.max(0, calendarIds.indexOf(calendarId)));
+        } finally {
+            binding = false;
+        }
+    }
+
+    public long getSelectedWritableCalendarId() {
+        return writableIds.contains(calendarId) ? calendarId : -1;
+    }
+
+    @Override public void onResume() {
+        super.onResume();
+        active = true;
+        ZoneId latestZone = ZoneId.of(Utils.getTimeZone(requireContext(), null));
+        if (!latestZone.equals(zone)) zone = latestZone;
+        reloadCalendars();
+        Anchor anchor = pendingAnchor != null ? pendingAnchor : currentAnchor();
+        request(firstDay, lastDay, anchor, false);
+    }
+
+    @Override public void onPause() {
+        pendingAnchor = currentAnchor();
+        active = false;
+        main.removeCallbacks(reload);
+        cancelQuery();
+        super.onPause();
+    }
+
+    @Override public void onDestroyView() {
+        active = false;
+        main.removeCallbacksAndMessages(null);
+        cancelQuery();
+        if (worker != null) worker.shutdownNow();
+        worker = null;
+        list = null;
+        filter = null;
+        status = null;
+        adapter = null;
+        rows.clear();
+        super.onDestroyView();
+    }
+
+    private void cancelQuery() {
+        generation++;
+        if (cancellation != null) cancellation.cancel();
+        if (future != null) future.cancel(true);
+        cancellation = null;
+        future = null;
+        loading = false;
+    }
+
+    private Anchor currentAnchor() {
+        if (list != null && !rows.isEmpty()) {
+            int index = Math.min(list.getFirstVisiblePosition(), rows.size() - 1);
+            Row row = rows.get(index);
+            Entry event = row.event;
+            return new Anchor(row.day, event == null ? -1 : event.instanceId,
+                    event == null ? -1 : event.id, event == null ? -1 : event.begin,
+                    list.getChildCount() == 0 ? 0 : list.getChildAt(0).getTop());
+        }
+        if (pendingAnchor != null) return pendingAnchor;
+        LocalDate anchor = targetDay == null ? LocalDate.now(zone == null ? ZoneId.systemDefault() : zone) : targetDay;
+        return new Anchor(anchor, -1, -1, -1, 0);
+    }
+
+    public Bundle saveViewState() {
+        Bundle state = new Bundle();
+        Anchor anchor = currentAnchor();
+        ZoneId savedZone = zone == null ? ZoneId.systemDefault() : zone;
+        state.putLong("anchor_time", anchor.day.atStartOfDay(savedZone).toInstant().toEpochMilli());
+        state.putLong("instance", anchor.instance);
+        state.putLong("event_id", anchor.eventId);
+        state.putLong("begin", anchor.begin);
+        state.putInt("offset", anchor.offset);
+        state.putLong("calendar_id", calendarId);
+        if (firstDay != null) state.putLong("first_day", firstDay.toEpochDay());
+        if (lastDay != null) state.putLong("last_day", lastDay.toEpochDay());
+        return state;
+    }
+
+    @Override public void onSaveInstanceState(Bundle state) {
+        super.onSaveInstanceState(state);
+        state.putAll(saveViewState());
+    }
+
+    private void expand(int direction) {
+        if (!active || loading || expandedThisGesture || !hasLoaded) return;
+        expandedThisGesture = true;
+        LocalDate first = firstDay;
+        LocalDate last = lastDay;
+        if (direction < 0) {
+            first = first.minusDays(BLOCK_DAYS);
+            LocalDate cap = first.plusDays(MAX_WINDOW_DAYS - 1);
+            if (last.isAfter(cap)) last = cap;
+        } else {
+            last = last.plusDays(BLOCK_DAYS);
+            LocalDate cap = last.minusDays(MAX_WINDOW_DAYS - 1);
+            if (first.isBefore(cap)) first = cap;
+        }
+        request(first, last, currentAnchor(), false);
+    }
+
+    private void goTo(LocalDate day) {
+        if (list == null) return;
+        targetDay = day;
+        Anchor anchor = new Anchor(day, -1, -1, -1, 0);
+        if (!active) {
+            pendingAnchor = anchor;
+            if (day.isBefore(firstDay) || day.isAfter(lastDay)) {
+                firstDay = day.minusDays(BLOCK_DAYS);
+                lastDay = day.plusDays(BLOCK_DAYS);
+            }
+            return;
+        }
+        if (hasLoaded && !loading && !day.isBefore(firstDay) && !day.isAfter(lastDay)) {
+            restoreAnchor(anchor);
+        } else {
+            request(day.minusDays(BLOCK_DAYS), day.plusDays(BLOCK_DAYS), anchor, false);
+        }
+    }
+
+    private void request(LocalDate first, LocalDate last, Anchor anchor, boolean clear) {
+        if (list == null || worker == null) return;
+        if (!active) {
+            firstDay = first;
+            lastDay = last;
+            pendingAnchor = anchor;
+            return;
+        }
+        main.removeCallbacks(reload);
+        cancelQuery();
+        pendingAnchor = anchor;
+        firstDay = first;
+        lastDay = last;
+        loading = true;
+        if (clear) {
+            binding = true;
+            rows.clear();
+            adapter.notifyDataSetChanged();
+            binding = false;
+            hasLoaded = false;
+        }
+        if (rows.isEmpty()) {
+            status.setText(R.string.loading);
+            status.setVisibility(View.VISIBLE);
+        }
+        Context context = requireContext().getApplicationContext();
+        long selected = calendarId;
+        ZoneId queryZone = zone;
+        LocalDate today = LocalDate.now(queryZone);
+        boolean hideDeclined = GeneralPreferences.Companion.getSharedPreferences(context)
+                .getBoolean(GeneralPreferences.KEY_HIDE_DECLINED, false);
+        CancellationSignal signal = new CancellationSignal();
+        cancellation = signal;
+        int ticket = generation;
+        future = worker.submit(() -> {
+            try {
+                List<Row> result = query(context, first, last, selected, hideDeclined, today, signal);
+                main.post(() -> {
+                    if (!active || list == null || ticket != generation) return;
+                    loading = false;
+                    firstDay = first;
+                    lastDay = last;
+                    hasLoaded = true;
+                    binding = true;
+                    rows.clear();
+                    rows.addAll(result);
+                    adapter.notifyDataSetChanged();
+                    if (result.stream().noneMatch(row -> row.event != null)) {
+                        status.setText(R.string.agenda_no_events_in_range);
+                        status.setVisibility(View.VISIBLE);
+                    } else status.setVisibility(View.GONE);
+                    restoreAnchor(anchor);
+                    pendingAnchor = null;
+                    binding = false;
+                });
+            } catch (OperationCanceledException ignored) {
+                // A newer query or a destroyed view owns the UI now.
+            } catch (RuntimeException error) {
+                Log.w(TAG, "Could not query agenda instances", error);
+                main.post(() -> {
+                    if (!active || list == null || ticket != generation) return;
+                    loading = false;
+                    status.setText(Utils.isCalendarPermissionGranted(requireContext(), false)
+                            ? R.string.agenda_load_failed : R.string.calendar_permission_not_granted);
+                    status.setVisibility(View.VISIBLE);
+                });
+            }
+        });
+    }
+
+    private static List<Row> query(Context context, LocalDate first, LocalDate last,
+            long selected, boolean hideDeclined, LocalDate today, CancellationSignal signal) {
+        ContentResolver resolver = context.getContentResolver();
+        Uri.Builder builder = Instances.CONTENT_BY_DAY_URI.buildUpon();
+        ContentUris.appendId(builder, julian(first));
+        ContentUris.appendId(builder, julian(last));
+        String selection = Calendars.VISIBLE + "=1";
+        if (hideDeclined) selection += " AND " + Instances.SELF_ATTENDEE_STATUS
+                + "!=" + Attendees.ATTENDEE_STATUS_DECLINED;
+        if (selected >= 0) selection += " AND " + Instances.CALENDAR_ID + "=?";
+        String[] args = selected < 0 ? null : new String[]{Long.toString(selected)};
+        ArrayList<Row> items = new ArrayList<>();
+        int start = julian(first), end = julian(last);
+        try (Cursor cursor = resolver.query(builder.build(), PROJECTION, selection, args,
+                Instances.START_DAY + " ASC, " + Instances.BEGIN + " ASC, " + Instances.TITLE + " ASC", signal)) {
+            if (cursor == null) throw new IllegalStateException("CalendarProvider returned no cursor");
+            while (cursor.moveToNext()) {
+                signal.throwIfCanceled();
+                Entry entry = new Entry(cursor);
+                for (int d = Math.max(start, entry.startDay); d <= Math.min(end, entry.endDay); d++) {
+                    items.add(new Row(day(d), entry));
+                }
+            }
+        }
+        items.sort(Comparator.comparing((Row row) -> row.day)
+                .thenComparingLong(row -> row.event.begin)
+                .thenComparing(row -> row.event.title == null ? "" : row.event.title)
+                .thenComparingLong(row -> row.event.instanceId));
+        ArrayList<Row> result = new ArrayList<>();
+        LocalDate previous = null;
+        boolean todayAdded = today.isBefore(first) || today.isAfter(last);
+        for (Row row : items) {
+            if (!row.day.equals(previous)) {
+                if (!todayAdded && row.day.isAfter(today)) {
+                    result.add(new Row(today, null));
+                    todayAdded = true;
+                }
+                result.add(new Row(row.day, null));
+                if (row.day.equals(today)) todayAdded = true;
+                previous = row.day;
+            }
+            result.add(row);
+        }
+        if (!todayAdded) result.add(new Row(today, null));
+        return result;
+    }
+
+    private void restoreAnchor(Anchor anchor) {
+        int index = -1, nearest = -1, lastHeader = -1;
+        for (int i = 0; i < rows.size(); i++) {
+            Row row = rows.get(i);
+            if (row.event == null) {
+                lastHeader = i;
+                if (nearest == -1 && !row.day.isBefore(anchor.day)) nearest = i;
+            }
+            if (!row.day.equals(anchor.day)) continue;
+            if (row.event == null && anchor.instance < 0 && anchor.eventId < 0) {
+                index = i;
+                break;
+            }
+            if (row.event != null && (row.event.instanceId == anchor.instance
+                    || (row.event.id == anchor.eventId && row.event.begin == anchor.begin))) {
+                index = i;
+                break;
+            }
+        }
+        boolean exact = index >= 0;
+        if (index < 0) index = nearest >= 0 ? nearest : lastHeader;
+        if (index >= 0) list.setSelectionFromTop(index, exact ? anchor.offset : 0);
+        targetDay = index >= 0 ? rows.get(index).day : anchor.day;
+        publishDay(targetDay);
+    }
+
+    private void publishVisibleDay() {
+        if (list == null || rows.isEmpty()) return;
+        int first = list.getFirstVisiblePosition();
+        if (first < rows.size()) publishDay(rows.get(first).day);
+    }
+
+    private void publishDay(LocalDate day) {
+        targetDay = day;
+        if (day.equals(publishedDay)) return;
+        publishedDay = day;
+        main.post(() -> {
+            if (!active || list == null || !day.equals(publishedDay)
+                    || controller.getViewType() != ViewType.AGENDA) return;
+            Time time = new Time(zone.getId());
+            time.set(millis(day));
+            controller.setTime(time.toMillis());
+            controller.sendEvent(this, EventType.UPDATE_TITLE, time, time, null,
+                    -1, ViewType.CURRENT, 0, null, null);
+        });
+    }
+
+    @Override public long getSupportedEventTypes() { return EventType.GO_TO | EventType.EVENTS_CHANGED; }
+
+    @Override public void handleEvent(EventInfo event) {
+        if (event.eventType == EventType.GO_TO && event.startTime != null) {
+            if (list == null) {
+                pendingGoToMillis = event.startTime.toMillis();
+                return;
+            }
+            ZoneId currentZone = zone;
+            LocalDate target = Instant.ofEpochMilli(event.startTime.toMillis()).atZone(currentZone).toLocalDate();
+            // The activity sends its initialization GO_TO before the fragment is attached.
+            // See below for that case; preserve the saved pixel/instance anchor on equal dates.
+            if (list != null && pendingAnchor != null && pendingAnchor.day.equals(target) && !hasLoaded) return;
+            goTo(target);
+        } else if (event.eventType == EventType.EVENTS_CHANGED) eventsChanged();
+    }
+
+    @Override public void eventsChanged() {
+        if (!active || list == null) return;
+        main.removeCallbacks(reload);
+        main.post(reload);
+    }
+
+    private final class AgendaRows extends BaseAdapter {
+        @Override public int getCount() { return rows.size(); }
+        @Override public Object getItem(int position) { return rows.get(position); }
+        @Override public long getItemId(int position) { return position; }
+        @Override public int getViewTypeCount() { return 2; }
+        @Override public int getItemViewType(int position) { return rows.get(position).event == null ? 0 : 1; }
+        @Override public boolean areAllItemsEnabled() { return false; }
+        @Override public boolean isEnabled(int position) { return rows.get(position).event != null; }
+
+        @Override public View getView(int position, View convertView, ViewGroup parent) {
+            Row row = rows.get(position);
+            Context context = parent.getContext();
+            LocalDate today = LocalDate.now(zone);
+            LayoutInflater inflater = LayoutInflater.from(context);
+            if (row.event == null) {
+                View header = convertView == null ? inflater.inflate(R.layout.agenda_day, parent, false) : convertView;
+                long time = millis(row.day);
+                ((TextView) header.findViewById(R.id.day)).setText(
+                        Utils.getDayOfWeekString(julian(row.day), julian(today), time, context));
+                ((TextView) header.findViewById(R.id.date)).setText(
+                        Utils.formatDateRange(context, time, time, DateUtils.FORMAT_SHOW_DATE));
+                header.setBackgroundResource(DynamicThemeKt.getDrawableId(context,
+                        row.day.isAfter(today) ? "agenda_item_bg_primary" : "agenda_item_bg_secondary"));
+                View boundary = header.findViewById(R.id.top_divider_past_present);
+                boolean firstPresent = !row.day.isBefore(today) && position > 0
+                        && rows.get(position - 1).day.isBefore(today);
+                boundary.setVisibility(firstPresent ? View.VISIBLE : View.GONE);
+                return header;
+            }
+
+            View item = convertView == null ? inflater.inflate(R.layout.agenda_item, parent, false) : convertView;
+            Entry entry = row.event;
+            TextView title = item.findViewById(R.id.title);
+            TextView when = item.findViewById(R.id.when);
+            TextView where = item.findViewById(R.id.where);
+            ColorChipView chip = item.findViewById(R.id.agenda_item_color);
+            boolean past = entry.allDay ? !row.day.isAfter(today)
+                    : Math.max(entry.begin, millis(row.day)) <= System.currentTimeMillis();
+            item.setBackgroundResource(DynamicThemeKt.getDrawableId(context,
+                    past ? "agenda_item_bg_secondary" : "agenda_item_bg_primary"));
+            boolean declined = entry.response == Attendees.ATTENDEE_STATUS_DECLINED;
+            boolean invited = entry.response == Attendees.ATTENDEE_STATUS_INVITED;
+            boolean ownNonResponding = !entry.organizerCanRespond && TextUtils.equals(entry.owner, entry.organizer);
+            int titleColor = DynamicThemeKt.getColor(context,
+                    declined && !ownNonResponding ? "agenda_item_declined_color" : "agenda_item_standard_color");
+            int textColor = ownNonResponding ? titleColor : DynamicThemeKt.getColor(context,
+                    declined ? "agenda_item_where_declined_text_color" : "agenda_item_where_text_color");
+            title.setTextColor(titleColor);
+            when.setTextColor(textColor);
+            where.setTextColor(textColor);
+            title.setTypeface(past ? Typeface.DEFAULT : Typeface.DEFAULT_BOLD);
+            title.setPaintFlags(entry.status == Events.STATUS_CANCELED
+                    ? title.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG
+                    : title.getPaintFlags() & ~Paint.STRIKE_THRU_TEXT_FLAG);
+            title.setText(TextUtils.isEmpty(entry.title) ? context.getString(R.string.no_title_label) : entry.title);
+
+            chip.setColor(Utils.getDisplayColorFromColor(context, entry.color));
+            chip.setDrawStyle(ownNonResponding ? ColorChipView.DRAW_FULL : declined ? ColorChipView.DRAW_FADED
+                    : invited ? ColorChipView.DRAW_BORDER : ColorChipView.DRAW_FULL);
+            ViewGroup.LayoutParams chipParams = chip.getLayoutParams();
+            chipParams.height = dp(getResources().getInteger(entry.allDay
+                    ? R.integer.color_chip_all_day_height : R.integer.color_chip_height));
+            chip.setLayoutParams(chipParams);
+
+            String tz = entry.allDay ? "UTC" : zone.getId();
+            int flags = entry.allDay ? 0 : DateUtils.FORMAT_SHOW_TIME;
+            if (DateFormat.is24HourFormat(context)) flags |= DateUtils.FORMAT_24HOUR;
+            String time = DateUtils.formatDateRange(context, new java.util.Formatter(),
+                    entry.begin, entry.end, flags, tz).toString();
+            if (!entry.allDay && !TextUtils.equals(tz, entry.timezone)) {
+                TimeZone displayZone = TimeZone.getTimeZone(tz);
+                time += " (" + (displayZone.getID().equals("GMT") ? tz
+                        : displayZone.getDisplayName(false, TimeZone.SHORT)) + ")";
+            }
+            when.setText(time);
+            where.setText(entry.location);
+            where.setVisibility(TextUtils.isEmpty(entry.location) ? View.GONE : View.VISIBLE);
+            TextView countdown = item.findViewById(R.id.event_countdown_label);
+            String label = EventCountdown.label(context, entry.id, entry.begin, entry.allDay);
+            countdown.setText(label);
+            countdown.setVisibility(label.isEmpty() ? View.GONE : View.VISIBLE);
+            item.findViewById(R.id.selected_marker).setVisibility(View.GONE);
+            return item;
+        }
+    }
+}

@@ -80,6 +80,7 @@ import com.android.calendar.CalendarController.EventInfo;
 import com.android.calendar.CalendarController.EventType;
 import com.android.calendar.CalendarController.ViewType;
 import com.android.calendar.agenda.AgendaFragment;
+import com.android.calendar.agenda.DatedAgendaFragment;
 import com.android.calendar.alerts.AlertService;
 import com.android.calendar.month.MonthByWeekFragment;
 import com.android.calendar.selectcalendars.SelectVisibleCalendarsFragment;
@@ -122,6 +123,8 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
     private static final String BUNDLE_KEY_RESTORE_TIME = "key_restore_time";
     private static final String BUNDLE_KEY_EVENT_ID = "key_event_id";
     private static final String BUNDLE_KEY_RESTORE_VIEW = "key_restore_view";
+    private static final String BUNDLE_KEY_AGENDA_STATE = "key_agenda_state";
+    private Bundle mAgendaRestoreState;
     private static final int HANDLER_KEY = 0;
     private boolean taskReceiverRegistered;
     private final BroadcastReceiver taskChangeReceiver = new BroadcastReceiver() {
@@ -259,7 +262,7 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
                     updateTaskTabletTitle(now);
                 }
             }
-            if (mCurrentView == ViewType.REMINDERS && mController != null) {
+            if ((mCurrentView == ViewType.REMINDERS || mCurrentView == ViewType.AGENDA) && mController != null) {
                 if (mCalendarToolbarHandler != null) mCalendarToolbarHandler.refresh(AllInOneActivity.this);
                 else if (mToolbar != null) updateTaskTabletTitle(mController.getTime());
                 eventsChanged();
@@ -319,6 +322,7 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         if (icicle != null) {
             timeMillis = icicle.getLong(BUNDLE_KEY_RESTORE_TIME);
             viewType = icicle.getInt(BUNDLE_KEY_RESTORE_VIEW, -1);
+            mAgendaRestoreState = icicle.getBundle(BUNDLE_KEY_AGENDA_STATE);
         } else {
             String action = intent.getAction();
             if (Intent.ACTION_VIEW.equals(action)) {
@@ -614,8 +618,8 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
                                         ? System.currentTimeMillis() : mController.getTime()) : millis,
                                 timed && !allDay, listId);
                     } else {
-                        long calendarId = mCurrentView == ViewType.AGENDA && fragment instanceof AgendaFragment
-                                ? ((AgendaFragment) fragment).getSelectedWritableCalendarId() : -1;
+                        long calendarId = mCurrentView == ViewType.AGENDA && fragment instanceof DatedAgendaFragment
+                                ? ((DatedAgendaFragment) fragment).getSelectedWritableCalendarId() : -1;
                         if (calendarId >= 0) {
                             startActivity(mController.generateCreateEventIntent(millis, -1, allDay, null, calendarId));
                         } else {
@@ -793,8 +797,10 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         } else if (mCurrentView == ViewType.AGENDA) {
             FragmentManager fm = getSupportFragmentManager();
             Fragment f = fm.findFragmentById(R.id.main_pane);
-            if (f instanceof AgendaFragment) {
-                outState.putLong(BUNDLE_KEY_EVENT_ID, ((AgendaFragment) f).getLastShowEventId());
+            if (f instanceof DatedAgendaFragment) {
+                Bundle agendaState = ((DatedAgendaFragment) f).saveViewState();
+                outState.putBundle(BUNDLE_KEY_AGENDA_STATE, agendaState);
+                outState.putLong(BUNDLE_KEY_RESTORE_TIME, agendaState.getLong("anchor_time", mController.getTime()));
             }
         }
 
@@ -1248,7 +1254,8 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
                 break;
             case ViewType.AGENDA:
                 mNavigationView.getMenu().findItem(R.id.agenda_menu_item).setChecked(true);
-                frag = AgendaFragment.withCalendarFilter(timeMillis);
+                frag = DatedAgendaFragment.newInstance(timeMillis, mAgendaRestoreState);
+                mAgendaRestoreState = null;
                 if (mIsTabletConfig) {
                     mToolbar.setTitle(R.string.agenda_view);
                 }
