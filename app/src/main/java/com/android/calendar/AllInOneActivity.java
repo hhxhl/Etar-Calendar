@@ -259,6 +259,11 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
                     updateTaskTabletTitle(now);
                 }
             }
+            if (mCurrentView == ViewType.REMINDERS && mController != null) {
+                if (mCalendarToolbarHandler != null) mCalendarToolbarHandler.refresh(AllInOneActivity.this);
+                else if (mToolbar != null) updateTaskTabletTitle(mController.getTime());
+                eventsChanged();
+            }
             AllInOneActivity.this.invalidateOptionsMenu();
             Utils.setMidnightUpdater(mHandler, mTimeChangesUpdater, mTimeZone);
         }

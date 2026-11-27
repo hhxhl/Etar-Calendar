@@ -43,6 +43,9 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
     private CalendarController controller;
     private LocalDate topDay;
     private boolean binding;
+    private boolean firstResume = true;
+    private LocalDate initialDate;
+    private int scrollState = AbsListView.OnScrollListener.SCROLL_STATE_IDLE;
     private static final class Row {
         final LocalDate day;
         final TaskStore.Task task;
@@ -63,6 +66,8 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
         Context context = requireContext();
         store = TaskStore.get(context);
         controller = CalendarController.getInstance(requireActivity());
+        firstResume = true;
+        initialDate = Instant.ofEpochMilli(controller.getTime()).atZone(zone()).toLocalDate();
         if (state != null) {
             listId = state.getLong("list_id");
             showCompleted = state.getBoolean("completed");
@@ -77,6 +82,16 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
         list.setClipToPadding(false);
         adapter = new ReminderAdapter();
         list.setAdapter(adapter);
+        list.setItemsCanFocus(true);
+        list.setOnItemClickListener((parent, view, position, id) -> {
+            Row row = rows.get(position);
+            if (row.completedCount >= 0) {
+                showCompleted = !showCompleted;
+                refresh(true);
+            } else if (row.task != null) {
+                TaskCalendarUi.openTask(requireContext(), row.task.id);
+            }
+        });
         root.addView(list,new LinearLayout.LayoutParams(-1,0,1));
         reloadLists();
         filter.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
@@ -91,24 +106,31 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
             }
         });
         list.setOnScrollListener(new AbsListView.OnScrollListener() {
-            @Override public void onScrollStateChanged(AbsListView view,int state) {}
+            @Override public void onScrollStateChanged(AbsListView view,int state) {
+                if (scrollState != SCROLL_STATE_IDLE && state == SCROLL_STATE_IDLE) {
+                    updateScrolledTitle(view.getFirstVisiblePosition());
+                }
+                scrollState = state;
+            }
             @Override public void onScroll(AbsListView view,int first,int count,int total) {
-                if (binding || first >= rows.size() || !isAdded()) return;
-                LocalDate day = rows.get(first).day;
-                if (day == null || day.equals(topDay)) return;
-                topDay = day;
-                publishTitle(day);
+                if (scrollState != SCROLL_STATE_IDLE) updateScrolledTitle(first);
             }
         });
         refresh(false);
-        scrollTo(Instant.ofEpochMilli(controller.getTime()).atZone(zone()).toLocalDate());
+        scrollTo(initialDate);
         return root;
     }
 
     @Override public void onResume() {
         super.onResume();
         reloadLists();
-        refresh(true);
+        if (firstResume) {
+            firstResume = false;
+            refresh(false);
+            scrollTo(initialDate);
+        } else {
+            refresh(true);
+        }
         TaskAlarmReceiver.schedule(requireContext());
     }
 
@@ -164,7 +186,8 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
     private void refresh(boolean preservePosition) {
         if (list == null || !isAdded()) return;
         int first=list.getFirstVisiblePosition();
-        LocalDate previous=first<rows.size()?rows.get(first).day:null;
+        Row previousRow=first<rows.size()?rows.get(first):null;
+        LocalDate previous=previousRow==null?null:previousRow.day;
         int offset=list.getChildCount()>0?list.getChildAt(0).getTop():0;
         List<TaskStore.Task> pending=new ArrayList<>(), completed=new ArrayList<>();
         for (TaskStore.Task task:store.tasks(listId)) {
@@ -179,14 +202,22 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
         binding=true;
         rows.clear();
         appendDays(pending,true);
+        if(pending.isEmpty() && completed.isEmpty()) rows.add(new Row(null,null,-2));
         if(!completed.isEmpty()){
             rows.add(new Row(null,null,completed.size()));
             if(showCompleted)appendDays(completed,false);
         }
         adapter.notifyDataSetChanged();
-        if(preservePosition && previous!=null) {
-            int index=findDay(previous);
-            list.setSelectionFromTop(index,offset);
+        if(preservePosition && previousRow!=null) {
+            int index=-1;
+            for(int i=0;i<rows.size();i++){
+                Row row=rows.get(i);
+                if(previousRow.task!=null && row.task!=null && previousRow.task.id==row.task.id
+                        && previousRow.task.done==row.task.done){index=i;break;}
+                if(previousRow.completedCount>=0 && row.completedCount>=0){index=i;break;}
+            }
+            if(index<0 && previous!=null)index=findDay(previous);
+            if(index>=0)list.setSelectionFromTop(index,offset);
         }
         binding=false;
     }
@@ -204,17 +235,25 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
         return last;
     }
 
+    private void updateScrolledTitle(int first) {
+        if(binding || first>=rows.size() || !isAdded())return;
+        LocalDate date=rows.get(first).day;
+        if(date!=null && !date.equals(topDay))publishTitle(date);
+    }
+
     private void scrollTo(LocalDate target) {
         if(list==null)return;
         int index=findDay(target);
-        list.setSelection(index);
-        publishTitle(target);
+        list.setSelectionFromTop(index,0);
+        LocalDate actual=rows.isEmpty()?target:rows.get(index).day;
+        publishTitle(actual==null?target:actual);
     }
 
     private void publishTitle(LocalDate date) {
         if(list==null||!isAdded())return;
+        topDay=date;
         list.post(()->{
-            if(list==null||!isAdded()||controller.getViewType()!=CalendarController.ViewType.REMINDERS)return;
+            if(list==null||!isAdded()||!date.equals(topDay)||controller.getViewType()!=CalendarController.ViewType.REMINDERS)return;
             Time time=new Time(zone().getId());
             time.set(date.atStartOfDay(zone()).toInstant().toEpochMilli());
             controller.setTime(time.toMillis());
@@ -228,7 +267,9 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
     }
     @Override public void handleEvent(CalendarController.EventInfo event){
         if(event.eventType==CalendarController.EventType.GO_TO && list!=null && event.startTime!=null){
-            scrollTo(Instant.ofEpochMilli(event.startTime.toMillis()).atZone(zone()).toLocalDate());
+            LocalDate target=Instant.ofEpochMilli(event.startTime.toMillis()).atZone(zone()).toLocalDate();
+            if(firstResume)initialDate=target;
+            scrollTo(target);
         }else if(event.eventType==CalendarController.EventType.EVENTS_CHANGED)eventsChanged();
     }
     @Override public void eventsChanged(){refresh(true);}
@@ -237,15 +278,25 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
         @Override public int getCount(){return rows.size();}
         @Override public Object getItem(int position){return rows.get(position);}
         @Override public long getItemId(int position){return position;}
-        @Override public boolean isEnabled(int position){return false;}
-        @Override public int getViewTypeCount(){return 3;}
+        @Override public boolean areAllItemsEnabled(){return false;}
+        @Override public boolean isEnabled(int position){
+            Row row=rows.get(position);
+            return row.completedCount>=0||row.task!=null;
+        }
+        @Override public int getViewTypeCount(){return 4;}
         @Override public int getItemViewType(int position){
             Row row=rows.get(position);
-            return row.completedCount>=0?2:row.task==null?0:1;
+            return row.completedCount==-2?3:row.completedCount>=0?2:row.task==null?0:1;
         }
         @Override public View getView(int position,View convertView,ViewGroup parent){
             Row row=rows.get(position);
             Context context=parent.getContext();
+            if(row.completedCount==-2){
+                TextView empty=new TextView(context);
+                empty.setPadding(dp(16),dp(20),dp(16),dp(20));
+                empty.setText(R.string.reminders_empty);
+                return empty;
+            }
             if(row.completedCount>=0){
                 TextView heading=new TextView(context);
                 heading.setPadding(dp(16),dp(14),dp(16),dp(14));
@@ -269,6 +320,7 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
             item.setGravity(Gravity.CENTER_VERTICAL);
             item.setPadding(dp(8),0,dp(16),0);
             item.setMinimumHeight(dp(64));
+            item.setBackgroundResource(android.R.color.transparent);
             CheckBox done=new CheckBox(context);
             done.setChecked(task.done);
             done.setContentDescription(getString(R.string.tasks_complete)+" "+task.title);
