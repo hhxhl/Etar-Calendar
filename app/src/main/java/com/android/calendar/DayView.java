@@ -3985,16 +3985,11 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         int y = (int) ev.getY();
         boolean valid = setSelectionFromPosition(x, y, false);
         if (!valid && y >= DAY_HEADER_HEIGHT) return;
-        ArrayList<Event> items = valid ? new ArrayList<>(mSelectedEvents) : itemsOnSelectedDay();
         boolean allDay = !valid || mSelectionAllday;
         long time = getSelectedTimeInMillis();
         focusSlot(time, allDay);
         performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
-        if (items.isEmpty()) {
-            com.android.calendar.tasks.TaskCalendarUi.showCreate(mContext, mController, time, allDay, true);
-        } else {
-            com.android.calendar.tasks.TaskCalendarUi.showItems(mContext, mController, items);
-        }
+        com.android.calendar.tasks.TaskCalendarUi.showCreate(mContext, mController, time, allDay, true);
     }
 
     private void doScroll(MotionEvent e1, MotionEvent e2, float deltaX, float deltaY) {
@@ -4993,16 +4988,10 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
 
     @Override
     public boolean onLongClick(View v) {
-        ArrayList<Event> items = new ArrayList<>(mSelectedEvents);
-        if (items.isEmpty() && mSelectedEvent != null) items.add(mSelectedEvent);
         long time = getSelectedTimeInMillis();
         boolean allDay = mSelectionAllday;
         focusSlot(time, allDay);
-        if (items.isEmpty()) {
-            com.android.calendar.tasks.TaskCalendarUi.showCreate(mContext, mController, time, allDay, true);
-        } else {
-            com.android.calendar.tasks.TaskCalendarUi.showItems(mContext, mController, items);
-        }
+        com.android.calendar.tasks.TaskCalendarUi.showCreate(mContext, mController, time, allDay, true);
         return true;
     }
 
