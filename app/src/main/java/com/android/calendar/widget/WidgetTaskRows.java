@@ -13,6 +13,7 @@ import java.util.Comparator;
 /** Merge read-only task rows into widget instance projections without writing CalendarProvider. */
 final class WidgetTaskRows {
     static final String TASK_COMPLETED = "etar_widget_task_completed";
+    static final String TASK_COUNTDOWN = "etar_widget_task_countdown";
     private WidgetTaskRows() {}
 
     static MatrixCursor merge(Context context, int widgetId, Cursor source, String[] projection,
@@ -22,8 +23,9 @@ final class WidgetTaskRows {
 
     static MatrixCursor merge(Context context, int widgetId, Cursor source, String[] projection,
             int firstDay, int lastDay, boolean allDayFirst, boolean includeOverdue) {
-        String[] columns = java.util.Arrays.copyOf(projection, projection.length + 1);
+        String[] columns = java.util.Arrays.copyOf(projection, projection.length + 2);
         columns[projection.length] = TASK_COMPLETED;
+        columns[projection.length + 1] = TASK_COUNTDOWN;
         ArrayList<Object[]> rows = new ArrayList<>();
         if (source != null) {
             source.moveToPosition(-1);
@@ -47,6 +49,7 @@ final class WidgetTaskRows {
         for (Event task : tasks) {
             Object[] row = new Object[columns.length];
             row[projection.length] = task.taskCompleted ? 1 : 0;
+            row[projection.length + 1] = task.taskCountdown ? 1 : 0;
             for (int i = 0; i < projection.length; i++) {
                 String field = projection[i];
                 if (Instances.ALL_DAY.equals(field)) row[i] = task.allDay ? 1 : 0;

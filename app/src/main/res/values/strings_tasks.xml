@@ -78,4 +78,6 @@
         <item quantity="one">%d task</item>
         <item quantity="other">%d tasks</item>
     </plurals>
+    <string name="tasks_choose_color">Item color</string>
+    <string name="tasks_default_list_color">Use list color</string>
 </resources>

@@ -228,7 +228,7 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
         final LinearLayout root;
         final CheckBox done;
         final TextView title;
-        final TextView subtitle;
+        final TextView subtitle, countdown;
         final ImageView bell;
 
         ReminderRowView(Context context) {
@@ -243,6 +243,10 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
             layout.addLeading(done);
             title = layout.addText(18);
             subtitle = layout.addText(14);
+            countdown = DatedListUi.RowLayout.textView(context, 12);
+            LinearLayout.LayoutParams countdownParams = new LinearLayout.LayoutParams(-2, -2);
+            countdownParams.setMarginStart(dp(8));
+            layout.item.addView(countdown, countdownParams);
 
             bell = new ImageView(context);
             bell.setImageResource(R.drawable.ic_reminder_outline);
@@ -262,6 +266,8 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
             // Detach the previous row's listener before rebinding a recycled checkbox.
             done.setOnCheckedChangeListener(null);
             done.setChecked(task.done);
+            done.setButtonTintList(android.content.res.ColorStateList.valueOf(
+                    TaskCalendarUi.displayColor(context, task, false)));
             done.setContentDescription(getString(R.string.tasks_complete) + " " + task.title);
             done.setOnCheckedChangeListener((button, checked) -> store.complete(task.id, checked, task.due));
             title.setText(task.title);
@@ -276,6 +282,11 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
             subtitle.setText(overdue ? when + " · " + getString(R.string.reminders_overdue) : when);
             subtitle.setTextColor(overdue ? com.google.android.material.color.MaterialColors.getColor(
                     context, androidx.appcompat.R.attr.colorError, secondaryColor) : secondaryColor);
+            String label = task.countdown && !task.done && task.due != null
+                    ? com.android.calendar.EventCountdown.dateLabel(context, task.due, task.allDay) : "";
+            countdown.setText(label);
+            countdown.setTextColor(secondaryColor);
+            countdown.setVisibility(label.isEmpty() ? View.GONE : View.VISIBLE);
             bell.setVisibility(task.alarm ? View.VISIBLE : View.GONE);
             bell.setColorFilter(secondaryColor);
             root.setOnClickListener(v -> TaskCalendarUi.openTask(context, task.id));

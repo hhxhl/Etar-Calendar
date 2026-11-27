@@ -17,6 +17,8 @@ import android.widget.ImageView;
 import android.widget.CompoundButton;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import com.android.calendar.Utils;
+import com.android.calendar.colorpicker.ColorPickerDialog;
+import com.android.calendar.colorpicker.HsvColorComparator;
 import com.android.calendar.timezonepicker.TimeZonePickerDialog;
 import com.android.calendar.timezonepicker.TimeZonePickerUtils;
 import com.google.android.material.datepicker.MaterialDatePicker;
@@ -56,6 +58,7 @@ public final class TaskListActivity extends AppCompatActivity {
     private Bundle restoredDraft;
     private java.util.function.Supplier<Bundle> captureDraft;
     private Runnable saveEditor, deleteEditor;
+    private static final String COLOR_PICKER = "TaskItemColorPicker";
     private static final String DATE_PICKER = "TaskDatePicker", TIME_PICKER = "TaskTimePicker", ZONE_PICKER = "TaskZonePicker";
     private static final String[] RULES={null,"FREQ=DAILY","FREQ=WEEKLY","FREQ=MONTHLY","FREQ=YEARLY"};
     private int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
@@ -216,6 +219,11 @@ public final class TaskListActivity extends AppCompatActivity {
         title.setText(task.title);
         EditText notes = form.findViewById(R.id.description);
         notes.setText(task.notes);
+        EditText url = form.findViewById(R.id.url);
+        url.setText(task.url);
+        CompoundButton countdown = form.findViewById(R.id.event_countdown);
+        countdown.setChecked(reminder && task.countdown);
+        int[] itemColor = {task.color};
         Spinner list = form.findViewById(R.id.calendars_spinner);
         List<TaskStore.TaskList> available = store.lists();
         if (available.isEmpty()) { finish(); return; }
@@ -233,7 +241,7 @@ public final class TaskListActivity extends AppCompatActivity {
         Runnable updateColor = () -> {
             int pos = list.getSelectedItemPosition();
             if (pos < 0 || pos >= available.size()) return;
-            int color = available.get(pos).color;
+            int color = itemColor[0] != 0 ? itemColor[0] : available.get(pos).color;
             listColor.setBackgroundColor(color == 0 ? getColor(R.color.event_center)
                     : Utils.getDisplayColorFromColor(this, color));
         };
@@ -244,13 +252,42 @@ public final class TaskListActivity extends AppCompatActivity {
             @Override public void onNothingSelected(AdapterView<?> parent) {}
         });
         updateColor.run();
+        View palette = form.findViewById(R.id.change_color);
+        palette.setEnabled(true);
+        palette.setContentDescription(getString(R.string.tasks_choose_color));
+        com.android.calendar.colorpicker.ColorPickerSwatch.OnColorSelectedListener colorListener = color -> {
+            itemColor[0] = color;
+            updateColor.run();
+        };
+        palette.setOnClickListener(v -> {
+            if (getSupportFragmentManager().findFragmentByTag(COLOR_PICKER) != null) return;
+            int[] raw = getResources().getIntArray(R.array.defaultCalendarColors);
+            Integer[] sorted = java.util.Arrays.stream(raw).boxed().toArray(Integer[]::new);
+            java.util.Arrays.sort(sorted, new HsvColorComparator());
+            int[] colors = java.util.Arrays.stream(sorted).mapToInt(Integer::intValue).toArray();
+            int pos = list.getSelectedItemPosition();
+            int selected = itemColor[0] != 0 ? itemColor[0] : pos < 0 ? 0 : available.get(pos).color;
+            if (selected != 0 && java.util.Arrays.binarySearch(java.util.Arrays.stream(colors).sorted().toArray(), selected) < 0) {
+                int[] extended = java.util.Arrays.copyOf(colors, colors.length + 1);
+                extended[colors.length] = selected;
+                colors = extended;
+            }
+            TaskColorPicker picker = new TaskColorPicker();
+            picker.initialize(R.string.tasks_choose_color, colors, selected, 4,
+                    Utils.getConfigBool(this, R.bool.tablet_config) ? ColorPickerDialog.SIZE_LARGE : ColorPickerDialog.SIZE_SMALL);
+            picker.setOnColorSelectedListener(colorListener);
+            picker.show(getSupportFragmentManager(), COLOR_PICKER);
+        });
+        androidx.fragment.app.Fragment colorPicker = getSupportFragmentManager().findFragmentByTag(COLOR_PICKER);
+        if (colorPicker instanceof TaskColorPicker)
+            ((TaskColorPicker) colorPicker).setOnColorSelectedListener(colorListener);
 
         // The shared layout also contains event-only fields; collapse those sections.
-        hide(form, R.id.change_color, R.id.end_date, R.id.end_time,
+        hide(form, R.id.end_date, R.id.end_time,
                 R.id.response_group, R.id.response_row, R.id.organizer_row,
                 R.id.add_attendees_group, R.id.attendees_icon, R.id.add_attendees_row,
-                R.id.where_icon, R.id.where_row, R.id.url_icon, R.id.url_row,
-                R.id.event_countdown, R.id.reminder_add, R.id.view6,
+                R.id.where_icon, R.id.where_row,
+                R.id.reminder_add, R.id.view6,
                 R.id.visibility_icon, R.id.visibility);
         ConstraintLayout.LayoutParams descriptionParams =
                 (ConstraintLayout.LayoutParams) form.findViewById(R.id.description_row).getLayoutParams();
@@ -341,7 +378,7 @@ public final class TaskListActivity extends AppCompatActivity {
         if (!reminder) hide(form, R.id.imageView, R.id.is_all_day_label, R.id.is_all_day,
                 R.id.start_date, R.id.start_time, R.id.timezone_button_row, R.id.timezone_icon,
                 R.id.timezone_button, R.id.view2, R.id.rrule_icon, R.id.rrule,
-                R.id.view4, R.id.reminder_icon, R.id.reminder_items_container, R.id.view5);
+                R.id.event_countdown, R.id.view4, R.id.reminder_icon, R.id.reminder_items_container, R.id.view5);
 
         // Restore only the draft, not the original baseline used for detecting schedule edits.
         if (restoredDraft != null) {
@@ -349,6 +386,9 @@ public final class TaskListActivity extends AppCompatActivity {
             restoredDraft = null;
             title.setText(draft.getString("title", task.title));
             notes.setText(draft.getString("notes", task.notes));
+            url.setText(draft.getString("url", task.url));
+            itemColor[0] = draft.getInt("item_color", task.color);
+            countdown.setChecked(reminder && draft.getBoolean("countdown", task.countdown));
             completed.setChecked(draft.getBoolean("complete", task.done));
             long selectedList = draft.getLong("list_id", task.listId);
             for (int i = 0; i < available.size(); i++)
@@ -430,6 +470,9 @@ public final class TaskListActivity extends AppCompatActivity {
             Bundle draft = new Bundle();
             draft.putString("title", title.getText().toString());
             draft.putString("notes", notes.getText().toString());
+            draft.putString("url", url.getText().toString());
+            draft.putInt("item_color", itemColor[0]);
+            draft.putBoolean("countdown", countdown.isChecked());
             draft.putBoolean("complete", completed.isChecked());
             int pos = list.getSelectedItemPosition();
             draft.putLong("list_id", pos < 0 ? task.listId : available.get(pos).id);
@@ -458,6 +501,9 @@ public final class TaskListActivity extends AppCompatActivity {
             if (pos < 0 || pos >= available.size()) return;
             task.title = text;
             task.notes = notes.getText().toString();
+            task.url = url.getText().toString().trim();
+            task.color = itemColor[0];
+            task.countdown = reminder && countdown.isChecked();
             task.listId = available.get(pos).id;
             Long oldDue = task.due;
             String oldRule = task.rule;
@@ -491,6 +537,18 @@ public final class TaskListActivity extends AppCompatActivity {
             if (finishAfterPermission) checkAlarmPermissions(); else finish();
         };
         invalidateOptionsMenu();
+    }
+
+    /** Same color palette as calendar settings, with an explicit inherit action. */
+    public static final class TaskColorPicker extends ColorPickerDialog {
+        public TaskColorPicker() {}
+        @Override public android.app.Dialog onCreateDialog(Bundle state) {
+            androidx.appcompat.app.AlertDialog dialog =
+                    (androidx.appcompat.app.AlertDialog) super.onCreateDialog(state);
+            dialog.setButton(android.content.DialogInterface.BUTTON_NEUTRAL,
+                    getString(R.string.tasks_default_list_color), (d, which) -> onColorSelected(0));
+            return dialog;
+        }
     }
 
     private void checkAlarmPermissions(){

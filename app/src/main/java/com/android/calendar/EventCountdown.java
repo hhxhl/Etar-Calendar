@@ -64,6 +64,11 @@ public final class EventCountdown {
 
     public static String label(Context context, long eventId, long start, boolean allDay) {
         if (!enabled(context, eventId)) return "";
+        return dateLabel(context, start, allDay);
+    }
+
+    /** Shared calendar-date formatting; the caller owns the enabled flag. */
+    public static String dateLabel(Context context, long start, boolean allDay) {
         ZoneId zone = calendarZone(context);
         return format(context, daysBetween(LocalDate.now(zone), targetDate(start, allDay, zone)));
     }

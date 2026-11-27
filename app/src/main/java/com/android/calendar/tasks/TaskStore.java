@@ -25,7 +25,7 @@ public final class TaskStore extends SQLiteOpenHelper {
     }
     private final Context appContext;
     private TaskStore(Context context) {
-        super(context, "tasks.db", null, 2);
+        super(context, "tasks.db", null, 3);
         appContext = context.getApplicationContext();
     }
     public static final String ACTION_TASKS_CHANGED = "com.android.calendar.tasks.CHANGED";
@@ -45,7 +45,7 @@ public final class TaskStore extends SQLiteOpenHelper {
 
     private static void createTables(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE tasklists (_id INTEGER PRIMARY KEY AUTOINCREMENT, account_name TEXT NOT NULL DEFAULT 'Local', account_type TEXT NOT NULL DEFAULT 'org.dmfs.account.LOCAL', list_name TEXT NOT NULL, list_color INTEGER NOT NULL DEFAULT 0, visible INTEGER NOT NULL DEFAULT 1, sync_enabled INTEGER NOT NULL DEFAULT 0, _sync_id TEXT, sync_version TEXT)");
-        db.execSQL("CREATE TABLE tasks (_id INTEGER PRIMARY KEY AUTOINCREMENT, list_id INTEGER NOT NULL REFERENCES tasklists(_id) ON DELETE CASCADE, _uid TEXT NOT NULL UNIQUE, _sync_id TEXT, sync_version TEXT, _dirty INTEGER NOT NULL DEFAULT 1, _deleted INTEGER NOT NULL DEFAULT 0, title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', due INTEGER, dtstart INTEGER, is_allday INTEGER NOT NULL DEFAULT 0, tz TEXT, status INTEGER NOT NULL DEFAULT 0, completed INTEGER, percent_complete INTEGER NOT NULL DEFAULT 0, priority INTEGER NOT NULL DEFAULT 0, rrule TEXT, created INTEGER NOT NULL, last_modified INTEGER NOT NULL, alarm_fired INTEGER, repeat_minute INTEGER)");
+        db.execSQL("CREATE TABLE tasks (_id INTEGER PRIMARY KEY AUTOINCREMENT, list_id INTEGER NOT NULL REFERENCES tasklists(_id) ON DELETE CASCADE, _uid TEXT NOT NULL UNIQUE, _sync_id TEXT, sync_version TEXT, _dirty INTEGER NOT NULL DEFAULT 1, _deleted INTEGER NOT NULL DEFAULT 0, title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', due INTEGER, dtstart INTEGER, is_allday INTEGER NOT NULL DEFAULT 0, tz TEXT, status INTEGER NOT NULL DEFAULT 0, completed INTEGER, percent_complete INTEGER NOT NULL DEFAULT 0, priority INTEGER NOT NULL DEFAULT 0, rrule TEXT, created INTEGER NOT NULL, last_modified INTEGER NOT NULL, alarm_fired INTEGER, repeat_minute INTEGER, item_color INTEGER NOT NULL DEFAULT 0, url TEXT NOT NULL DEFAULT '', show_countdown INTEGER NOT NULL DEFAULT 0)");
         db.execSQL("CREATE TABLE properties (property_id INTEGER PRIMARY KEY AUTOINCREMENT, task_id INTEGER NOT NULL REFERENCES tasks(_id) ON DELETE CASCADE, mimetype TEXT NOT NULL, data0 INTEGER, data1 INTEGER, data2 TEXT, data3 INTEGER)");
     }
 
@@ -56,9 +56,16 @@ public final class TaskStore extends SQLiteOpenHelper {
     }
 
     @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        if (oldVersion != 1 || newVersion != 2) {
+        if (oldVersion == 2 && newVersion == 3) {
+            db.execSQL("ALTER TABLE tasks ADD COLUMN item_color INTEGER NOT NULL DEFAULT 0");
+            db.execSQL("ALTER TABLE tasks ADD COLUMN url TEXT NOT NULL DEFAULT ''");
+            db.execSQL("ALTER TABLE tasks ADD COLUMN show_countdown INTEGER NOT NULL DEFAULT 0");
+            return;
+        }
+        if (oldVersion != 1 || newVersion != 3) {
             throw new IllegalStateException("Missing task database migration");
         }
+        // The v1 rebuild below creates the current schema; new fields use defaults.
         // SQLiteOpenHelper already wraps upgrades in a transaction. Rename parents
         // before children so the old foreign keys continue referencing old tables.
         db.execSQL("ALTER TABLE tasklists RENAME TO old_tasklists");
@@ -83,10 +90,10 @@ public final class TaskStore extends SQLiteOpenHelper {
     }
     public static final class Task {
         public long id, listId = 1;
-        public String title = "", notes = "", rule, tz;
+        public String title = "", notes = "", url = "", rule, tz;
         public Long due, anchor;
-        public boolean allDay, done, alarm;
-        public int priority;
+        public boolean allDay, done, alarm, countdown;
+        public int priority, color, listColor;
         public Integer repeatMinute;
     }
     public List<TaskList> lists() {
@@ -143,12 +150,14 @@ public final class TaskStore extends SQLiteOpenHelper {
             notifyChanged();
         }
     }
-    private static final String SELECT = "SELECT t._id,t.list_id,t.title,t.description,t.due,t.dtstart,t.is_allday,t.tz,t.status,t.priority,t.rrule, EXISTS(SELECT 1 FROM properties p WHERE p.task_id=t._id AND p.mimetype='vnd.android.cursor.item/alarm'),t.repeat_minute FROM tasks t WHERE t._deleted=0";
+    private static final String SELECT = "SELECT t._id,t.list_id,t.title,t.description,t.due,t.dtstart,t.is_allday,t.tz,t.status,t.priority,t.rrule, EXISTS(SELECT 1 FROM properties p WHERE p.task_id=t._id AND p.mimetype='vnd.android.cursor.item/alarm'),t.repeat_minute,t.item_color,t.url,t.show_countdown, (SELECT l.list_color FROM tasklists l WHERE l._id=t.list_id) FROM tasks t WHERE t._deleted=0";
     private static Task read(Cursor c) {
         Task t = new Task(); t.id=c.getLong(0); t.listId=c.getLong(1); t.title=c.getString(2); t.notes=c.getString(3);
         t.due=c.isNull(4)?null:c.getLong(4); t.anchor=c.isNull(5)?null:c.getLong(5); t.allDay=c.getInt(6)!=0;
         t.tz=c.getString(7); t.done=c.getInt(8)==2; t.priority=c.getInt(9); t.rule=c.getString(10); t.alarm=c.getInt(11)!=0;
         t.repeatMinute=c.isNull(12)?null:c.getInt(12);
+        t.color=c.getInt(13); t.url=c.getString(14); t.countdown=c.getInt(15)!=0;
+        t.listColor=c.getInt(16);
         return t;
     }
     public List<Task> tasks(long listId) {
@@ -210,6 +219,9 @@ public final class TaskStore extends SQLiteOpenHelper {
             v.put("list_id", t.listId);
             v.put("title", t.title.trim());
             v.put("description", t.notes);
+            v.put("item_color", t.color);
+            v.put("url", t.url == null ? "" : t.url);
+            v.put("show_countdown", t.due != null && t.countdown ? 1 : 0);
             v.put("due", t.due);
             v.put("dtstart", t.anchor);
             v.put("repeat_minute", t.repeatMinute);

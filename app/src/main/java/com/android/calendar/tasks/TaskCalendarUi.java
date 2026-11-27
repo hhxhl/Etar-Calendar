@@ -16,7 +16,6 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.WeakHashMap;
 import ws.xsoh.etar.R;
 
@@ -102,6 +101,13 @@ public final class TaskCalendarUi {
     }
 
     /** Project dated tasks into the existing display model; never write them to CalendarProvider. */
+    /** Individual color overrides the list; zero means inherit the default. */
+    public static int displayColor(Context context, TaskStore.Task task, boolean rawColor) {
+        int color = task.color != 0 ? task.color : task.listColor;
+        if (color == 0) return context.getColor(R.color.event_center);
+        return rawColor ? color : Utils.getDisplayColorFromColor(context, color);
+    }
+
     public static void append(Context context, ArrayList<Event> events, int firstDay, int lastDay) {
         append(context, events, firstDay, lastDay, null, false);
     }
@@ -122,8 +128,6 @@ public final class TaskCalendarUi {
         long utcFrom = first.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
         long utcUntil = end.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
         TaskStore store = TaskStore.get(context);
-        HashMap<Long, Integer> colors = new HashMap<>();
-        for (TaskStore.TaskList list : store.lists()) colors.put(list.id, list.color);
         java.util.List<TaskStore.Task> tasks = store.datedTasks(from, until, utcFrom, utcUntil);
         if (includeOverdue) tasks.addAll(store.overdueTasks(from, utcFrom));
         for (TaskStore.Task task : tasks) {
@@ -137,9 +141,8 @@ public final class TaskCalendarUi {
             item.allDay = task.allDay;
             item.hasAlarm = task.alarm;
             item.isRepeating = task.rule != null;
-            int color = colors.getOrDefault(task.listId, 0);
-            item.color = color == 0 ? context.getColor(R.color.event_center)
-                    : rawColor ? color : Utils.getDisplayColorFromColor(context, color);
+            item.color = displayColor(context, task, rawColor);
+            item.taskCountdown = task.countdown && !task.done;
             ZonedDateTime date = Instant.ofEpochMilli(task.due).atZone(task.allDay ? ZoneOffset.UTC : zone);
             item.startDay = item.endDay = (int) (date.toLocalDate().toEpochDay() + JULIAN_EPOCH);
             item.startMillis = task.due;

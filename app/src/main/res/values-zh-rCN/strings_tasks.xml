@@ -76,4 +76,6 @@
     <plurals name="tasks_list_task_count">
         <item quantity="other">%d 任务</item>
     </plurals>
+    <string name="tasks_choose_color">事项颜色</string>
+    <string name="tasks_default_list_color">使用列表颜色</string>
 </resources>

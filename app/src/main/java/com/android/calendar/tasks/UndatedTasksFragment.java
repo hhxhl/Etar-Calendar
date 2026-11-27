@@ -116,6 +116,8 @@ public final class UndatedTasksFragment extends Fragment implements CalendarCont
             row.setGravity(Gravity.CENTER_VERTICAL);
             CheckBox done = new CheckBox(context);
             done.setChecked(task.done);
+            done.setButtonTintList(android.content.res.ColorStateList.valueOf(
+                    TaskCalendarUi.displayColor(context, task, false)));
             done.setContentDescription(getString(R.string.tasks_complete) + " " + task.title);
             done.setOnCheckedChangeListener((button, checked) -> {
                 store.complete(task.id, checked, task.due);

@@ -72,6 +72,7 @@ class CalendarAppWidgetModel {
 
         cursor.moveToPosition(-1);
         int taskCompletedColumn = cursor.getColumnIndex(WidgetTaskRows.TASK_COMPLETED);
+        int taskCountdownColumn = cursor.getColumnIndex(WidgetTaskRows.TASK_COUNTDOWN);
         String tz = Utils.getTimeZone(mContext, null);
         while (cursor.moveToNext()) {
             final int rowId = cursor.getPosition();
@@ -114,6 +115,10 @@ class CalendarAppWidgetModel {
             if (overdue && startDay < mTodayJulianDay && allDay) {
                 displayTitle = title + " · " + Utils.formatDateRange(mContext, start, start,
                         DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_ABBREV_ALL);
+            }
+            if (pendingTask && taskCountdownColumn >= 0 && cursor.getInt(taskCountdownColumn) != 0) {
+                // All-day instants have already been converted into the calendar zone.
+                displayTitle += " · " + com.android.calendar.EventCountdown.dateLabel(mContext, start, false);
             }
 
             int i = mEventInfos.size();
