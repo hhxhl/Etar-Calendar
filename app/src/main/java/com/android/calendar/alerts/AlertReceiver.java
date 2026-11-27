@@ -527,7 +527,7 @@ public class AlertReceiver extends BroadcastReceiver {
      */
     static Intent createEmailIntent(Context context, long eventId, String body) {
         // TODO: Refactor to move query part into Utils.createEmailAttendeeIntent, to
-        // be shared with EventInfoFragment.
+        // be shared with the event editor.
 
         // Query for the owner account(s).
         String ownerAccount = null;

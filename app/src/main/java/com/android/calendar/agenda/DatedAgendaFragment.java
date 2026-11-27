@@ -566,7 +566,6 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
     }
 
     /** Main agenda rows mirror the dated reminders' layout and theme palette.
-     * The legacy agenda_item layout remains for the optional tablet pane.
      */
     private final class AgendaRowView {
         final LinearLayout root;
