@@ -20,8 +20,6 @@ import com.android.calendar.Utils;
 import com.android.calendar.colorpicker.ColorPickerDialog;
 import com.android.calendar.timezonepicker.TimeZonePickerDialog;
 import com.android.calendar.timezonepicker.TimeZonePickerUtils;
-import com.google.android.material.datepicker.MaterialDatePicker;
-import com.google.android.material.timepicker.MaterialTimePicker;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import ws.xsoh.etar.databinding.SimpleFrameLayoutMaterialBinding;
 import android.widget.ArrayAdapter;
@@ -63,11 +61,7 @@ public final class TaskListActivity extends AppCompatActivity {
             finish();
             return;
         }
-        new MaterialAlertDialogBuilder(this)
-                .setMessage(R.string.discard_event_changes)
-                .setPositiveButton(R.string.discard, (dialog, which) -> finish())
-                .setNegativeButton(android.R.string.cancel, null)
-                .show();
+        com.android.calendar.ItemEditorUi.confirmDiscard(this, this::finish);
     }
 
     private static boolean sameDraft(Bundle first, Bundle second) {
@@ -391,62 +385,27 @@ public final class TaskListActivity extends AppCompatActivity {
         update.run();
         updateColor.run();
 
-        // The Material picker fragments survive Activity recreation; rebind their listeners.
-        java.util.function.Consumer<MaterialDatePicker<Long>> bindDate = picker -> {
-            picker.clearOnPositiveButtonClickListeners();
-            picker.addOnPositiveButtonClickListener(selection -> {
-                date[0] = Instant.ofEpochMilli(selection).atZone(ZoneOffset.UTC).toLocalDate();
-                update.run();
-            });
-        };
-        dateButton.setOnClickListener(v -> {
-            if (getSupportFragmentManager().findFragmentByTag(DATE_PICKER) != null) return;
-            MaterialDatePicker<Long> picker = com.android.calendar.ItemDateTimePickers.date(this,
-                    date[0].atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli());
-            bindDate.accept(picker);
-            picker.show(getSupportFragmentManager(), DATE_PICKER);
-        });
-        androidx.fragment.app.Fragment datePicker = getSupportFragmentManager().findFragmentByTag(DATE_PICKER);
-        if (datePicker instanceof MaterialDatePicker) {
-            @SuppressWarnings("unchecked") MaterialDatePicker<Long> restored = (MaterialDatePicker<Long>) datePicker;
-            bindDate.accept(restored);
-        }
-
-        java.util.function.Consumer<MaterialTimePicker> bindTime = picker -> {
-            picker.clearOnPositiveButtonClickListeners();
-            picker.addOnPositiveButtonClickListener(v -> {
-                time[0] = LocalTime.of(picker.getHour(), picker.getMinute());
-                update.run();
-            });
-        };
-        timeButton.setOnClickListener(v -> {
-            if (getSupportFragmentManager().findFragmentByTag(TIME_PICKER) != null) return;
-            MaterialTimePicker picker = com.android.calendar.ItemDateTimePickers.time(
-                    this, time[0].getHour(), time[0].getMinute());
-            bindTime.accept(picker);
-            picker.show(getSupportFragmentManager(), TIME_PICKER);
-        });
-        androidx.fragment.app.Fragment timePicker = getSupportFragmentManager().findFragmentByTag(TIME_PICKER);
-        if (timePicker instanceof MaterialTimePicker) bindTime.accept((MaterialTimePicker) timePicker);
+        com.android.calendar.ItemDateTimePickers.bindDate(dateButton, getSupportFragmentManager(), DATE_PICKER,
+                () -> date[0].atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(), selection -> {
+                    date[0] = Instant.ofEpochMilli(selection).atZone(ZoneOffset.UTC).toLocalDate();
+                    update.run();
+                });
+        com.android.calendar.ItemDateTimePickers.bindTime(timeButton, getSupportFragmentManager(), TIME_PICKER,
+                () -> time[0], selection -> {
+                    time[0] = selection;
+                    update.run();
+                });
 
         TimeZonePickerDialog.OnTimeZoneSetListener zoneListener = tzi -> {
             zone[0] = ZoneId.of(tzi.mTzId);
             update.run();
         };
-        zoneButton.setOnClickListener(v -> {
-            if (getSupportFragmentManager().findFragmentByTag(ZONE_PICKER) != null) return;
-            Bundle args = new Bundle();
-            args.putLong(TimeZonePickerDialog.BUNDLE_START_TIME_MILLIS,
-                    date[0].atTime(time[0]).atZone(zone[0]).toInstant().toEpochMilli());
-            args.putString(TimeZonePickerDialog.BUNDLE_TIME_ZONE, zone[0].getId());
-            TimeZonePickerDialog picker = new TimeZonePickerDialog();
-            picker.setArguments(args);
-            picker.setOnTimeZoneSetListener(zoneListener);
-            picker.show(getSupportFragmentManager(), ZONE_PICKER);
-        });
-        androidx.fragment.app.Fragment zonePicker = getSupportFragmentManager().findFragmentByTag(ZONE_PICKER);
-        if (zonePicker instanceof TimeZonePickerDialog)
-            ((TimeZonePickerDialog) zonePicker).setOnTimeZoneSetListener(zoneListener);
+        zoneButton.setOnClickListener(v -> com.android.calendar.ItemDateTimePickers.showZone(
+                getSupportFragmentManager(), ZONE_PICKER,
+                date[0].atTime(time[0]).atZone(zone[0]).toInstant().toEpochMilli(),
+                zone[0].getId(), zoneListener));
+        com.android.calendar.ItemDateTimePickers.restoreZone(getSupportFragmentManager(), ZONE_PICKER, zoneListener);
+
 
         if (task.id != 0) deleteEditor = () -> new MaterialAlertDialogBuilder(this)
                 .setMessage(reminder ? R.string.reminders_delete_confirm : R.string.tasks_delete_confirm)

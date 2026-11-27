@@ -16,10 +16,8 @@
 
 package com.android.calendar.event;
 
-import android.app.DatePickerDialog;
 import android.app.ProgressDialog;
 import android.app.Service;
-import android.app.TimePickerDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -89,11 +87,8 @@ import com.android.calendar.timezonepicker.TimeZoneInfo;
 import com.android.calendar.timezonepicker.TimeZonePickerDialog;
 import com.android.calendar.timezonepicker.TimeZonePickerUtils;
 
-import com.google.android.material.datepicker.MaterialDatePicker;
-import com.google.android.material.datepicker.MaterialPickerOnPositiveButtonClickListener;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
-import com.google.android.material.timepicker.MaterialTimePicker;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -179,9 +174,6 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
     private Cursor mCalendarsCursor;
     private AccountSpecifier mAddressAdapter;
     private Rfc822Validator mEmailValidator;
-    private TimePickerDialog mStartTimePickerDialog;
-    private TimePickerDialog mEndTimePickerDialog;
-    private DatePickerDialog mDatePickerDialog;
     /**
      * Contents of the "minutes" spinner.  This has default values from the XML file, augmented
      * with any additional values that were already associated with the event.
@@ -361,11 +353,7 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
         if (rpd != null) {
             rpd.setOnRecurrenceSetListener(this);
         }
-        TimeZonePickerDialog tzpd = (TimeZonePickerDialog) fm
-                .findFragmentByTag(FRAG_TAG_TIME_ZONE_PICKER);
-        if (tzpd != null) {
-            tzpd.setOnTimeZoneSetListener(this);
-        }
+        com.android.calendar.ItemDateTimePickers.restoreZone(fm, FRAG_TAG_TIME_ZONE_PICKER, this);
 
     }
 
@@ -403,11 +391,8 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
         setTime(mStartTimeButton, startMillis);
         setTime(mEndTimeButton, endMillis);
 
-        mStartDateButton.setOnClickListener(this::showDatePickerDialog);
-        mEndDateButton.setOnClickListener(this::showDatePickerDialog);
-
-        mStartTimeButton.setOnClickListener(this::showTimerPickerDialog);
-        mEndTimeButton.setOnClickListener(this::showTimerPickerDialog);
+        bindDateTimePicker(mStartDateButton, mStartTimeButton, true);
+        bindDateTimePicker(mEndDateButton, mEndTimeButton, false);
     }
 
     // Implements OnTimeZoneSetListener
@@ -439,20 +424,8 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
     }
 
     private void showTimezoneDialog() {
-        Bundle b = new Bundle();
-        b.putLong(TimeZonePickerDialog.BUNDLE_START_TIME_MILLIS, mStartTime.toMillis());
-        b.putString(TimeZonePickerDialog.BUNDLE_TIME_ZONE, mTimezone);
-
-        FragmentManager fm = mActivity.getSupportFragmentManager();
-        TimeZonePickerDialog tzpd = (TimeZonePickerDialog) fm
-                .findFragmentByTag(FRAG_TAG_TIME_ZONE_PICKER);
-        if (tzpd != null) {
-            tzpd.dismiss();
-        }
-        tzpd = new TimeZonePickerDialog();
-        tzpd.setArguments(b);
-        tzpd.setOnTimeZoneSetListener(EditEventView.this);
-        tzpd.show(fm, FRAG_TAG_TIME_ZONE_PICKER);
+        com.android.calendar.ItemDateTimePickers.showZone(mActivity.getSupportFragmentManager(),
+                FRAG_TAG_TIME_ZONE_PICKER, mStartTime.toMillis(), mTimezone, this);
     }
 
     private void populateRepeats() {
@@ -1727,16 +1700,26 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
     public void onNothingSelected(AdapterView<?> parent) {
     }
 
-    public void showTimerPickerDialog(View view) {
-        MaterialTimePicker materialTimePicker = com.android.calendar.ItemDateTimePickers.time(
-                mActivity,
-                (view == mStartTimeButton) ? mStartTime.getHour() : mEndTime.getHour(),
-                (view == mStartTimeButton) ? mStartTime.getMinute() : mEndTime.getMinute());
-
-        materialTimePicker.addOnPositiveButtonClickListener((dialog) -> {
-            onTimeSet(view, materialTimePicker.getHour(), materialTimePicker.getMinute());
-        });
-        materialTimePicker.show(mActivity.getSupportFragmentManager(), "TimePicker");
+    private void bindDateTimePicker(View dateButton, View timeButton, boolean start) {
+        FragmentManager manager = mActivity.getSupportFragmentManager();
+        String suffix = start ? "Start" : "End";
+        com.android.calendar.ItemDateTimePickers.bindDate(dateButton, manager, "DatePicker" + suffix,
+                () -> {
+                    Time value = start ? mStartTime : mEndTime;
+                    Calendar utc = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+                    utc.clear();
+                    utc.set(value.getYear(), value.getMonth(), value.getDay());
+                    return utc.getTimeInMillis();
+                }, selection -> {
+                    Calendar utc = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+                    utc.setTimeInMillis(selection);
+                    onDateSet(dateButton, utc.get(Calendar.YEAR), utc.get(Calendar.MONTH), utc.get(Calendar.DAY_OF_MONTH));
+                });
+        com.android.calendar.ItemDateTimePickers.bindTime(timeButton, manager, "TimePicker" + suffix,
+                () -> {
+                    Time value = start ? mStartTime : mEndTime;
+                    return java.time.LocalTime.of(value.getHour(), value.getMinute());
+                }, selection -> onTimeSet(timeButton, selection.getHour(), selection.getMinute()));
     }
 
     public void onTimeSet(View view, int hourOfDay, int minute) {
@@ -1784,28 +1767,6 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
         setTime(mStartTimeButton, startMillis);
         setTime(mEndTimeButton, endMillis);
         updateHomeTime();
-    }
-
-    private void showDatePickerDialog(View view) {
-        MaterialPickerOnPositiveButtonClickListener<Long> materialPickerOnPositiveButtonClickListener = timePicked -> {
-            Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-            calendar.setTime(new Date(timePicked));
-            onDateSet(view, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH));
-        };
-
-        Calendar calPickTime = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-        calPickTime.clear();
-        if (view == mStartDateButton) {
-            calPickTime.set(mStartTime.getYear(), mStartTime.getMonth(), mStartTime.getDay());
-        } else {
-            calPickTime.set(mEndTime.getYear(), mEndTime.getMonth(), mEndTime.getDay());
-        }
-
-        MaterialDatePicker<Long> datePickerDialog = com.android.calendar.ItemDateTimePickers.date(
-                mActivity, calPickTime.getTimeInMillis());
-
-        datePickerDialog.addOnPositiveButtonClickListener(materialPickerOnPositiveButtonClickListener);
-        datePickerDialog.show(mActivity.getSupportFragmentManager(), "DatePicker");
     }
 
     public void onDateSet(View view, int year, int month, int monthDay) {

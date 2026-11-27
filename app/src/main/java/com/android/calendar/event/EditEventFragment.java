@@ -817,17 +817,11 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
     }
 
     private void showDiscardConfirmAlert() {
-        new MaterialAlertDialogBuilder(getActivity())
-                .setMessage(R.string.discard_event_changes)
-                .setCancelable(true)
-                .setPositiveButton(R.string.discard, ((dialog, which) -> {
-                    revertEventChanges();
-                    if (mExistingEvent) mActivity.finish();
-                    else Utils.returnToCalendarHome(getActivity());
-                    dialog.cancel();
-                }))
-                .setNegativeButton(R.string.cancel, ((dialog, which) -> dialog.cancel()))
-                .show();
+        com.android.calendar.ItemEditorUi.confirmDiscard(getActivity(), () -> {
+            revertEventChanges();
+            if (mExistingEvent) mActivity.finish();
+            else Utils.returnToCalendarHome(getActivity());
+        });
     }
 
     private void revertEventChanges() {
