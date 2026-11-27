@@ -2305,12 +2305,12 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
     }
 
     private void drawAllDayHighlights(Rect r, Canvas canvas, Paint p) {
-        // Keep the weekday, date and lunar labels on the normal themed background.
+        // Use the future-date themed background across the entire date header.
         r.top = 0;
         r.bottom = DAY_HEADER_HEIGHT;
         r.left = 0;
         r.right = mViewWidth;
-        p.setColor(mBgColor);
+        p.setColor(mFutureBgColor != 0 ? mFutureBgColor : mBgColor);
         p.setStyle(Style.FILL);
         canvas.drawRect(r, p);
 
@@ -2320,6 +2320,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
             r.bottom = mFirstCell - 1;
             r.left = 0;
             r.right = mHoursWidth;
+            p.setColor(mBgColor);
             canvas.drawRect(r, p);
 
             int startIndex = -1;

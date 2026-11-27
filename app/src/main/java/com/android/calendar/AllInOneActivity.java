@@ -63,6 +63,7 @@ import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.widget.AppCompatImageButton;
 import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
@@ -914,6 +915,14 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         super.onCreateOptionsMenu(menu);
         mOptionsMenu = menu;
         getMenuInflater().inflate(R.menu.all_in_one_title_bar, menu);
+        View switchButton = menu.findItem(R.id.action_view_switch).getActionView();
+        if (switchButton != null) {
+            switchButton.setOnClickListener(v -> cycleCalendarView(false));
+            switchButton.setOnLongClickListener(v -> {
+                cycleCalendarView(true);
+                return true;
+            });
+        }
         updateViewSwitchButtons();
 
         // Add additional options (if any).
@@ -1001,39 +1010,36 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         boolean enabled = Utils.getSharedPreference(this,
                 GeneralPreferences.KEY_VIEW_SWITCH_BUTTONS, false);
         MenuItem switchItem = mOptionsMenu.findItem(R.id.action_view_switch);
-        int selectedId;
         int iconRes;
         int titleRes;
         switch (mCurrentView) {
             case ViewType.DAY:
-                selectedId = R.id.action_view_day;
                 iconRes = R.drawable.ic_toolbar_view_day;
                 titleRes = R.string.day_view;
                 break;
             case ViewType.WEEK:
-                selectedId = R.id.action_view_week;
                 iconRes = R.drawable.ic_toolbar_view_week;
                 titleRes = R.string.week_view;
                 break;
             case ViewType.MONTH:
-                selectedId = R.id.action_view_month;
                 iconRes = R.drawable.ic_toolbar_view_month;
                 titleRes = R.string.month_view;
                 break;
             default:
-                selectedId = 0;
                 iconRes = 0;
                 titleRes = 0;
                 break;
         }
 
-        boolean showSwitch = enabled && selectedId != 0;
+        boolean showSwitch = enabled && iconRes != 0;
         if (switchItem != null) {
             switchItem.setVisible(showSwitch);
             if (showSwitch) {
-                switchItem.setIcon(iconRes);
                 switchItem.setTitle(titleRes);
-                switchItem.getSubMenu().findItem(selectedId).setChecked(true);
+                if (switchItem.getActionView() instanceof AppCompatImageButton button) {
+                    button.setImageResource(iconRes);
+                    button.setContentDescription(getString(titleRes));
+                }
             }
         }
 
@@ -1043,6 +1049,24 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
             today.setShowAsAction(showSwitch || isTaskView(mCurrentView)
                     ? MenuItem.SHOW_AS_ACTION_ALWAYS : MenuItem.SHOW_AS_ACTION_IF_ROOM);
         }
+    }
+
+    private void cycleCalendarView(boolean skipOne) {
+        int nextView;
+        switch (mCurrentView) {
+            case ViewType.DAY:
+                nextView = skipOne ? ViewType.MONTH : ViewType.WEEK;
+                break;
+            case ViewType.WEEK:
+                nextView = skipOne ? ViewType.DAY : ViewType.MONTH;
+                break;
+            case ViewType.MONTH:
+                nextView = skipOne ? ViewType.WEEK : ViewType.DAY;
+                break;
+            default:
+                return;
+        }
+        mController.sendEvent(this, EventType.GO_TO, null, null, -1, nextView);
     }
 
     @Override
@@ -1060,20 +1084,8 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
             extras |= CalendarController.EXTRA_GOTO_TODAY;
             mController.sendEvent(this, EventType.GO_TO, t, null, t, -1, viewType, extras, null, null);
             return true;
-        } else if (itemId == R.id.action_view_day) {
-            if (mCurrentView != ViewType.DAY) {
-                mController.sendEvent(this, EventType.GO_TO, null, null, -1, ViewType.DAY);
-            }
-            return true;
-        } else if (itemId == R.id.action_view_week) {
-            if (mCurrentView != ViewType.WEEK) {
-                mController.sendEvent(this, EventType.GO_TO, null, null, -1, ViewType.WEEK);
-            }
-            return true;
-        } else if (itemId == R.id.action_view_month) {
-            if (mCurrentView != ViewType.MONTH) {
-                mController.sendEvent(this, EventType.GO_TO, null, null, -1, ViewType.MONTH);
-            }
+        } else if (itemId == R.id.action_view_switch) {
+            cycleCalendarView(false);
             return true;
         } else if (itemId == R.id.action_goto) {
             goToDate();
