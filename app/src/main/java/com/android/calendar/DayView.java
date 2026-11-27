@@ -422,7 +422,6 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
     private static final int MAX_EVENT_TEXT_LEN = 500;
     // smallest height to draw an event with
     private static float MIN_EVENT_HEIGHT = 24.0F; // in pixels
-    private static int CALENDAR_COLOR_SQUARE_SIZE = 10;
     private static int EVENT_RECT_TOP_MARGIN = 1;
     private static int EVENT_RECT_BOTTOM_MARGIN = 0;
     private static int EVENT_RECT_LEFT_MARGIN = 1;
@@ -718,7 +717,6 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
                 DAY_HEADER_ONE_DAY_LEFT_MARGIN *= mScale;
                 DAY_HEADER_ONE_DAY_RIGHT_MARGIN *= mScale;
                 DAY_HEADER_ONE_DAY_BOTTOM_MARGIN *= mScale;
-                CALENDAR_COLOR_SQUARE_SIZE *= mScale;
                 EVENT_RECT_TOP_MARGIN *= mScale;
                 EVENT_RECT_BOTTOM_MARGIN *= mScale;
                 ALL_DAY_EVENT_RECT_BOTTOM_MARGIN *= mScale;
@@ -3474,27 +3472,23 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
             }
 
             if (paintIt) {
+                int oldColor = p.getColor();
+                Paint.Style oldStyle = p.getStyle();
+                boolean oldAntiAlias = p.isAntiAlias();
+                p.setStyle(Paint.Style.FILL);
+                p.setAntiAlias(true);
                 p.setColor(color);
-                canvas.drawRoundRect(r.left, r.top, r.right, r.bottom, radius, radius, p);
+                canvas.save();
+                if (canvas.clipRect(visibleLeft, visibleTop, visibleRight, visibleBot))
+                    canvas.drawRoundRect(r.left, r.top, r.right, r.bottom, radius, radius, p);
+                canvas.restore();
+                p.setColor(oldColor);
+                p.setStyle(oldStyle);
+                p.setAntiAlias(oldAntiAlias);
             }
-            p.setAntiAlias(true);
         }
 
-        // Draw cal color square border
-        // r.top = (int) event.top + CALENDAR_COLOR_SQUARE_V_OFFSET;
-        // r.left = (int) event.left + CALENDAR_COLOR_SQUARE_H_OFFSET;
-        // r.bottom = r.top + CALENDAR_COLOR_SQUARE_SIZE + 1;
-        // r.right = r.left + CALENDAR_COLOR_SQUARE_SIZE + 1;
-        // p.setColor(0xFFFFFFFF);
-        // canvas.drawRect(r, p);
 
-        // Draw cal color
-        // r.top++;
-        // r.left++;
-        // r.bottom--;
-        // r.right--;
-        // p.setColor(event.color);
-        // canvas.drawRect(r, p);
     }
 
     private final Pattern drawTextSanitizerFilter = Pattern.compile("[\t\n],");

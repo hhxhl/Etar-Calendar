@@ -24,7 +24,6 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.graphics.Paint;
-import android.net.Uri;
 import android.provider.CalendarContract.Events;
 import android.provider.CalendarContract.Instances;
 import android.text.format.DateUtils;
@@ -46,8 +45,6 @@ import ws.xsoh.etar.R;
 public class CalendarAppWidgetService extends RemoteViewsService {
     static final int EVENT_MIN_COUNT = 20;
     static final int EVENT_MAX_COUNT = 100;
-    // Minimum delay between queries on the database for widget updates in ms
-    static final int WIDGET_UPDATE_THROTTLE = 500;
     static final String[] EVENT_PROJECTION = new String[] {
         Instances.ALL_DAY,
         Instances.BEGIN,
@@ -189,6 +186,12 @@ public class CalendarAppWidgetService extends RemoteViewsService {
 
         private void scheduleNextUpdate(long triggerTime) {
             if (mAppWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return;
+            boolean active = false;
+            for (int id : AppWidgetManager.getInstance(mContext)
+                    .getAppWidgetIds(CalendarAppWidgetProvider.getComponentName(mContext))) {
+                if (id == mAppWidgetId) { active = true; break; }
+            }
+            if (!active) return;
             AlarmManager alarm = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
             alarm.set(AlarmManager.RTC, triggerTime,
                     CalendarAppWidgetProvider.getUpdateIntent(mContext, mAppWidgetId));

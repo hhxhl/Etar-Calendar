@@ -136,7 +136,6 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
     private long mBegin;
     private long mEnd;
     private long mCalendarId = -1;
-    private EventColorPickerDialog mColorPickerDialog;
     private AppCompatActivity mActivity;
     private boolean mSaveOnDetach = true;
     private boolean mIsReadOnly = false;
@@ -171,20 +170,12 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
 
         @Override
         public void onClick(View v) {
-            int[] colors = mModel.getCalendarEventColors();
-            if (mColorPickerDialog == null) {
-                mColorPickerDialog = EventColorPickerDialog.newInstance(colors,
-                        mModel.getEventColor(), mModel.getCalendarColor(), mView.mIsMultipane);
-                mColorPickerDialog.setOnColorSelectedListener(EditEventFragment.this);
-            } else {
-                mColorPickerDialog.setCalendarColor(mModel.getCalendarColor());
-                mColorPickerDialog.setColors(colors, mModel.getEventColor());
-            }
-            final FragmentManager fragmentManager = getParentFragmentManager();
-            fragmentManager.executePendingTransactions();
-            if (!mColorPickerDialog.isAdded()) {
-                mColorPickerDialog.show(fragmentManager, COLOR_PICKER_DIALOG_TAG);
-            }
+            FragmentManager manager = getParentFragmentManager();
+            if (manager.isStateSaved() || manager.findFragmentByTag(COLOR_PICKER_DIALOG_TAG) != null) return;
+            EventColorPickerDialog picker = EventColorPickerDialog.newInstance(mModel.getCalendarEventColors(),
+                    mModel.getEventColor(), mModel.getCalendarColor(), mView.mIsMultipane);
+            picker.setOnColorSelectedListener(EditEventFragment.this);
+            picker.showOnce(manager, COLOR_PICKER_DIALOG_TAG);
         }
     };
 
@@ -249,10 +240,9 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        mColorPickerDialog = (EventColorPickerDialog) getActivity().getSupportFragmentManager()
-                .findFragmentByTag(COLOR_PICKER_DIALOG_TAG);
-        if (mColorPickerDialog != null) {
-            mColorPickerDialog.setOnColorSelectedListener(this);
+        Fragment restored = getParentFragmentManager().findFragmentByTag(COLOR_PICKER_DIALOG_TAG);
+        if (restored instanceof EventColorPickerDialog picker) {
+            picker.setOnColorSelectedListener(this);
         }
     }
 

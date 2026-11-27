@@ -32,7 +32,6 @@ import java.text.DateFormatSymbols
 import java.util.Calendar
 import java.util.Locale
 import android.widget.Toast
-import androidx.preference.CheckBoxPreference
 import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
@@ -63,7 +62,7 @@ class GeneralPreferences : PreferenceFragmentCompat(),
     private lateinit var weekStartPref: ListPreference
     private lateinit var dayWeekPref: ListPreference
     private lateinit var defaultEventDurationPref: ListPreference
-    private lateinit var useHomeTzPref: CheckBoxPreference
+    private lateinit var useHomeTzPref: MaterialSwitchPreference
     private lateinit var homeTzPref: Preference
     private lateinit var snoozeDelayPref: ListPreference
     private lateinit var useDefaultCustomSnoozeDelayPref: Preference
