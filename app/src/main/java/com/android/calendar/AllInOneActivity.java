@@ -1031,13 +1031,6 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
         final int itemId = item.getItemId();
-        if (itemId == R.id.day_menu_item || itemId == R.id.week_menu_item || itemId == R.id.month_menu_item) {
-            mNavigationView.getMenu().findItem(R.id.agenda_menu_item).setChecked(false);
-        } else if (itemId == R.id.agenda_menu_item) {
-            mNavigationView.getMenu().findItem(R.id.day_menu_item).setChecked(false);
-            mNavigationView.getMenu().findItem(R.id.week_menu_item).setChecked(false);
-            mNavigationView.getMenu().findItem(R.id.month_menu_item).setChecked(false);
-        }
         if (itemId == R.id.day_menu_item) {
             if (mCurrentView != ViewType.DAY) {
                 switchToView(ViewType.DAY);
@@ -1133,6 +1126,12 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
             mCurrentView = viewType;
             updateViewSwitchButtons();
         }
+        // Navigation has two groups; keep a single calendar view checked even
+        // when navigation originates from a gesture or a toolbar button.
+        mNavigationView.getMenu().findItem(R.id.day_menu_item).setChecked(false);
+        mNavigationView.getMenu().findItem(R.id.week_menu_item).setChecked(false);
+        mNavigationView.getMenu().findItem(R.id.month_menu_item).setChecked(false);
+        mNavigationView.getMenu().findItem(R.id.agenda_menu_item).setChecked(false);
         // Create new fragment
         Fragment frag = null;
         Fragment secFrag = null;

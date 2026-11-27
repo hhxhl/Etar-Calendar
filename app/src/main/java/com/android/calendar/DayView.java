@@ -1567,7 +1567,11 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
                 long begin = selectedEvent.startMillis;
                 long end = selectedEvent.endMillis;
                 long id = selectedEvent.id;
-                mDeleteEventHelper.delete(begin, end, id, -1);
+                if (selectedEvent.taskId > 0) {
+                    com.android.calendar.tasks.TaskCalendarUi.openTask(mContext, selectedEvent.taskId);
+                } else {
+                    mDeleteEventHelper.delete(begin, end, id, -1);
+                }
                 return true;
             case KeyEvent.KEYCODE_ENTER:
                 switchViews(true /* trackball or keyboard */);
@@ -3982,12 +3986,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         } else if (selected != null) {
             if (mIsAccessibilityEnabled) mAccessibilityMgr.interrupt();
             mSelectionMode = SELECTION_HIDDEN;
-            if (selected.taskId > 0 || getEventAccessLevel(mContext, selected) == ACCESS_LEVEL_EDIT) {
-                com.android.calendar.tasks.TaskCalendarUi.openItem(mContext, mController, selected);
-            } else {
-                mController.sendEventRelatedEvent(this, EventType.VIEW_EVENT_DETAILS, selected.id,
-                        selected.startMillis, selected.endMillis, 0, 0, -1);
-            }
+            com.android.calendar.tasks.TaskCalendarUi.openItem(mContext, mController, selected);
         } else {
             focusSlot(time, allDay);
         }
@@ -4556,6 +4555,10 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
             }
             return true;
         }
+    }
+
+    public static boolean canEditCalendarItem(Context context, Event item) {
+        return getEventAccessLevel(context, item) == ACCESS_LEVEL_EDIT;
     }
 
     private static int getEventAccessLevel(Context context, Event e) {

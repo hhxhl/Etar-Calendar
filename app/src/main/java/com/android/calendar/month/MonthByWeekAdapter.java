@@ -427,9 +427,12 @@ public class MonthByWeekAdapter extends SimpleWeeksAdapter {
         @Override
         public void onLongPress(MotionEvent e) {
             if (mLongClickedView != null) {
-                Time day = mLongClickedView.getDayFromLocation(mClickedXLocation);
+                MonthWeekEventsView clicked = mLongClickedView;
+                mLongClickedView = null;
+                Time day = clicked.getDayFromLocation(mClickedXLocation);
+                clicked.clearClickedDay();
                 if (day != null) {
-                    mLongClickedView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+                    clicked.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
                     setDayParameters(day);
                     ArrayList<Event> items = itemsOnDay(day);
                     focusDay(day);
@@ -439,8 +442,6 @@ public class MonthByWeekAdapter extends SimpleWeeksAdapter {
                         com.android.calendar.tasks.TaskCalendarUi.showItems(mContext, mController, items);
                     }
                 }
-                mLongClickedView.clearClickedDay();
-                mLongClickedView = null;
             }
         }
     }

@@ -3,13 +3,11 @@ package com.android.calendar.tasks;
 import android.content.Context;
 import android.content.Intent;
 import android.text.format.DateUtils;
-import androidx.annotation.NonNull;
 import com.android.calendar.CalendarController;
 import com.android.calendar.CalendarController.EventType;
 import com.android.calendar.CalendarController.ViewType;
 import com.android.calendar.Event;
 import com.android.calendar.Utils;
-import com.android.calendar.calendarcommon2.Time;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -87,8 +85,9 @@ public final class TaskCalendarUi {
         if (item.taskId > 0) {
             openTask(context, item.taskId);
         } else {
-            // The existing editor enforces calendar access restrictions.
-            controller.sendEventRelatedEvent(context, EventType.EDIT_EVENT, item.id,
+            long type = com.android.calendar.DayView.canEditCalendarItem(context, item)
+                    ? EventType.EDIT_EVENT : EventType.VIEW_EVENT_DETAILS;
+            controller.sendEventRelatedEvent(context, type, item.id,
                     item.startMillis, item.endMillis, 0, 0, -1);
         }
     }
