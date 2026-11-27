@@ -339,14 +339,8 @@ public class CalendarAppWidgetService extends RemoteViewsService {
                 int adaptiveTextColor = Utils.getAdaptiveTextColor(mContext, mStandardColor, displayColor);
                 int adaptiveAllDayTextColor = Utils.getAdaptiveTextColor(mContext, mAllDayColor, displayColor);
 
-                final long now = System.currentTimeMillis();
-                if (!eventInfo.allDay && eventInfo.start <= now && now <= eventInfo.end) {
-                    int pastColor = DynamicThemeKt.getColor(mContext, "widget_header");
-                    views.setInt(R.id.widget_row, "setBackgroundColor", pastColor);
-                } else {
-                    // Normal rows inherit the widget surface, including its opacity.
-                    views.setInt(R.id.widget_row, "setBackgroundColor", android.graphics.Color.TRANSPARENT);
-                }
+                // All rows inherit the widget surface, including its opacity.
+                views.setInt(R.id.widget_row, "setBackgroundColor", android.graphics.Color.TRANSPARENT);
 
                 if (!eventInfo.allDay) {
                     updateTextView(views, R.id.when, eventInfo.visibWhen, eventInfo.when);
