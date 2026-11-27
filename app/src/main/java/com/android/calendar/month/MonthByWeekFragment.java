@@ -87,6 +87,8 @@ public class MonthByWeekFragment extends SimpleDayPickerFragment implements
             String tz = Utils.getTimeZone(mContext, mTZUpdater);
             mSelectedDay.setTimezone(tz);
             mSelectedDay.normalize();
+            mDesiredDay.switchTimezone(tz);
+            mDesiredDay.normalize();
             mTempTime.setTimezone(tz);
             mFirstDayOfMonth.setTimezone(tz);
             mFirstDayOfMonth.normalize();
@@ -128,7 +130,6 @@ public class MonthByWeekFragment extends SimpleDayPickerFragment implements
             }
         }
     };
-    private boolean mUserScrolled = false;
     private int mEventsLoadingDelay;
     private boolean mShowCalendarControls;
     private boolean mIsDetached;
@@ -163,6 +164,14 @@ public class MonthByWeekFragment extends SimpleDayPickerFragment implements
     public MonthByWeekFragment(long initialTime, boolean isMiniMonth) {
         super(initialTime);
         mIsMiniMonth = isMiniMonth;
+        mDesiredDay.set(mSelectedDay);
+    }
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        // The superclass restores the selected date from saved state.
+        mDesiredDay.set(mSelectedDay);
     }
 
     /**
@@ -456,27 +465,23 @@ public class MonthByWeekFragment extends SimpleDayPickerFragment implements
     protected void setMonthDisplayed(Time time, boolean updateHighlight) {
         super.setMonthDisplayed(time, updateHighlight);
         if (!mIsMiniMonth) {
-            boolean useSelected = false;
+            // The visible month's anchor is not necessarily the selected date.
             if (time.getYear() == mDesiredDay.getYear() && time.getMonth() == mDesiredDay.getMonth()) {
                 mSelectedDay.set(mDesiredDay);
-                mAdapter.setSelectedDay(mDesiredDay);
-                useSelected = true;
             } else {
                 mSelectedDay.set(time);
-                mAdapter.setSelectedDay(time);
             }
+            mAdapter.setSelectedDay(mSelectedDay);
             CalendarController controller = CalendarController.getInstance(mContext);
             if (mSelectedDay.getMinute() >= 30) {
                 mSelectedDay.setMinute(30);
             } else {
                 mSelectedDay.setMinute(0);
             }
-            long newTime = mSelectedDay.normalize();
-            if (newTime != controller.getTime() && mUserScrolled) {
-                long offset = useSelected ? 0 : DateUtils.WEEK_IN_MILLIS * mNumWeeks / 3;
-                controller.setTime(newTime + offset);
-            }
-            controller.sendEvent(this, EventType.UPDATE_TITLE, time, time, time, -1,
+            mSelectedDay.normalize();
+            Time selected = new Time(mSelectedDay.getTimezone());
+            selected.set(mSelectedDay);
+            controller.sendEvent(this, EventType.UPDATE_TITLE, time, time, selected, -1,
                     ViewType.CURRENT, DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_NO_MONTH_DAY
                             | DateUtils.FORMAT_SHOW_YEAR, null, null);
         }
@@ -489,7 +494,6 @@ public class MonthByWeekFragment extends SimpleDayPickerFragment implements
             if (scrollState != OnScrollListener.SCROLL_STATE_IDLE) {
                 mShouldLoad = false;
                 stopLoader();
-                mDesiredDay.set(System.currentTimeMillis());
             } else {
                 mHandler.removeCallbacks(mUpdateLoader);
                 mShouldLoad = true;
@@ -497,7 +501,8 @@ public class MonthByWeekFragment extends SimpleDayPickerFragment implements
             }
         }
         if (scrollState == OnScrollListener.SCROLL_STATE_TOUCH_SCROLL) {
-            mUserScrolled = true;
+            // Only a user scroll resets the desired date, not programmatic navigation.
+            mDesiredDay.set(System.currentTimeMillis());
         }
 
         mScrollStateChangedRunnable.doScrollStateChange(view, scrollState);
