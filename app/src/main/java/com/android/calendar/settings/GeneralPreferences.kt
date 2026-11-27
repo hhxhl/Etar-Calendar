@@ -17,39 +17,30 @@
 
 package com.android.calendar.settings
 
-import android.annotation.TargetApi
 import android.app.backup.BackupManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
-import android.media.RingtoneManager
-import android.net.Uri
-import android.os.Build
 import android.os.Bundle
-import android.os.Vibrator
 import android.provider.CalendarContract
 import android.provider.CalendarContract.CalendarCache
 import android.provider.SearchRecentSuggestions
 import android.provider.Settings
-import android.text.TextUtils
 import java.text.DateFormatSymbols
 import java.util.Calendar
 import java.util.Locale
-import android.util.SparseIntArray
 import android.widget.Toast
 import androidx.preference.CheckBoxPreference
 import androidx.preference.ListPreference
 import androidx.preference.Preference
-import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceManager
 import com.android.calendar.CalendarController
 import com.android.calendar.CalendarRecentSuggestionsProvider
 import com.android.calendar.CalendarUtils
 import com.android.calendar.Utils
-import com.android.calendar.alerts.AlertReceiver
 import com.android.calendar.event.EventViewUtils
 import com.android.calendar.theme.isSystemInDarkTheme
 import com.android.calendar.timezonepicker.TimeZoneInfo
@@ -80,19 +71,8 @@ class GeneralPreferences : PreferenceFragmentCompat(),
     private lateinit var copyDbPref: Preference
     private lateinit var skipRemindersPref: ListPreference
 
-    // >= 26
-    private lateinit var notificationPref: Preference
-
-    // < 26
-    private lateinit var alertPref: CheckBoxPreference
-    private lateinit var ringtonePref: Preference
-    private lateinit var vibratePref: MaterialSwitchPreference
-
     private lateinit var tzPickerUtils: TimeZonePickerUtils
     private var timeZoneId: String? = null
-
-    // Used to retrieve the color id from the color picker
-    private val colorMap = SparseIntArray()
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         preferenceManager.sharedPreferencesName = SHARED_PREFS_NAME
@@ -127,29 +107,6 @@ class GeneralPreferences : PreferenceFragmentCompat(),
 
         val prefs = CalendarUtils.getSharedPreferences(requireActivity(),
                 Utils.SHARED_PREFS_NAME)
-
-        if (Utils.isOreoOrLater()) {
-            notificationPref = preferenceScreen.findPreference(KEY_NOTIFICATION)!!
-        } else {
-            alertPref = preferenceScreen.findPreference(KEY_ALERTS)!!
-            vibratePref = preferenceScreen.findPreference(KEY_ALERTS_VIBRATE)!!
-            val vibrator = requireActivity().getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-            if (!vibrator.hasVibrator()) {
-                val alertGroup = preferenceScreen
-                        .findPreference<PreferenceCategory>(KEY_ALERTS_CATEGORY)!!
-                alertGroup.removePreference(vibratePref)
-            }
-            ringtonePref = preferenceScreen.findPreference(KEY_ALERTS_RINGTONE)!!
-            val ringtoneUriString = Utils.getRingtonePreference(activity)
-
-            // Set the ringtoneUri to the backup-able shared pref only so that
-            // the Ringtone dialog will open up with the correct value.
-            val editor = prefs.edit()
-            editor.putString(KEY_ALERTS_RINGTONE, ringtoneUriString).apply()
-
-            val ringtoneDisplayString = getRingtoneTitleFromUri(requireActivity(), ringtoneUriString)
-            ringtonePref.summary = ringtoneDisplayString ?: ""
-        }
 
         if (themePref.value == "system" && !isSystemInDarkTheme(requireActivity()) || themePref.value == "light") {
             preferenceScreen.removePreferenceRecursively(KEY_PURE_BLACK_NIGHT_MODE)
@@ -234,9 +191,6 @@ class GeneralPreferences : PreferenceFragmentCompat(),
         snoozeDelayPref.onPreferenceChangeListener = listener
         defaultReminderPref.onPreferenceChangeListener = listener
         skipRemindersPref.onPreferenceChangeListener = listener
-        if (!Utils.isOreoOrLater()) {
-            vibratePref.onPreferenceChangeListener = listener
-        }
     }
 
     override fun onStop() {
@@ -251,16 +205,6 @@ class GeneralPreferences : PreferenceFragmentCompat(),
         BackupManager.dataChanged(a.packageName)
 
         when (key) {
-            KEY_ALERTS -> {
-                val intent = Intent()
-                intent.setClass(a, AlertReceiver::class.java)
-                if (alertPref.isChecked) {
-                    intent.action = AlertReceiver.ACTION_DISMISS_OLD_REMINDERS
-                } else {
-                    intent.action = AlertReceiver.EVENT_REMINDER_APP_ACTION
-                }
-                a.sendBroadcast(intent)
-            }
             KEY_THEME_PREF -> {
                 Utils.sendUpdateWidgetIntent(a)
                 a.recreate()
@@ -278,15 +222,6 @@ class GeneralPreferences : PreferenceFragmentCompat(),
     }
 
     override fun onPreferenceChange(preference: Preference, newValue: Any): Boolean {
-        if (!Utils.isOreoOrLater()) {
-            when (preference) {
-                vibratePref -> {
-                    vibratePref.isChecked = newValue as Boolean
-                    return true
-                }
-            }
-        }
-
         when (preference) {
             useHomeTzPref -> {
                 if (Utils.isCalendarPermissionGranted(requireContext(), true)) {
@@ -352,15 +287,6 @@ class GeneralPreferences : PreferenceFragmentCompat(),
         return false
     }
 
-    private fun getRingtoneTitleFromUri(context: Context, uri: String): String? {
-        if (TextUtils.isEmpty(uri)) {
-            return null
-        }
-
-        val ring = RingtoneManager.getRingtone(activity, Uri.parse(uri))
-        return ring?.getTitle(context)
-    }
-
     private fun buildWeekStartEntries() {
         val symbols = DateFormatSymbols.getInstance(Locale.getDefault())
         val weekdays = symbols.weekdays
@@ -413,10 +339,6 @@ class GeneralPreferences : PreferenceFragmentCompat(),
                 clearSearchHistory()
                 return true
             }
-            KEY_ALERTS_RINGTONE -> {
-                showRingtoneManager()
-                return true
-            }
             KEY_NOTIFICATION -> {
                 showNotificationChannel()
                 return true
@@ -444,56 +366,12 @@ class GeneralPreferences : PreferenceFragmentCompat(),
         Toast.makeText(activity, R.string.search_history_cleared, Toast.LENGTH_SHORT).show()
     }
 
-    @TargetApi(Build.VERSION_CODES.O)
     private fun showNotificationChannel() {
         val intent = Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).apply {
             putExtra(Settings.EXTRA_CHANNEL_ID, "alert_channel_01")
             putExtra(Settings.EXTRA_APP_PACKAGE, requireActivity().packageName)
         }
         startActivity(intent)
-    }
-
-    /**
-     * AndroidX does not include the RingtonePreference
-     * This code is based on https://issuetracker.google.com/issues/37057453#comment3
-     */
-    private fun showRingtoneManager() {
-        val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
-            putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_NOTIFICATION)
-            putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
-            putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, true)
-            putExtra(RingtoneManager.EXTRA_RINGTONE_DEFAULT_URI, Settings.System.DEFAULT_NOTIFICATION_URI)
-        }
-
-        val existingValue = Utils.getRingtonePreference(activity)
-        if (existingValue != null) {
-            if (existingValue.isEmpty()) {
-                // Select "Silent"
-                val empty: Uri? = null
-                intent.putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, empty)
-            } else {
-                intent.putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, Uri.parse(existingValue))
-            }
-        } else {
-            // No ringtone has been selected, set to the default
-            intent.putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, Settings.System.DEFAULT_NOTIFICATION_URI)
-        }
-
-        startActivityForResult(intent, REQUEST_CODE_ALERT_RINGTONE)
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        if (requestCode == REQUEST_CODE_ALERT_RINGTONE && data != null) {
-            val ringtone = data.getParcelableExtra<Uri>(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
-            // ringtone is null when "Silent" was selected
-            val ringtoneString = ringtone?.toString() ?: ""
-
-            Utils.setRingtonePreference(activity, ringtoneString)
-            val ringtoneDisplayString = getRingtoneTitleFromUri(requireActivity(), ringtoneString)
-            ringtonePref.summary = ringtoneDisplayString ?: ""
-        } else {
-            super.onActivityResult(requestCode, resultCode, data)
-        }
     }
 
     override fun onTimeZoneSet(tzi: TimeZoneInfo) {
@@ -577,7 +455,6 @@ class GeneralPreferences : PreferenceFragmentCompat(),
         const val KEY_OTHER_COPY_DB = "preferences_copy_db"
         const val KEY_OTHER_REMINDERS_RESPONDED = "preferences_reminders_responded"
 
-        internal const val REQUEST_CODE_ALERT_RINGTONE = 42
 
         /** Return a properly configured SharedPreferences instance  */
         fun getSharedPreferences(context: Context): SharedPreferences {
