@@ -80,7 +80,7 @@ public final class UndatedTasksFragment extends Fragment implements CalendarCont
 
     private void reloadLists() {
         if (filter == null) return;
-        lists = store.lists();
+        lists = store.visibleLists();
         ArrayList<String> names = new ArrayList<>();
         names.add(getString(R.string.tasks_all));
         int position = 0;
@@ -110,7 +110,7 @@ public final class UndatedTasksFragment extends Fragment implements CalendarCont
         if (rows == null || !isAdded()) return;
         Context context = requireContext();
         rows.removeAllViews();
-        for (TaskStore.Task task : store.tasks(listId)) {
+        for (TaskStore.Task task : store.visibleTasks(listId)) {
             if (task.due != null) continue;
             LinearLayout row = new LinearLayout(context);
             row.setGravity(Gravity.CENTER_VERTICAL);

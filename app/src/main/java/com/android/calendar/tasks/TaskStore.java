@@ -78,6 +78,7 @@ public final class TaskStore extends SQLiteOpenHelper {
         public long id;
         public String name;
         public int color;
+        public boolean visible;
         @Override public String toString() { return name; }
     }
     public static final class Task {
@@ -89,13 +90,39 @@ public final class TaskStore extends SQLiteOpenHelper {
         public Integer repeatMinute;
     }
     public List<TaskList> lists() {
+        return queryLists(null, null);
+    }
+    public List<TaskList> visibleLists() {
+        return queryLists("visible=1", null);
+    }
+    public TaskList findList(long id) {
+        List<TaskList> result = queryLists("_id=?", new String[]{Long.toString(id)});
+        return result.isEmpty() ? null : result.get(0);
+    }
+    private List<TaskList> queryLists(String selection, String[] args) {
         ArrayList<TaskList> result = new ArrayList<>();
-        try (Cursor c = getReadableDatabase().query("tasklists", new String[]{"_id","list_name","list_color"}, null,null,null,null,"_id")) {
+        try (Cursor c = getReadableDatabase().query("tasklists",
+                new String[]{"_id","list_name","list_color","visible"}, selection,args,null,null,"_id")) {
             while (c.moveToNext()) {
-                TaskList l = new TaskList(); l.id = c.getLong(0); l.name = c.getString(1); l.color = c.getInt(2); result.add(l);
+                TaskList l = new TaskList();
+                l.id = c.getLong(0); l.name = c.getString(1); l.color = c.getInt(2);
+                l.visible = c.getInt(3) != 0;
+                result.add(l);
             }
         }
         return result;
+    }
+    public void setListVisible(long id, boolean visible) {
+        ContentValues v = new ContentValues();
+        v.put("visible", visible ? 1 : 0);
+        if (getWritableDatabase().update("tasklists", v, "_id=?", new String[]{Long.toString(id)}) > 0)
+            notifyChanged();
+    }
+    public void setListColor(long id, int color) {
+        ContentValues v = new ContentValues();
+        v.put("list_color", color);
+        if (getWritableDatabase().update("tasklists", v, "_id=?", new String[]{Long.toString(id)}) > 0)
+            notifyChanged();
     }
     public long addList(String name) {
         ContentValues v = new ContentValues(); v.put("list_name",name.trim());
@@ -125,8 +152,15 @@ public final class TaskStore extends SQLiteOpenHelper {
         return t;
     }
     public List<Task> tasks(long listId) {
+        return queryTasks(listId, false);
+    }
+    public List<Task> visibleTasks(long listId) {
+        return queryTasks(listId, true);
+    }
+    private List<Task> queryTasks(long listId, boolean visibleOnly) {
         ArrayList<Task> result=new ArrayList<>();
         String filter=listId==0?"":" AND t.list_id=?";
+        if (visibleOnly) filter += " AND EXISTS(SELECT 1 FROM tasklists l WHERE l._id=t.list_id AND l.visible=1)";
         try(Cursor c=getReadableDatabase().rawQuery(SELECT+filter+" ORDER BY t.status=2,t.due IS NULL,t.due,t._id",listId==0?null:new String[]{Long.toString(listId)})) {
             while(c.moveToNext()) result.add(read(c));
         }

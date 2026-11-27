@@ -64,4 +64,18 @@
     <string name="tasks_add_list_button">Add list</string>
     <string name="tasks_offline_list_message">Offline lists are not synchronized to a cloud service and are only available on your phone.</string>
     <string name="tasks_caldav_list_unavailable">CalDAV list synchronization is not implemented yet.</string>
+    <string name="tasks_list_visible">Show items</string>
+    <string name="tasks_list_hidden">Items are not displayed</string>
+    <string name="tasks_list_notifications_shared">Applies to all reminders</string>
+    <string name="tasks_delete_list">Delete list</string>
+    <string name="tasks_list_info">List information</string>
+    <string name="tasks_offline_list">Offline list</string>
+    <plurals name="tasks_list_reminder_count">
+        <item quantity="one">%d reminder</item>
+        <item quantity="other">%d reminders</item>
+    </plurals>
+    <plurals name="tasks_list_task_count">
+        <item quantity="one">%d task</item>
+        <item quantity="other">%d tasks</item>
+    </plurals>
 </resources>

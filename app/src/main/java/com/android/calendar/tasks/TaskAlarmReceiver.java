@@ -18,7 +18,14 @@ import ws.xsoh.etar.R;
 public final class TaskAlarmReceiver extends BroadcastReceiver {
     private static final String FIRE="com.android.calendar.tasks.FIRE";
     private static final String COMPLETE="com.android.calendar.tasks.COMPLETE";
-    private static final String CHANNEL="task_reminders";
+    public static final String CHANNEL="task_reminders";
+    public static void ensureChannel(Context context) {
+        if (Build.VERSION.SDK_INT >= 26) {
+            NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            nm.createNotificationChannel(new NotificationChannel(CHANNEL,
+                    context.getString(R.string.reminders_title), NotificationManager.IMPORTANCE_HIGH));
+        }
+    }
     private static PendingIntent alarm(Context c) {
         return PendingIntent.getBroadcast(c,0,new Intent(c,TaskAlarmReceiver.class).setAction(FIRE),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
     }
@@ -45,7 +52,7 @@ public final class TaskAlarmReceiver extends BroadcastReceiver {
         } else if(FIRE.equals(intent.getAction())){
             if(Build.VERSION.SDK_INT<33 || context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)==PackageManager.PERMISSION_GRANTED){
                 NotificationManager nm=(NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
-                if(Build.VERSION.SDK_INT>=26)nm.createNotificationChannel(new NotificationChannel(CHANNEL,context.getString(R.string.reminders_title),NotificationManager.IMPORTANCE_HIGH));
+                ensureChannel(context);
                 for(TaskStore.Task t:store.dueAlarms(System.currentTimeMillis())){
                     Intent open=new Intent(context,TaskListActivity.class).setData(Uri.parse("etar-task:"+t.id)).putExtra("task_id",t.id);
                     PendingIntent view=PendingIntent.getActivity(context,0,open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);

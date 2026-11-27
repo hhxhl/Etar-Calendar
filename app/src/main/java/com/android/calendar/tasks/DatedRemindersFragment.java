@@ -128,7 +128,7 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
 
     private void reloadLists() {
         if (filter == null) return;
-        lists=store.lists();
+        lists=store.visibleLists();
         ArrayList<String> names=new ArrayList<>();
         names.add(getString(R.string.reminders_all));
         int position=0;

@@ -64,4 +64,16 @@
     <string name="tasks_add_list_button">添加列表</string>
     <string name="tasks_offline_list_message">离线列表不会同步到云服务，只能在手机上使用。</string>
     <string name="tasks_caldav_list_unavailable">暂未实现 CalDAV 列表同步。</string>
+    <string name="tasks_list_visible">显示事项</string>
+    <string name="tasks_list_hidden">事项未显示</string>
+    <string name="tasks_list_notifications_shared">适用于全部提醒</string>
+    <string name="tasks_delete_list">删除列表</string>
+    <string name="tasks_list_info">列表信息</string>
+    <string name="tasks_offline_list">离线列表</string>
+    <plurals name="tasks_list_reminder_count">
+        <item quantity="other">%d 提醒</item>
+    </plurals>
+    <plurals name="tasks_list_task_count">
+        <item quantity="other">%d 任务</item>
+    </plurals>
 </resources>

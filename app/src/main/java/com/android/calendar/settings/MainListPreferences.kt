@@ -222,14 +222,12 @@ class MainListPreferences : PreferenceFragmentCompat() {
             category.addPreference(Preference(requireContext()).apply {
                 key = "task_list_${list.id}"
                 title = list.name.ifBlank { getString(R.string.tasks_default_list) }
-                icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_task_outline)?.mutate()?.apply {
-                    if (list.color != 0) setColorFilter(list.color, Mode.SRC_IN)
-                }
-                setOnPreferenceClickListener {
-                    AddOfflineCalendarDialogFragment.forTaskList(list.id)
-                            .show(parentFragmentManager, "editOfflineList")
-                    true
-                }
+                icon = getCalendarIcon(
+                        if (list.color == 0) requireContext().getColor(R.color.event_center) else list.color,
+                        list.visible, true)
+                summary = if (list.visible) "" else getString(R.string.tasks_list_hidden)
+                fragment = TaskListPreferences::class.java.name
+                extras.putLong(TaskListPreferences.ARG_LIST_ID, list.id)
             })
         }
     }
