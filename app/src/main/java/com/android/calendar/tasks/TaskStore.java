@@ -30,8 +30,10 @@ public final class TaskStore extends SQLiteOpenHelper {
     }
     public static final String ACTION_TASKS_CHANGED = "com.android.calendar.tasks.CHANGED";
 
-    private void notifyChanged() {
-        TaskAlarmReceiver.schedule(appContext);
+    private void notifyChanged() { notifyChanged(true); }
+
+    private void notifyChanged(boolean alarmsChanged) {
+        if (alarmsChanged) TaskAlarmReceiver.schedule(appContext);
         com.android.calendar.Utils.sendUpdateWidgetIntent(appContext);
         appContext.sendBroadcast(new android.content.Intent(ACTION_TASKS_CHANGED)
                 .setPackage(appContext.getPackageName()));
@@ -123,24 +125,24 @@ public final class TaskStore extends SQLiteOpenHelper {
         ContentValues v = new ContentValues();
         v.put("visible", visible ? 1 : 0);
         if (getWritableDatabase().update("tasklists", v, "_id=?", new String[]{Long.toString(id)}) > 0)
-            notifyChanged();
+            notifyChanged(false);
     }
     public void setListColor(long id, int color) {
         ContentValues v = new ContentValues();
         v.put("list_color", color);
         if (getWritableDatabase().update("tasklists", v, "_id=?", new String[]{Long.toString(id)}) > 0)
-            notifyChanged();
+            notifyChanged(false);
     }
     public long addList(String name) {
         ContentValues v = new ContentValues(); v.put("list_name",name.trim());
         long id = getWritableDatabase().insertOrThrow("tasklists",null,v);
-        notifyChanged();
+        notifyChanged(false);
         return id;
     }
     public void renameList(long id,String name) {
         ContentValues v = new ContentValues(); v.put("list_name",name.trim());
         getWritableDatabase().update("tasklists",v,"_id=?",new String[]{Long.toString(id)});
-        notifyChanged();
+        notifyChanged(false);
     }
     public void deleteList(long id) {
         if (id == 1) return;

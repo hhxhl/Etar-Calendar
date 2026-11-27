@@ -27,11 +27,13 @@ public final class UndatedTasksFragment extends Fragment implements CalendarCont
     private TaskAdapter adapter;
     private long listId;
     private TaskStore store;
+    private TaskListLoader<TaskStore.Task> loader;
     private final List<TaskStore.Task> rows = new ArrayList<>();
 
     @Override public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle state) {
         Context context = requireContext();
         store = TaskStore.get(context);
+        loader = new TaskListLoader<>(store);
         if (state != null) listId = state.getLong("list_id");
         LinearLayout root = new LinearLayout(context);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -45,7 +47,7 @@ public final class UndatedTasksFragment extends Fragment implements CalendarCont
 
     @Override public void onResume() {
         super.onResume();
-        reloadLists();
+        loader.start();
         refresh(true);
     }
 
@@ -54,23 +56,19 @@ public final class UndatedTasksFragment extends Fragment implements CalendarCont
         super.onSaveInstanceState(out);
     }
 
+    @Override public void onPause() {
+        if (loader != null) loader.stop();
+        super.onPause();
+    }
+
     @Override public void onDestroyView() {
+        if (loader != null) loader.close();
+        loader = null;
         list = null;
         filter = null;
         adapter = null;
         rows.clear();
         super.onDestroyView();
-    }
-
-    private void reloadLists() {
-        if (filter == null) return;
-        listId = TaskListUi.bindFilter(filter, store.visibleLists(), R.string.tasks_all, listId,
-                selected -> {
-                    if (selected != listId) {
-                        listId = selected;
-                        refresh(false);
-                    }
-                });
     }
 
     public long getListId() { return listId; }
@@ -82,12 +80,28 @@ public final class UndatedTasksFragment extends Fragment implements CalendarCont
     }
 
     private void refresh(boolean preservePosition) {
+        if (loader == null || list == null || !isAdded()) return;
+        loader.request(listId, store::visibleUndatedTasks, result -> {
+            if (list == null || !isAdded()) return;
+            listId = result.selected;
+            TaskListUi.bindFilter(filter, result.lists, R.string.tasks_all, listId, selected -> {
+                if (selected != listId) {
+                    listId = selected;
+                    refresh(false);
+                }
+            });
+            render(result.items, preservePosition);
+        }, () -> android.widget.Toast.makeText(requireContext(),
+                R.string.tasks_load_failed, android.widget.Toast.LENGTH_SHORT).show());
+    }
+
+    private void render(List<TaskStore.Task> items, boolean preservePosition) {
         if (list == null || !isAdded()) return;
         int first = list.getFirstVisiblePosition();
         long anchor = first < rows.size() ? rows.get(first).id : -1;
         int offset = DatedListUi.topOffset(list);
         rows.clear();
-        rows.addAll(store.visibleUndatedTasks(listId));
+        rows.addAll(items);
         adapter.notifyDataSetChanged();
         if (!preservePosition) {
             list.setSelection(0);
@@ -113,7 +127,7 @@ public final class UndatedTasksFragment extends Fragment implements CalendarCont
         }
 
         void bind(TaskStore.Task task) {
-            TaskListUi.bindRow(layout.root, done, title, task, store, () -> refresh(true));
+            TaskListUi.bindRow(layout.root, done, title, task, store, null);
         }
     }
 
@@ -158,7 +172,6 @@ public final class UndatedTasksFragment extends Fragment implements CalendarCont
     }
 
     @Override public void eventsChanged() {
-        reloadLists();
         refresh(true);
     }
 }

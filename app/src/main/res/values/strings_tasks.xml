@@ -84,4 +84,5 @@
     <string name="agenda_search_next_range">Search later dates</string>
     <string name="agenda_search_enter_query">Enter a search term</string>
     <string name="agenda_search_no_results">No matching events in this date range</string>
+    <string name="tasks_load_failed">Unable to load reminders and tasks</string>
 </resources>

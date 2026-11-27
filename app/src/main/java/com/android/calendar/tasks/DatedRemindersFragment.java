@@ -39,6 +39,9 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
     private LocalDate topDay;
     private boolean binding;
     private boolean firstResume = true;
+    private TaskListLoader<DatedItemsRepository.Item<TaskStore.Task>> loader;
+    private List<DatedItemsRepository.Item<TaskStore.Task>> loadedItems = new ArrayList<>();
+    private LocalDate pendingScroll;
     private LocalDate initialDate;
     private static final class Row {
         final LocalDate day;
@@ -55,6 +58,7 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
     @Override public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle state) {
         Context context = requireContext();
         store = TaskStore.get(context);
+        loader = new TaskListLoader<>(store);
         controller = CalendarController.getInstance(requireActivity());
         firstResume = true;
         initialDate = Instant.ofEpochMilli(controller.getTime()).atZone(zone()).toLocalDate();
@@ -69,33 +73,29 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
         adapter = new ReminderAdapter();
         list = DatedListUi.createList(context, adapter);
         list.setOnItemClickListener((parent, view, position, id) -> {
+            if (position < 0 || position >= rows.size()) return;
             Row row = rows.get(position);
             if (row.completedCount >= 0) {
                 showCompleted = !showCompleted;
-                refresh(true);
+                render(loadedItems, true);
             } else if (row.task != null) {
                 TaskCalendarUi.openTask(requireContext(), row.task.id);
             }
         });
         root.addView(list,new LinearLayout.LayoutParams(-1,0,1));
-        reloadLists();
         DatedListUi.listenToScroll(list, this::updateScrolledTitle);
-        refresh(false);
-        scrollTo(initialDate);
+        pendingScroll = initialDate;
         return root;
     }
 
     @Override public void onResume() {
         super.onResume();
-        reloadLists();
+        loader.start();
         if (firstResume) {
             firstResume = false;
-            refresh(false);
-            scrollTo(initialDate);
-        } else {
-            refresh(true);
+            pendingScroll = initialDate;
         }
-        TaskAlarmReceiver.schedule(requireContext());
+        refresh(true);
     }
 
     @Override public void onSaveInstanceState(Bundle state) {
@@ -104,20 +104,40 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
         super.onSaveInstanceState(state);
     }
 
+    @Override public void onPause() {
+        if (loader != null) loader.stop();
+        super.onPause();
+    }
+
     @Override public void onDestroyView() {
+        if (loader != null) loader.close();
+        loader = null;
+        loadedItems = new ArrayList<>();
         list=null; filter=null; adapter=null; rows.clear();
         super.onDestroyView();
     }
 
-    private void reloadLists() {
-        if (filter == null) return;
-        listId = TaskListUi.bindFilter(filter, store.visibleLists(), R.string.reminders_all,
-                listId, selected -> {
-                    if (listId != selected) {
-                        listId = selected;
-                        refresh(true);
-                    }
-                });
+    private void refresh(boolean preservePosition) {
+        if (loader == null || list == null || !isAdded()) return;
+        ZoneId queryZone = zone();
+        loader.request(listId, id -> DatedItemsRepository.reminders(store, id, queryZone), result -> {
+            if (list == null || !isAdded()) return;
+            listId = result.selected;
+            TaskListUi.bindFilter(filter, result.lists, R.string.reminders_all, listId, selected -> {
+                if (listId != selected) {
+                    listId = selected;
+                    refresh(true);
+                }
+            });
+            loadedItems = result.items;
+            render(loadedItems, preservePosition);
+            if (pendingScroll != null) {
+                LocalDate target = pendingScroll;
+                pendingScroll = null;
+                scrollTo(target);
+            }
+        }, () -> android.widget.Toast.makeText(requireContext(),
+                R.string.tasks_load_failed, android.widget.Toast.LENGTH_SHORT).show());
     }
 
     private void appendDays(List<DatedItemsRepository.Item<TaskStore.Task>> tasks, boolean includeToday) {
@@ -125,14 +145,14 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
                 date -> new Row(date, null, -1), item -> new Row(item.day, item.value, -1));
     }
 
-    private void refresh(boolean preservePosition) {
+    private void render(List<DatedItemsRepository.Item<TaskStore.Task>> items, boolean preservePosition) {
         if (list == null || !isAdded()) return;
         int first=list.getFirstVisiblePosition();
         Row previousRow=first<rows.size()?rows.get(first):null;
         LocalDate previous=previousRow==null?null:previousRow.day;
         int offset=DatedListUi.topOffset(list);
         List<DatedItemsRepository.Item<TaskStore.Task>> pending = new ArrayList<>(), completed = new ArrayList<>();
-        for (DatedItemsRepository.Item<TaskStore.Task> item : DatedItemsRepository.reminders(store, listId, zone())) {
+        for (DatedItemsRepository.Item<TaskStore.Task> item : items) {
             (item.value.done ? completed : pending).add(item);
         }
         binding=true;
@@ -193,7 +213,8 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
         if(event.eventType==CalendarController.EventType.GO_TO && list!=null && event.startTime!=null){
             LocalDate target=Instant.ofEpochMilli(event.startTime.toMillis()).atZone(zone()).toLocalDate();
             if(firstResume)initialDate=target;
-            scrollTo(target);
+            if (rows.isEmpty()) pendingScroll = target;
+            else scrollTo(target);
         }else if(event.eventType==CalendarController.EventType.EVENTS_CHANGED)eventsChanged();
     }
     @Override public void eventsChanged(){refresh(true);}
@@ -283,7 +304,7 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
                 heading.setTextColor(DynamicThemeKt.getColor(context,"agenda_item_standard_color"));
                 heading.setBackgroundResource(DynamicThemeKt.getDrawableId(context,"agenda_item_bg_secondary"));
                 heading.setText((showCompleted?"▾ ":"▸ ")+getString(R.string.reminders_completed,row.completedCount));
-                heading.setOnClickListener(v->{showCompleted=!showCompleted;refresh(true);});
+                heading.setOnClickListener(v->{showCompleted=!showCompleted;render(loadedItems, true);});
                 return heading;
             }
             if(row.task==null){

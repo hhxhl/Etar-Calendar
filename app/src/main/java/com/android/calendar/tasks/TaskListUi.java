@@ -35,15 +35,32 @@ final class TaskListUi {
             names.add(list.name.isEmpty() ? context.getString(R.string.tasks_default_list) : list.name);
             if (list.id == selected) position = i + 1;
         }
-        ArrayAdapter<String> labels = new ArrayAdapter<>(context, android.R.layout.simple_spinner_item, names);
-        labels.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        // Keep the existing adapter if the visible sources have not changed.
+        List<Long> ids = new ArrayList<>();
+        for (TaskStore.TaskList item : lists) ids.add(item.id);
+        boolean unchanged = ids.equals(filter.getTag()) && filter.getAdapter() != null
+                && filter.getAdapter().getCount() == names.size();
+        if (unchanged) {
+            for (int i = 0; i < names.size(); i++) {
+                if (!names.get(i).equals(filter.getAdapter().getItem(i))) {
+                    unchanged = false;
+                    break;
+                }
+            }
+        }
         filter.setOnItemSelectedListener(null);
-        filter.setAdapter(labels);
-        filter.setSelection(position);
+        if (!unchanged) {
+            ArrayAdapter<String> labels = new ArrayAdapter<>(context, android.R.layout.simple_spinner_item, names);
+            labels.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            filter.setAdapter(labels);
+            filter.setTag(ids);
+        }
+        if (filter.getSelectedItemPosition() != position) filter.setSelection(position);
         filter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override public void onNothingSelected(AdapterView<?> parent) {}
             @Override public void onItemSelected(AdapterView<?> parent, View view, int p, long id) {
-                if (p >= 0 && p <= lists.size()) onSelected.accept(p == 0 ? 0 : lists.get(p - 1).id);
+                if (p >= 0 && p <= lists.size() && p == filter.getSelectedItemPosition())
+                    onSelected.accept(p == 0 ? 0 : lists.get(p - 1).id);
             }
         });
         return position == 0 ? 0 : lists.get(position - 1).id;

@@ -87,7 +87,6 @@ import com.android.calendar.settings.SettingsActivityKt;
 import com.android.calendar.settings.ViewDetailsPreferences;
 import com.android.calendar.theme.DynamicThemeKt;
 import com.android.calendar.calendarcommon2.Time;
-import com.google.android.material.datepicker.CalendarConstraints;
 import com.google.android.material.datepicker.MaterialDatePicker;
 import com.google.android.material.datepicker.MaterialPickerOnPositiveButtonClickListener;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -123,6 +122,8 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
     private Bundle mAgendaRestoreState;
     private static final int HANDLER_KEY = 0;
     private boolean taskReceiverRegistered;
+    private final Handler refreshHandler = new Handler(android.os.Looper.getMainLooper());
+    private final Runnable refreshEvents = this::dispatchEventsChanged;
     private final BroadcastReceiver taskChangeReceiver = new BroadcastReceiver() {
         @Override public void onReceive(Context context, Intent intent) {
             if (mController != null) eventsChanged();
@@ -745,6 +746,7 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
 
         mController.deregisterEventHandler(HANDLER_KEY);
         mPaused = true;
+        refreshHandler.removeCallbacks(refreshEvents);
         mHomeTime.removeCallbacks(mHomeTimeUpdater);
 
         if (!Utils.isCalendarPermissionGranted(this, false)) {
@@ -1462,15 +1464,9 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
             }
         };
 
-        CalendarConstraints calendarConstraints = new CalendarConstraints.Builder()
-                .setFirstDayOfWeek(Utils.getFirstDayOfWeekAsCalendar(this))
-                .build();
-
-        MaterialDatePicker<Long> datePickerDialog = MaterialDatePicker.Builder.datePicker()
-                .setSelection(Calendar.getInstance().getTimeInMillis())
-                .setCalendarConstraints(calendarConstraints)
-                .setTitleText(R.string.goto_date)
-                .build();
+        long selection = java.time.LocalDate.now(java.time.ZoneId.of(mTimeZone))
+                .atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli();
+        MaterialDatePicker<Long> datePickerDialog = ItemDateTimePickers.date(this, selection);
 
         datePickerDialog.addOnPositiveButtonClickListener(materialPickerOnPositiveButtonClickListener);
         datePickerDialog.show(getSupportFragmentManager(), "GoTo");
@@ -1688,7 +1684,13 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
 
     @Override
     public void eventsChanged() {
-        mController.sendEvent(this, EventType.EVENTS_CHANGED, null, null, -1, ViewType.CURRENT);
+        refreshHandler.removeCallbacks(refreshEvents);
+        refreshHandler.postDelayed(refreshEvents, 32);
+    }
+
+    private void dispatchEventsChanged() {
+        if (!mPaused && mController != null)
+            mController.sendEvent(this, EventType.EVENTS_CHANGED, null, null, -1, ViewType.CURRENT);
     }
 
     @Override
