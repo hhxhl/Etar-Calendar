@@ -1,6 +1,11 @@
 package com.android.calendar.widget;
 
 import android.content.Context;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
+import android.view.View;
+import android.widget.RemoteViews;
+import java.time.ZoneId;
 import android.os.Build;
 
 import androidx.core.content.ContextCompat;
@@ -41,6 +46,48 @@ final class WidgetHeaderUtils {
     static int dividerColor(Context context) {
         return ColorUtils.blendARGB(background(context),
                 DynamicThemeKt.getColor(context, "widget_text"), 0.28f);
+    }
+
+    static void scheduleMidnight(Context context, PendingIntent intent, ZoneId zone) {
+        long midnight = LocalDate.now(zone).plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli();
+        AlarmManager alarm = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        alarm.set(AlarmManager.RTC, midnight, intent);
+    }
+
+    static void bindGridDate(Context context, RemoteViews views, int dayId, int labelId,
+            LocalDate date, boolean today, boolean currentMonth) {
+        views.setTextViewText(dayId, String.valueOf(date.getDayOfMonth()));
+        String label = LocalizedDay.combined(context, date);
+        views.setTextViewText(labelId, label);
+        views.setViewVisibility(labelId, label.isEmpty() ? View.GONE : View.VISIBLE);
+        WidgetUtils.setThemeText(context, views, labelId, R.color.widget_live_text,
+                DynamicThemeKt.getColor(context, "month_day_number"));
+        if (today) {
+            WidgetUtils.setThemeText(context, views, dayId, R.color.widget_live_on_primary,
+                    DynamicThemeKt.getColor(context, "month_widget_today_text"));
+            views.setInt(dayId, "setBackgroundResource", WidgetUtils.usesLiveTheme(context)
+                    ? R.drawable.widget_today_live : DynamicThemeKt.getDrawableId(context, "month_widget_today_circle"));
+        } else {
+            WidgetUtils.setThemeText(context, views, dayId,
+                    currentMonth ? R.color.widget_live_text : R.color.widget_live_secondary,
+                    DynamicThemeKt.getColor(context, currentMonth ? "month_day_number" : "month_day_number_other"));
+            views.setInt(dayId, "setBackgroundResource", 0);
+        }
+    }
+
+    static void bindGridBorder(Context context, RemoteViews views, int id, boolean visible) {
+        views.setViewVisibility(id, visible ? View.VISIBLE : View.GONE);
+        if (visible) WidgetUtils.setThemeLine(context, views, id, R.color.widget_live_grid,
+                DynamicThemeKt.getColor(context, "month_grid_lines"));
+    }
+
+    static void bindOverflow(Context context, RemoteViews views, int id, int extra) {
+        views.setViewVisibility(id, extra > 0 ? View.VISIBLE : View.GONE);
+        if (extra > 0) {
+            views.setTextViewText(id, context.getString(R.string.widget_event_overflow, extra));
+            WidgetUtils.setThemeText(context, views, id, R.color.widget_live_text,
+                    DynamicThemeKt.getColor(context, "month_day_number"));
+        }
     }
 
     static String vertical(String value) {

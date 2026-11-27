@@ -106,11 +106,7 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
     protected abstract String computeTitle(Context context, long nowMillis);
 
     static PendingIntent getLaunchPendingIntentTemplate(Context context) {
-        Intent launchIntent = new Intent(context, WidgetClickActivity.class)
-                .setAction(Intent.ACTION_VIEW)
-                .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        return PendingIntent.getActivity(context, 0, launchIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE);
+        return WidgetClickActivity.launchTemplate(context);
     }
 
     static int calculateGridHeightPx(Context context, int widgetHeightDp) {
@@ -145,6 +141,13 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
     static int calculateGridHeightPxFromOptions(Context context, Bundle options) {
         int widgetHeightDp = getWidgetHeightDpFromOptions(context, options);
         return calculateGridHeightPx(context, widgetHeightDp);
+    }
+
+    static int resolveGridHeight(Context context, int widgetId, int fallback) {
+        if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return fallback;
+        int height = calculateGridHeightPxFromOptions(context,
+                AppWidgetManager.getInstance(context).getAppWidgetOptions(widgetId));
+        return height > 0 ? height : fallback;
     }
 
     static int[] calculateMaxVisibleEvents(int cellHeightPx, float density,
@@ -213,7 +216,7 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
 
     @Override
     public void onEnabled(Context context) {
-        Utils.scheduleMidnightUpdate(context, getUpdateIntent(context));
+        WidgetHeaderUtils.scheduleMidnight(context, getUpdateIntent(context), java.time.ZoneId.systemDefault());
     }
 
     @Override
@@ -291,6 +294,6 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
             appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId, getGridViewId());
         }
 
-        Utils.scheduleMidnightUpdate(context, getUpdateIntent(context));
+        WidgetHeaderUtils.scheduleMidnight(context, getUpdateIntent(context), java.time.ZoneId.systemDefault());
     }
 }

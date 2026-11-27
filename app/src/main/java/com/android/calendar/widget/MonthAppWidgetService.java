@@ -24,8 +24,6 @@ import android.appwidget.AppWidgetManager;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
-import android.net.Uri;
-import android.os.Bundle;
 import android.provider.CalendarContract.Instances;
 import android.util.Log;
 import android.view.View;
@@ -34,7 +32,6 @@ import android.widget.RemoteViewsService;
 
 import com.android.calendar.Utils;
 import com.android.calendar.calendarcommon2.Time;
-import com.android.calendar.theme.DynamicThemeKt;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -144,48 +141,18 @@ public class MonthAppWidgetService extends RemoteViewsService {
                     android.graphics.Color.TRANSPARENT);
 
             // Grid line borders
-            int gridLineColor = DynamicThemeKt.getColor(mContext, "month_grid_lines");
             int totalCells = mModel.mCells.size();
-            boolean lastColumn = (position % BaseGridWidgetProvider.DAYS_PER_WEEK == BaseGridWidgetProvider.DAYS_PER_WEEK - 1);
-            boolean lastRow = (position >= totalCells - BaseGridWidgetProvider.DAYS_PER_WEEK);
-
-            if (lastColumn) {
-                views.setViewVisibility(R.id.month_cell_border_right, View.GONE);
-            } else {
-                views.setViewVisibility(R.id.month_cell_border_right, View.VISIBLE);
-                WidgetUtils.setThemeLine(mContext, views, R.id.month_cell_border_right, R.color.widget_live_grid, gridLineColor);
-            }
-
-            if (lastRow) {
-                views.setViewVisibility(R.id.month_cell_border_bottom, View.GONE);
-            } else {
-                views.setViewVisibility(R.id.month_cell_border_bottom, View.VISIBLE);
-                WidgetUtils.setThemeLine(mContext, views, R.id.month_cell_border_bottom, R.color.widget_live_grid, gridLineColor);
-            }
+            boolean lastColumn = position % BaseGridWidgetProvider.DAYS_PER_WEEK == BaseGridWidgetProvider.DAYS_PER_WEEK - 1;
+            boolean lastRow = position >= totalCells - BaseGridWidgetProvider.DAYS_PER_WEEK;
+            WidgetHeaderUtils.bindGridBorder(mContext, views, R.id.month_cell_border_right, !lastColumn);
+            WidgetHeaderUtils.bindGridBorder(mContext, views, R.id.month_cell_border_bottom, !lastRow);
 
             // Set cell height to fill available grid space
             views.setInt(R.id.month_cell_root, "setMinimumHeight", mCellHeightPx);
 
-            // Set day number
-            views.setTextViewText(R.id.month_cell_day, String.valueOf(cell.dayNumber));
-            LocalDate localDate = Instant.ofEpochMilli(cell.timeMillis).atZone(ZoneId.systemDefault()).toLocalDate();
-            String localLabel = LocalizedDay.combined(mContext, localDate);
-            views.setTextViewText(R.id.month_cell_localized, localLabel);
-            views.setViewVisibility(R.id.month_cell_localized, localLabel.isEmpty() ? View.GONE : View.VISIBLE);
-            WidgetUtils.setThemeText(mContext, views, R.id.month_cell_localized, R.color.widget_live_text, DynamicThemeKt.getColor(mContext, "month_day_number"));
-
-            // Set text color based on current month / today status
-            if (cell.isToday) {
-                WidgetUtils.setThemeText(mContext, views, R.id.month_cell_day, R.color.widget_live_on_primary, DynamicThemeKt.getColor(mContext, "month_widget_today_text"));
-                views.setInt(R.id.month_cell_day, "setBackgroundResource", WidgetUtils.usesLiveTheme(mContext)
-                        ? R.drawable.widget_today_live : DynamicThemeKt.getDrawableId(mContext, "month_widget_today_circle"));
-            } else if (cell.isCurrentMonth) {
-                WidgetUtils.setThemeText(mContext, views, R.id.month_cell_day, R.color.widget_live_text, DynamicThemeKt.getColor(mContext, "month_day_number"));
-                views.setInt(R.id.month_cell_day, "setBackgroundResource", 0);
-            } else {
-                WidgetUtils.setThemeText(mContext, views, R.id.month_cell_day, R.color.widget_live_secondary, DynamicThemeKt.getColor(mContext, "month_day_number_other"));
-                views.setInt(R.id.month_cell_day, "setBackgroundResource", 0);
-            }
+            WidgetHeaderUtils.bindGridDate(mContext, views, R.id.month_cell_day, R.id.month_cell_localized,
+                    Instant.ofEpochMilli(cell.timeMillis).atZone(ZoneId.systemDefault()).toLocalDate(),
+                    cell.isToday, cell.isCurrentMonth);
 
             // Event chip row/bar/text IDs
             int[] rowIds = {
@@ -234,22 +201,9 @@ public class MonthAppWidgetService extends RemoteViewsService {
                 }
             }
 
-            // Show overflow indicator if more events than we can display
-            if (totalEvents > visibleCount) {
-                int extra = totalEvents - visibleCount;
-                views.setTextViewText(R.id.month_cell_overflow,
-                        mContext.getString(R.string.widget_event_overflow, extra));
-                WidgetUtils.setThemeText(mContext, views, R.id.month_cell_overflow, R.color.widget_live_text, DynamicThemeKt.getColor(mContext, "month_day_number"));
-                views.setViewVisibility(R.id.month_cell_overflow, View.VISIBLE);
-            } else {
-                views.setViewVisibility(R.id.month_cell_overflow, View.GONE);
-            }
-
-            // Set click fill-in intent for this day
-            Intent fillInIntent = new Intent();
-            fillInIntent.setData(Uri.parse("content://com.android.calendar/time/"
-                    + cell.timeMillis));
-            views.setOnClickFillInIntent(R.id.month_cell_root, fillInIntent);
+            WidgetHeaderUtils.bindOverflow(mContext, views, R.id.month_cell_overflow, totalEvents - visibleCount);
+            views.setOnClickFillInIntent(R.id.month_cell_root,
+                    WidgetClickActivity.itemIntent(0, cell.timeMillis));
 
             return views;
         }
@@ -276,14 +230,7 @@ public class MonthAppWidgetService extends RemoteViewsService {
         }
 
         private void loadData() {
-            if (mAppWidgetId != android.appwidget.AppWidgetManager.INVALID_APPWIDGET_ID) {
-                AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(mContext);
-                Bundle options = appWidgetManager.getAppWidgetOptions(mAppWidgetId);
-                int dynamicGridHeightPx = BaseGridWidgetProvider.calculateGridHeightPxFromOptions(mContext, options);
-                if (dynamicGridHeightPx > 0) {
-                    mGridHeightPx = dynamicGridHeightPx;
-                }
-            }
+            mGridHeightPx = BaseGridWidgetProvider.resolveGridHeight(mContext, mAppWidgetId, mGridHeightPx);
 
             Calendar now = Calendar.getInstance();
             int year = now.get(Calendar.YEAR);
@@ -355,22 +302,9 @@ public class MonthAppWidgetService extends RemoteViewsService {
             int offset = BaseGridWidgetProvider.getDayOfWeekOffset(firstDow, firstDayOfWeek);
             int gridStartJulianDay = monthStartJulianDay - offset;
 
-            String selection = WidgetUtils.getWidgetSelection(mContext, mAppWidgetId);
-
-            Uri uri = Uri.withAppendedPath(Instances.CONTENT_URI,
-                    Long.toString(startMillis) + "/" + Long.toString(endMillis));
-
-            Cursor cursor = null;
-            try {
-                cursor = mContext.getContentResolver().query(uri, INSTANCES_PROJECTION,
-                        selection, null, SORT_ORDER);
-                Cursor original = cursor;
-                try {
-                    cursor = WidgetTaskRows.merge(mContext, mAppWidgetId, original,
-                            INSTANCES_PROJECTION, monthStartJulianDay, monthEndJulianDay, true);
-                } finally {
-                    if (original != null) original.close();
-                }
+            try (Cursor cursor = WidgetTaskRows.queryGrid(mContext, mAppWidgetId,
+                    startMillis, endMillis, INSTANCES_PROJECTION, SORT_ORDER,
+                    monthStartJulianDay, monthEndJulianDay)) {
                 if (cursor != null) {
                     while (cursor.moveToNext()) {
                         int eventStartDay = cursor.getInt(INDEX_START_DAY);
@@ -431,10 +365,6 @@ public class MonthAppWidgetService extends RemoteViewsService {
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Error querying calendar instances", e);
-            } finally {
-                if (cursor != null) {
-                    cursor.close();
-                }
             }
 
             return eventsByDay;

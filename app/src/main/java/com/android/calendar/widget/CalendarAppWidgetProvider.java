@@ -91,12 +91,7 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
      * in combination with {@link RemoteViews#setPendingIntentTemplate(int, PendingIntent)}.
      */
     static PendingIntent getLaunchPendingIntentTemplate(Context context) {
-        Intent launchIntent = new Intent(context, WidgetClickActivity.class)
-                .setAction(Intent.ACTION_VIEW)
-                .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
-        return PendingIntent.getActivity(context, 0 /* no requestCode */, launchIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE);
+        return WidgetClickActivity.launchTemplate(context);
     }
 
     /**
@@ -363,11 +358,8 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
     }
 
     private static void scheduleHeaderUpdate(Context context) {
-        java.time.ZoneId zone = java.time.ZoneId.of(Utils.getTimeZone(context, null));
-        long midnight = java.time.LocalDate.now(zone).plusDays(1)
-                .atStartOfDay(zone).toInstant().toEpochMilli();
-        AlarmManager alarm = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        alarm.set(AlarmManager.RTC, midnight, getHeaderUpdateIntent(context));
+        WidgetHeaderUtils.scheduleMidnight(context, getHeaderUpdateIntent(context),
+                java.time.ZoneId.of(Utils.getTimeZone(context, null)));
     }
 
     public static boolean isWidgetSupported(Context context) {

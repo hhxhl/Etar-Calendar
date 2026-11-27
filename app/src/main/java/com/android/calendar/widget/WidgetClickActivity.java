@@ -1,6 +1,8 @@
 package com.android.calendar.widget;
 
 import android.app.Activity;
+import android.app.PendingIntent;
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -10,6 +12,14 @@ import com.android.calendar.tasks.TaskListActivity;
 
 /** Explicit destination for mutable collection widget PendingIntents. */
 public final class WidgetClickActivity extends Activity {
+    static PendingIntent launchTemplate(Context context) {
+        Intent launch = new Intent(context, WidgetClickActivity.class)
+                .setAction(Intent.ACTION_VIEW)
+                .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        return PendingIntent.getActivity(context, 0, launch,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE);
+    }
+
     static Intent itemIntent(long taskId, long date) {
         Intent intent = new Intent();
         if (taskId > 0) {

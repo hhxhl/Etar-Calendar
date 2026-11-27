@@ -32,7 +32,7 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-    <!-- Header with month/year title -->
+    <!-- Shared grid date title -->
     <LinearLayout
         android:id="@+id/grid_widget_header"
         android:layout_width="match_parent"
@@ -166,7 +166,7 @@
             android:textSize="11sp" />
     </LinearLayout>
 
-    <!-- Grid of day cells (4-6 weeks x 7 days , depending on month) -->
+    <!-- Grid of day cells -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="0dip"
