@@ -102,6 +102,7 @@ object WidgetUtils {
         Build.VERSION.SDK_INT >= 31 && ThemeUtils.getTheme(context) == Theme.SYSTEM
 
     // Use the same background shape and host-resolved color for every widget.
+    @Suppress("UNUSED_PARAMETER")
     @JvmStatic
     fun applyWidgetBackground(context: Context, views: android.widget.RemoteViews,
                               rootId: Int, appWidgetId: Int) {
@@ -114,8 +115,8 @@ object WidgetUtils {
             Theme.BLACK -> R.color.bg_black
         }
         val id = R.id.widget_background_image
-        views.setInt(rootId, "setBackgroundResource", 0)
-        views.setImageViewResource(id, R.drawable.widget_surface)
+        // The rounded surface is already declared in each widget layout.
+        // Replacing the white source drawable on every update can flash before tint is applied.
         if (Build.VERSION.SDK_INT >= 31) {
             // Resolve at RemoteViews application time in the host, not the provider.
             views.setColorStateList(id, "setImageTintList", color)
