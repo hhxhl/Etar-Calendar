@@ -177,6 +177,15 @@ public class CalendarAppWidgetService extends RemoteViewsService {
             return model;
         }
 
+        private CalendarAppWidgetModel buildWidgetModelWithTasks(Cursor cursor, String timeZone) {
+            CalendarAppWidgetModel model = new CalendarAppWidgetModel(mContext, timeZone);
+            try (MatrixCursor merged = WidgetTaskRows.merge(mContext, mAppWidgetId, cursor,
+                    EVENT_PROJECTION, model.mTodayJulianDay, model.mMaxJulianDay, false)) {
+                model.buildFromCursor(merged, timeZone);
+            }
+            return model;
+        }
+
         private static long getNextMidnightTimeMillis(String timezone) {
             Time time = new Time();
             time.set(System.currentTimeMillis());
@@ -239,9 +248,7 @@ public class CalendarAppWidgetService extends RemoteViewsService {
             Cursor cursor = null;
             try {
                 cursor = mContext.getContentResolver().query(uri, EVENT_PROJECTION, selection, null, EVENT_SORT_ORDER);
-                if (cursor != null) {
-                    mModel = buildAppWidgetModel(mContext, cursor, tz);
-                }
+                mModel = buildWidgetModelWithTasks(cursor, tz);
             } catch (Exception e) {
                 Log.e(TAG, "Error loading events for widget " + mAppWidgetId, e);
             } finally {
@@ -342,7 +349,7 @@ public class CalendarAppWidgetService extends RemoteViewsService {
                     updateTextView(views, R.id.when, eventInfo.visibWhen, eventInfo.when);
                     updateTextView(views, R.id.where, eventInfo.visibWhere, eventInfo.where);
                 }
-                String countdown = com.android.calendar.EventCountdown.widgetLabel(mContext, eventInfo.id, eventInfo.start);
+                String countdown = eventInfo.id < -1 ? "" : com.android.calendar.EventCountdown.widgetLabel(mContext, eventInfo.id, eventInfo.start);
                 String displayTitle = countdown.isEmpty() ? eventInfo.title : eventInfo.title + " · " + countdown;
                 updateTextView(views, R.id.title, eventInfo.visibTitle, displayTitle);
 
@@ -548,7 +555,7 @@ public class CalendarAppWidgetService extends RemoteViewsService {
                 // Copy it to a local static cursor.
                 MatrixCursor matrixCursor = Utils.matrixCursorFromCursor(cursor);
                 try {
-                    mModel = buildAppWidgetModel(mContext, matrixCursor, tz);
+                    mModel = buildWidgetModelWithTasks(matrixCursor, tz);
                 } finally {
                     if (matrixCursor != null) {
                         matrixCursor.close();

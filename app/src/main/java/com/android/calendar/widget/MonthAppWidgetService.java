@@ -65,6 +65,7 @@ public class MonthAppWidgetService extends RemoteViewsService {
                 Instances.TITLE,
                 Instances.END_DAY,
                 Instances.ALL_DAY,
+                Instances.START_MINUTE,
         };
         private static final int INDEX_START_DAY = 0;
         private static final int INDEX_DISPLAY_COLOR = 1;
@@ -386,6 +387,13 @@ public class MonthAppWidgetService extends RemoteViewsService {
             try {
                 cursor = mContext.getContentResolver().query(uri, INSTANCES_PROJECTION,
                         selection, null, SORT_ORDER);
+                Cursor original = cursor;
+                try {
+                    cursor = WidgetTaskRows.merge(mContext, mAppWidgetId, original,
+                            INSTANCES_PROJECTION, monthStartJulianDay, monthEndJulianDay, true);
+                } finally {
+                    if (original != null) original.close();
+                }
                 if (cursor != null) {
                     while (cursor.moveToNext()) {
                         int eventStartDay = cursor.getInt(INDEX_START_DAY);

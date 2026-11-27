@@ -40,6 +40,21 @@ object WidgetUtils {
 
     private const val PREF_KEY_PREFIX = "widget_calendars_"
     private const val OPACITY_KEY_PREFIX = "widget_background_opacity_"
+    private const val TASK_LIST_KEY_PREFIX = "widget_task_lists_"
+
+    @JvmStatic
+    fun getWidgetTaskListIds(context: Context, appWidgetId: Int): Set<String>? {
+        if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return null
+        val prefs = CalendarUtils.getSharedPreferences(context, Utils.SHARED_PREFS_NAME)
+        return prefs.getStringSet(TASK_LIST_KEY_PREFIX + appWidgetId, null)
+    }
+
+    fun saveWidgetTaskListIds(context: Context, appWidgetId: Int, ids: Set<String>) {
+        if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return
+        CalendarUtils.getSharedPreferences(context, Utils.SHARED_PREFS_NAME).edit {
+            putStringSet(TASK_LIST_KEY_PREFIX + appWidgetId, ids)
+        }
+    }
 
     fun getWidgetCalendarIds(context: Context, appWidgetId: Int): Set<String>? {
         if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
@@ -65,6 +80,7 @@ object WidgetUtils {
         prefs.edit {
             remove(PREF_KEY_PREFIX + appWidgetId)
             remove(OPACITY_KEY_PREFIX + appWidgetId)
+            remove(TASK_LIST_KEY_PREFIX + appWidgetId)
         }
     }
 
@@ -146,11 +162,12 @@ object WidgetUtils {
         }
 
         val calendarIds = getWidgetCalendarIds(context, appWidgetId)
-        return if (!calendarIds.isNullOrEmpty()) {
-            val ids = calendarIds.joinToString(",")
-            "$baseSelection AND ${Instances.CALENDAR_ID} IN ($ids)"
-        } else {
+        return if (calendarIds == null) {
             baseSelection
+        } else {
+            val ids = calendarIds.mapNotNull { it.toLongOrNull() }.joinToString(",")
+            if (ids.isEmpty()) "$baseSelection AND 0=1"
+            else "$baseSelection AND ${Instances.CALENDAR_ID} IN ($ids)"
         }
     }
 
@@ -182,6 +199,11 @@ object WidgetUtils {
         putExtra(CalendarContract.EXTRA_EVENT_ALL_DAY, false)
         putExtra(CalendarContract.Events.CALENDAR_ID, -1L)
     }
+
+    fun getAddReminderIntent(context: Context): Intent =
+        Intent(context, com.android.calendar.tasks.TaskListActivity::class.java).apply {
+            putExtra("new_task", true)
+        }
 
     @JvmStatic
     fun getMenuPendingIntent(context: Context, appWidgetId: Int): PendingIntent {

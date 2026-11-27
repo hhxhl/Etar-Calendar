@@ -108,6 +108,11 @@ public final class TaskCalendarUi {
 
     /** Project dated tasks into the existing display model; never write them to CalendarProvider. */
     public static void append(Context context, ArrayList<Event> events, int firstDay, int lastDay) {
+        append(context, events, firstDay, lastDay, null, false);
+    }
+
+    public static void append(Context context, ArrayList<Event> events, int firstDay, int lastDay,
+            java.util.Set<String> listIds, boolean rawColor) {
         if (lastDay < firstDay) return;
         ZoneId zone = ZoneId.of(Utils.getTimeZone(context, null));
         LocalDate first = LocalDate.ofEpochDay(firstDay - JULIAN_EPOCH);
@@ -120,6 +125,7 @@ public final class TaskCalendarUi {
         HashMap<Long, Integer> colors = new HashMap<>();
         for (TaskStore.TaskList list : store.lists()) colors.put(list.id, list.color);
         for (TaskStore.Task task : store.datedTasks(from, until, utcFrom, utcUntil)) {
+            if (listIds != null && !listIds.contains(Long.toString(task.listId))) continue;
             Event item = Event.newInstance();
             item.taskId = task.id;
             // Negative identity is reserved for tasks in the display model only.
@@ -130,7 +136,7 @@ public final class TaskCalendarUi {
             item.isRepeating = task.rule != null;
             int color = colors.getOrDefault(task.listId, 0);
             item.color = color == 0 ? context.getColor(R.color.event_center)
-                    : Utils.getDisplayColorFromColor(context, color);
+                    : rawColor ? color : Utils.getDisplayColorFromColor(context, color);
             ZonedDateTime date = Instant.ofEpochMilli(task.due).atZone(task.allDay ? ZoneOffset.UTC : zone);
             item.startDay = item.endDay = (int) (date.toLocalDate().toEpochDay() + JULIAN_EPOCH);
             item.startMillis = task.due;

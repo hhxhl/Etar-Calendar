@@ -361,6 +361,13 @@ public class WeekAppWidgetService extends RemoteViewsService {
             try {
                 cursor = mContext.getContentResolver().query(uri, INSTANCES_PROJECTION,
                         selection, null, SORT_ORDER);
+                Cursor original = cursor;
+                try {
+                    cursor = WidgetTaskRows.merge(mContext, mAppWidgetId, original,
+                            INSTANCES_PROJECTION, weekStartJulianDay, weekStartJulianDay + BaseGridWidgetProvider.DAYS_PER_WEEK - 1, true);
+                } finally {
+                    if (original != null) original.close();
+                }
                 if (cursor != null) {
                     while (cursor.moveToNext()) {
                         String title = cursor.getString(INDEX_TITLE);

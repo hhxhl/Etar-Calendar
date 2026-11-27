@@ -106,6 +106,12 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
     static Intent getLaunchFillInIntent(Context context, long id, long start, long end,
                                         boolean allDay) {
         final Intent fillInIntent = new Intent();
+        if (id < -1) {
+            fillInIntent.setClass(context, com.android.calendar.tasks.TaskListActivity.class);
+            fillInIntent.setData(Uri.parse("etar-task:" + (-id - 1)));
+            fillInIntent.putExtra("task_id", -id - 1);
+            return fillInIntent;
+        }
         String dataString = "content://com.android.calendar/events";
         if (id != 0) {
             fillInIntent.putExtra(Utils.INTENT_KEY_DETAIL_VIEW, true);

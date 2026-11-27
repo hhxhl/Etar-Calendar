@@ -21,7 +21,14 @@ public final class TaskStore extends SQLiteOpenHelper {
         if (instance == null) instance = new TaskStore(context.getApplicationContext());
         return instance;
     }
-    private TaskStore(Context context) { super(context, "tasks.db", null, 1); }
+    private final Context appContext;
+    private TaskStore(Context context) {
+        super(context, "tasks.db", null, 1);
+        appContext = context.getApplicationContext();
+    }
+    private void refreshWidgets() {
+        com.android.calendar.Utils.sendUpdateWidgetIntent(appContext);
+    }
     @Override public void onConfigure(SQLiteDatabase db) { db.setForeignKeyConstraintsEnabled(true); }
     @Override public void onCreate(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE tasklists (_id INTEGER PRIMARY KEY, account_name TEXT NOT NULL DEFAULT 'Local', account_type TEXT NOT NULL DEFAULT 'org.dmfs.account.LOCAL', list_name TEXT NOT NULL, list_color INTEGER NOT NULL DEFAULT 0, visible INTEGER NOT NULL DEFAULT 1, sync_enabled INTEGER NOT NULL DEFAULT 0, _sync_id TEXT, sync_version TEXT)");
@@ -59,14 +66,17 @@ public final class TaskStore extends SQLiteOpenHelper {
     }
     public long addList(String name) {
         ContentValues v = new ContentValues(); v.put("list_name",name.trim());
-        return getWritableDatabase().insertOrThrow("tasklists",null,v);
+        long id = getWritableDatabase().insertOrThrow("tasklists",null,v);
+        refreshWidgets();
+        return id;
     }
     public void renameList(long id,String name) {
         ContentValues v = new ContentValues(); v.put("list_name",name.trim());
         getWritableDatabase().update("tasklists",v,"_id=?",new String[]{Long.toString(id)});
+        refreshWidgets();
     }
     public void deleteList(long id) {
-        if (id != 1) getWritableDatabase().delete("tasklists","_id=?",new String[]{Long.toString(id)});
+        if (id != 1 && getWritableDatabase().delete("tasklists","_id=?",new String[]{Long.toString(id)}) > 0) refreshWidgets();
     }
     private static final String SELECT = "SELECT t._id,t.list_id,t.title,t.description,t.due,t.dtstart,t.is_allday,t.tz,t.status,t.priority,t.rrule, EXISTS(SELECT 1 FROM properties p WHERE p.task_id=t._id AND p.mimetype='vnd.android.cursor.item/alarm') FROM tasks t WHERE t._deleted=0";
     private static Task read(Cursor c) {
@@ -109,10 +119,14 @@ public final class TaskStore extends SQLiteOpenHelper {
             if(t.alarm && t.due!=null && !t.allDay) {
                 ContentValues a=new ContentValues(); a.put("task_id",t.id); a.put("mimetype","vnd.android.cursor.item/alarm"); a.put("data0",0); a.put("data1",1); a.put("data3",1); db.insertOrThrow("properties",null,a);
             }
-            db.setTransactionSuccessful(); return t.id;
+            db.setTransactionSuccessful();
         } finally {db.endTransaction();}
+        refreshWidgets();
+        return t.id;
     }
-    public void delete(long id) { getWritableDatabase().delete("tasks","_id=?",new String[]{Long.toString(id)}); }
+    public void delete(long id) {
+        if (getWritableDatabase().delete("tasks","_id=?",new String[]{Long.toString(id)}) > 0) refreshWidgets();
+    }
     /** Preset recurrence: preserve original day-of-month and wall-clock time. */
     static Long nextDue(Task t) {
         if(t.due==null || t.rule==null) return null;
@@ -143,6 +157,7 @@ public final class TaskStore extends SQLiteOpenHelper {
             v.put("last_modified",System.currentTimeMillis());v.put("_dirty",1);v.putNull("alarm_fired");
             db.update("tasks",v,"_id=?",new String[]{Long.toString(id)});db.setTransactionSuccessful();
         } finally {db.endTransaction();}
+        refreshWidgets();
     }
     private static final String ALARMS=" FROM tasks t WHERE t._deleted=0 AND t.status=0 AND t.is_allday=0 AND t.due IS NOT NULL AND t.alarm_fired IS NULL AND EXISTS(SELECT 1 FROM properties p WHERE p.task_id=t._id AND p.mimetype='vnd.android.cursor.item/alarm')";
     public Long nextAlarm() {
