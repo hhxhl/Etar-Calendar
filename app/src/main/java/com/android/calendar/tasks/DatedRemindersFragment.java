@@ -340,7 +340,7 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
             String when=task.allDay?getString(R.string.reminders_all_day):Utils.formatDateRange(context,task.due,task.due,DateUtils.FORMAT_SHOW_TIME);
             boolean overdue=!task.done && (task.allDay?row.day.isBefore(LocalDate.now(zone())):task.due<System.currentTimeMillis());
             subtitle.setText(overdue?when+" · "+getString(R.string.reminders_overdue):when);
-            if(overdue)subtitle.setTextColor(com.google.android.material.color.MaterialColors.getColor(context,com.google.android.material.R.attr.colorError,subtitle.getCurrentTextColor()));
+            if(overdue)subtitle.setTextColor(com.google.android.material.color.MaterialColors.getColor(context,androidx.appcompat.R.attr.colorError,subtitle.getCurrentTextColor()));
             details.addView(subtitle);
             item.addView(details,new LinearLayout.LayoutParams(0,-2,1));
             if(task.alarm){
