@@ -280,6 +280,12 @@ public class Utils {
             }
         }
 
+        return getPreferredStartView(activity);
+    }
+
+    /** Resolves the general default-view preference independently of launch intent extras. */
+    public static int getPreferredStartView(Context context) {
+        SharedPreferences prefs = GeneralPreferences.Companion.getSharedPreferences(context);
         // Check if the user wants the last view or the default startup view
         int defaultStart = Integer.parseInt(prefs.getString(GeneralPreferences.KEY_DEFAULT_START,
                 GeneralPreferences.DEFAULT_DEFAULT_START));

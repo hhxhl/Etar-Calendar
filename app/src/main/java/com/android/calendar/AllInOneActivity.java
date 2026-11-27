@@ -917,9 +917,9 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         getMenuInflater().inflate(R.menu.all_in_one_title_bar, menu);
         View switchButton = menu.findItem(R.id.action_view_switch).getActionView();
         if (switchButton != null) {
-            switchButton.setOnClickListener(v -> cycleCalendarView(false));
+            switchButton.setOnClickListener(v -> switchToDefaultView());
             switchButton.setOnLongClickListener(v -> {
-                cycleCalendarView(true);
+                showViewSelectionMenu(v);
                 return true;
             });
         }
@@ -1004,41 +1004,43 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         }
     }
 
+    private MenuItem navigationItemForView(int viewType) {
+        for (int i = 0; i < NAVIGATION_VIEWS.length; i++) {
+            if (NAVIGATION_VIEWS[i] == viewType) {
+                return mNavigationView.getMenu().findItem(NAVIGATION_ITEMS[i]);
+            }
+        }
+        return null;
+    }
+
+    private android.graphics.drawable.Drawable viewNavigationIcon(MenuItem item) {
+        android.graphics.drawable.Drawable icon = item.getIcon();
+        if (icon == null) return null;
+        android.graphics.drawable.Drawable.ConstantState state = icon.getConstantState();
+        if (state == null) return null;
+        android.graphics.drawable.Drawable copy = state.newDrawable(getResources(), getTheme()).mutate();
+        int normal = com.google.android.material.color.MaterialColors.getColor(
+                this, androidx.appcompat.R.attr.colorControlNormal,
+                android.graphics.Color.BLACK);
+        copy.setTint(normal);
+        return copy;
+    }
+
     private void updateViewSwitchButtons() {
         if (mOptionsMenu == null) return;
 
         boolean enabled = Utils.getSharedPreference(this,
                 GeneralPreferences.KEY_VIEW_SWITCH_BUTTONS, false);
         MenuItem switchItem = mOptionsMenu.findItem(R.id.action_view_switch);
-        int iconRes;
-        int titleRes;
-        switch (mCurrentView) {
-            case ViewType.DAY:
-                iconRes = R.drawable.ic_toolbar_view_day;
-                titleRes = R.string.day_view;
-                break;
-            case ViewType.WEEK:
-                iconRes = R.drawable.ic_toolbar_view_week;
-                titleRes = R.string.week_view;
-                break;
-            case ViewType.MONTH:
-                iconRes = R.drawable.ic_toolbar_view_month;
-                titleRes = R.string.month_view;
-                break;
-            default:
-                iconRes = 0;
-                titleRes = 0;
-                break;
-        }
-
-        boolean showSwitch = enabled && iconRes != 0;
+        MenuItem currentItem = navigationItemForView(mCurrentView);
+        boolean showSwitch = enabled && currentItem != null;
         if (switchItem != null) {
             switchItem.setVisible(showSwitch);
             if (showSwitch) {
-                switchItem.setTitle(titleRes);
+                switchItem.setTitle(currentItem.getTitle());
                 if (switchItem.getActionView() instanceof AppCompatImageButton button) {
-                    button.setImageResource(iconRes);
-                    button.setContentDescription(getString(titleRes));
+                    button.setImageDrawable(viewNavigationIcon(currentItem));
+                    button.setContentDescription(currentItem.getTitle());
                 }
             }
         }
@@ -1051,22 +1053,33 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         }
     }
 
-    private void cycleCalendarView(boolean skipOne) {
-        int nextView;
-        switch (mCurrentView) {
-            case ViewType.DAY:
-                nextView = skipOne ? ViewType.MONTH : ViewType.WEEK;
-                break;
-            case ViewType.WEEK:
-                nextView = skipOne ? ViewType.DAY : ViewType.MONTH;
-                break;
-            case ViewType.MONTH:
-                nextView = skipOne ? ViewType.WEEK : ViewType.DAY;
-                break;
-            default:
-                return;
+    private void switchToDefaultView() {
+        navigateToView(Utils.getPreferredStartView(this));
+    }
+
+    private void showViewSelectionMenu(View anchor) {
+        androidx.appcompat.widget.PopupMenu popup =
+                new androidx.appcompat.widget.PopupMenu(this, anchor, android.view.Gravity.END);
+        popup.setForceShowIcon(true);
+        Menu menu = popup.getMenu();
+        final int group = 1;
+        for (int i = 0; i < NAVIGATION_VIEWS.length; i++) {
+            MenuItem source = mNavigationView.getMenu().findItem(NAVIGATION_ITEMS[i]);
+            if (source == null) continue;
+            MenuItem item = menu.add(group, NAVIGATION_ITEMS[i], i, source.getTitle());
+            item.setIcon(viewNavigationIcon(source));
         }
-        switchToView(nextView);
+        menu.setGroupCheckable(group, true, true);
+        MenuItem current = navigationItemForView(mCurrentView);
+        if (current != null) {
+            MenuItem selected = menu.findItem(current.getItemId());
+            if (selected != null) selected.setChecked(true);
+        }
+        popup.setOnMenuItemClickListener(item -> {
+            navigateToView(navigationView(item.getItemId()));
+            return true;
+        });
+        popup.show();
     }
 
     @Override
@@ -1085,7 +1098,7 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
             mController.sendEvent(this, EventType.GO_TO, t, null, t, -1, viewType, extras, null, null);
             return true;
         } else if (itemId == R.id.action_view_switch) {
-            cycleCalendarView(false);
+            switchToDefaultView();
             return true;
         } else if (itemId == R.id.action_goto) {
             goToDate();
@@ -1156,6 +1169,18 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         return -1;
     }
 
+    // All view entry points share the same date and task-navigation behavior.
+    private void navigateToView(int viewType) {
+        if (viewType == mCurrentView || navigationItemForView(viewType) == null) return;
+        if (isTaskView(viewType)) {
+            Time today = new Time(mTimeZone);
+            today.set(System.currentTimeMillis());
+            mController.sendEvent(this, EventType.GO_TO, today, today, -1, viewType);
+        } else {
+            switchToView(viewType);
+        }
+    }
+
     private void selectNavigationView(int viewType) {
         int selected = R.id.week_menu_item;
         for (int i = 0; i < NAVIGATION_VIEWS.length; i++) {
@@ -1170,13 +1195,7 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         int itemId = item.getItemId();
         int view = navigationView(itemId);
         if (view != -1) {
-            if (mCurrentView != view) {
-                if (isTaskView(view)) {
-                    Time today = new Time(mTimeZone);
-                    today.set(System.currentTimeMillis());
-                    mController.sendEvent(this, EventType.GO_TO, today, today, -1, view);
-                } else switchToView(view);
-            }
+            navigateToView(view);
         } else if (itemId == R.id.action_settings) {
             mController.sendEvent(this, EventType.LAUNCH_SETTINGS, null, null, 0, 0);
         } else if (itemId == R.id.action_about) {
