@@ -574,7 +574,6 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
     protected final Drawable mCurrentTimeAnimateLine;
     protected final Drawable mExpandAlldayDrawable;
     protected final Drawable mCollapseAlldayDrawable;
-    protected Drawable mAcceptedOrTentativeEventBoxDrawable;
     private final DeleteEventHelper mDeleteEventHelper;
     private static int sCounter = 0;
 
@@ -752,7 +751,6 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         mCurrentTimeAnimateLine = ResourcesCompat.getDrawable(mResources, R.drawable.timeline_indicator_activated_holo_light, null);
         mExpandAlldayDrawable = ResourcesCompat.getDrawable(mResources, R.drawable.ic_expand_holo_light, null);
         mCollapseAlldayDrawable = ResourcesCompat.getDrawable(mResources, R.drawable.ic_collapse_holo_light, null);
-        mAcceptedOrTentativeEventBoxDrawable = ResourcesCompat.getDrawable(mResources, R.drawable.panel_month_event_holo_light, null);
 
         mEventLoader = eventLoader;
         mEventGeometry = new EventGeometry();
