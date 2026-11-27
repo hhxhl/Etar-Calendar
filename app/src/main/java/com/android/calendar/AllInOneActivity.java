@@ -542,9 +542,18 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
                 menu.getMenu().add(0, 1, 0, R.string.tasks_create_event_type);
                 menu.getMenu().add(0, 2, 1, R.string.tasks_title);
                 menu.setOnMenuItemClickListener(item -> {
-                    if (item.getItemId() == 1) {
+                    com.android.calendar.tasks.TaskCalendarUi.Selection selected =
+                            com.android.calendar.tasks.TaskCalendarUi.selection(mController);
+                    long millis = mController.getTime();
+                    boolean allDay = false;
+                    boolean timed = false;
+                    if (selected != null) {
+                        millis = selected.time;
+                        allDay = selected.allDay;
+                        timed = mCurrentView == ViewType.DAY || mCurrentView == ViewType.WEEK;
+                    } else {
                         Time t = new Time();
-                        t.set(mController.getTime());
+                        t.set(millis);
                         t.setSecond(0);
                         if (t.getMinute() > 30) {
                             t.setHour(t.getHour() + 1);
@@ -552,17 +561,10 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
                         } else if (t.getMinute() > 0 && t.getMinute() < 30) {
                             t.setMinute(30);
                         }
-                        mController.sendEventRelatedEvent(this, EventType.CREATE_EVENT,
-                                -1, t.toMillis(), 0, 0, 0, -1);
-                    } else {
-                        Intent intent = new Intent(AllInOneActivity.this,
-                                com.android.calendar.tasks.TaskListActivity.class);
-                        if (item.getItemId() == 2) {
-                            intent.putExtra("new_task", true);
-                            intent.putExtra("date", mController.getTime());
-                        }
-                        startActivity(intent);
+                        millis = t.toMillis();
                     }
+                    com.android.calendar.tasks.TaskCalendarUi.create(AllInOneActivity.this,
+                            mController, millis, allDay, timed, item.getItemId() == 2);
                     return true;
                 });
                 menu.show();
@@ -673,6 +675,8 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         invalidateOptionsMenu();
 
         mCalIntentReceiver = Utils.setTimeChangesReceiver(this, mTimeChangesUpdater);
+        // Local tasks are not part of CalendarProvider's observer stream.
+        eventsChanged();
     }
 
 
@@ -1027,6 +1031,13 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
         final int itemId = item.getItemId();
+        if (itemId == R.id.day_menu_item || itemId == R.id.week_menu_item || itemId == R.id.month_menu_item) {
+            mNavigationView.getMenu().findItem(R.id.agenda_menu_item).setChecked(false);
+        } else if (itemId == R.id.agenda_menu_item) {
+            mNavigationView.getMenu().findItem(R.id.day_menu_item).setChecked(false);
+            mNavigationView.getMenu().findItem(R.id.week_menu_item).setChecked(false);
+            mNavigationView.getMenu().findItem(R.id.month_menu_item).setChecked(false);
+        }
         if (itemId == R.id.day_menu_item) {
             if (mCurrentView != ViewType.DAY) {
                 switchToView(ViewType.DAY);

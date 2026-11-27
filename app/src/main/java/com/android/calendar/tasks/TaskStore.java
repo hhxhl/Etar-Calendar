@@ -83,6 +83,15 @@ public final class TaskStore extends SQLiteOpenHelper {
         }
         return result;
     }
+    public List<Task> datedTasks(long from,long until,long utcFrom,long utcUntil) {
+        ArrayList<Task> result=new ArrayList<>();
+        String where=" AND ((t.is_allday=0 AND t.due>=? AND t.due<?) OR (t.is_allday=1 AND t.due>=? AND t.due<?)) AND EXISTS(SELECT 1 FROM tasklists l WHERE l._id=t.list_id AND l.visible=1)";
+        try(Cursor c=getReadableDatabase().rawQuery(SELECT+where+" ORDER BY t.due,t._id",
+                new String[]{Long.toString(from),Long.toString(until),Long.toString(utcFrom),Long.toString(utcUntil)})){
+            while(c.moveToNext())result.add(read(c));
+        }
+        return result;
+    }
     public Task find(long id) {
         try(Cursor c=getReadableDatabase().rawQuery(SELECT+" AND t._id=?",new String[]{Long.toString(id)})) {return c.moveToFirst()?read(c):null;}
     }

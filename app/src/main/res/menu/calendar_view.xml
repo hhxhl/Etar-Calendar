@@ -15,13 +15,13 @@
             android:icon="@drawable/outline_calendar_view_month"
             android:title="@string/month_view" />
 
-        <item
-            android:id="@+id/agenda_menu_item"
-            android:icon="@drawable/outline_view_agenda"
-            android:title="@string/agenda_view" />
-
     </group>
     <group android:id="@+id/reminders_navigation" android:checkableBehavior="none">
+        <item
+            android:id="@+id/agenda_menu_item"
+            android:checkable="true"
+            android:icon="@drawable/outline_view_agenda"
+            android:title="@string/agenda_view" />
         <item android:id="@+id/reminders_menu_item"
             android:icon="@drawable/ic_task_outline"
             android:title="@string/tasks_title" />

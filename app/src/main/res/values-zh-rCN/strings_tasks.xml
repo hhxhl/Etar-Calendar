@@ -43,4 +43,6 @@
     <string name="tasks_create_event_type">日程</string>
     <string name="tasks_show_scheduled">显示有日期的提醒事项</string>
     <string name="tasks_manage_lists">提醒事项列表</string>
+    <string name="tasks_new_item">新建</string>
+    <string name="tasks_choose_item">选择日程或提醒事项</string>
 </resources>

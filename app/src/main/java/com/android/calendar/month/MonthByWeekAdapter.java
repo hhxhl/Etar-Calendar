@@ -319,30 +319,32 @@ public class MonthByWeekAdapter extends SimpleWeeksAdapter {
     @Override
     protected void onDayTapped(Time day) {
         setDayParameters(day);
-         if (mShowAgendaWithMonth || mIsMiniMonth) {
-            // If agenda view is visible with month view , refresh the views
-            // with the selected day's info
+        if (mIsMiniMonth) {
             mController.sendEvent(mContext, EventType.GO_TO, day, day, -1,
                     ViewType.CURRENT, CalendarController.EXTRA_GOTO_DATE, null, null);
-        } else {
-            // Else, check if the day we tapped has any events scheduled to it.
-            int viewJulianDay = Time.getJulianDay(day.normalize(), day.getGmtOffset());
-            int dayIndex = viewJulianDay - mFirstJulianDay;
-            boolean dayHasEvents = mEventDayList.subList(dayIndex, dayIndex + 1)
-                     .stream().anyMatch(l -> !l.isEmpty());
-
-            if (dayHasEvents) {
-                // If there are events on that day, switch to the detailed view for that day
-                mController.sendEvent(mContext, EventType.GO_TO, day, day, -1,
-                        ViewType.DETAIL,
-                        CalendarController.EXTRA_GOTO_DATE
-                                | CalendarController.EXTRA_GOTO_BACK_TO_PREVIOUS, null, null);
-            } else {
-                // If there are *no* events on that day, let the user create one
-                mController.sendEventRelatedEventWithExtra(this, EventType.CREATE_EVENT, -1,
-                        day.normalize(), 0, 0, 0,0, -1);
-            }
+            return;
         }
+        if (!itemsOnDay(day).isEmpty()) {
+            mController.sendEvent(mContext, EventType.GO_TO, day, day, -1,
+                    ViewType.DAY, CalendarController.EXTRA_GOTO_DATE
+                            | CalendarController.EXTRA_GOTO_BACK_TO_PREVIOUS, null, null);
+        } else {
+            focusDay(day);
+        }
+    }
+
+    private ArrayList<Event> itemsOnDay(Time day) {
+        int dayIndex = Time.getJulianDay(day.normalize(), day.getGmtOffset()) - mFirstJulianDay;
+        if (dayIndex < 0 || dayIndex >= mEventDayList.size()) return new ArrayList<>();
+        return new ArrayList<>(mEventDayList.get(dayIndex));
+    }
+
+    private void focusDay(Time day) {
+        setSelectedDay(day);
+        mController.sendEvent(mContext, EventType.GO_TO, day, day, -1,
+                ViewType.CURRENT, CalendarController.EXTRA_GOTO_DATE, null, null);
+        mController.setTime(day.normalize());
+        com.android.calendar.tasks.TaskCalendarUi.rememberSelection(mController, day.toMillis(), false);
     }
 
     private void setDayParameters(Time day) {
@@ -377,6 +379,7 @@ public class MonthByWeekAdapter extends SimpleWeeksAdapter {
             // On Up/scroll/move/cancel: hide the "clicked" color.
             switch (action) {
                 case MotionEvent.ACTION_DOWN:
+                    mLongClickedView = null;
                     mClickedView = (MonthWeekEventsView) v;
                     mClickedXLocation = event.getX();
                     mClickTime = System.currentTimeMillis();
@@ -409,6 +412,7 @@ public class MonthByWeekAdapter extends SimpleWeeksAdapter {
             v.clearClickedDay();
         }
         mClickedView = null;
+        mLongClickedView = null;
     }
 
     /**
@@ -426,9 +430,14 @@ public class MonthByWeekAdapter extends SimpleWeeksAdapter {
                 Time day = mLongClickedView.getDayFromLocation(mClickedXLocation);
                 if (day != null) {
                     mLongClickedView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
-                    Message message = new Message();
-                    message.obj = day;
-                    mEventDialogHandler.sendMessage(message);
+                    setDayParameters(day);
+                    ArrayList<Event> items = itemsOnDay(day);
+                    focusDay(day);
+                    if (items.isEmpty()) {
+                        com.android.calendar.tasks.TaskCalendarUi.showCreate(mContext, mController, day.toMillis(), false, false);
+                    } else {
+                        com.android.calendar.tasks.TaskCalendarUi.showItems(mContext, mController, items);
+                    }
                 }
                 mLongClickedView.clearClickedDay();
                 mLongClickedView = null;

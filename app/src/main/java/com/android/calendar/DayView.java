@@ -190,8 +190,6 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
     private int[] mEarliestStartHour;    // indexed by the week day offset
     private boolean[] mHasAllDayEvent;   // indexed by the week day offset
     private String mEventCountTemplate;
-    private final CharSequence[] mLongPressItems;
-    private String mLongPressTitle;
     private Event mClickedEvent;           // The event the user clicked on
     private Event mSavedClickedEvent;
     private static int mOnDownDelay;
@@ -775,10 +773,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         mEventGeometry.setMinEventHeight(MIN_EVENT_HEIGHT);
         mEventGeometry.setHourGap(HOUR_GAP);
         mEventGeometry.setCellMargin(DAY_GAP);
-        mLongPressItems = new CharSequence[] {
-            mResources.getString(R.string.new_event_dialog_option)
-        };
-        mLongPressTitle = mResources.getString(R.string.new_event_dialog_label);
+
         mDeleteEventHelper = new DeleteEventHelper(context, null, false /* don't exit when done */);
         mLastPopupEventID = INVALID_EVENT_ID;
         mController = controller;
@@ -3953,120 +3948,89 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
     }
 
     private void doSingleTapUp(MotionEvent ev) {
-        if (!mHandleActionUp || mScrolling) {
-            return;
-        }
+        if (!mHandleActionUp || mScrolling) return;
 
         int x = (int) ev.getX();
         int y = (int) ev.getY();
-        int selectedDay = mSelectionDay;
-        int selectedHour = mSelectionHour;
-
         if (mMaxAlldayEvents > mMaxUnexpandedAlldayEventCount) {
-            // check if the tap was in the allday expansion area
             int bottom = mFirstCell;
-            if((x < mHoursWidth && y > DAY_HEADER_HEIGHT && y < DAY_HEADER_HEIGHT + mAlldayHeight)
-                    || (!mShowAllAllDayEvents && mAnimateDayHeight == 0 && y < bottom &&
-                            y >= bottom - MIN_UNEXPANDED_ALLDAY_EVENT_HEIGHT)) {
+            if ((x < mHoursWidth && y > DAY_HEADER_HEIGHT && y < DAY_HEADER_HEIGHT + mAlldayHeight)
+                    || (!mShowAllAllDayEvents && mAnimateDayHeight == 0 && y < bottom
+                        && y >= bottom - MIN_UNEXPANDED_ALLDAY_EVENT_HEIGHT)) {
                 doExpandAllDayClick();
                 return;
             }
         }
 
-        boolean validPosition = setSelectionFromPosition(x, y, false);
-        if (!validPosition) {
-            if (y < DAY_HEADER_HEIGHT) {
-                Time selectedTime = new Time();
-                selectedTime.set(mBaseDate);
-                selectedTime.setJulianDay(mSelectionDay);
-                selectedTime.setHour(mSelectionHour);
-                selectedTime.normalize();
-                mController.sendEvent(this, EventType.GO_TO, null, null, selectedTime, -1,
-                        ViewType.DAY, CalendarController.EXTRA_GOTO_DATE, null, null);
-            }
-            return;
+        eventClickCleanup();
+        boolean valid = setSelectionFromPosition(x, y, false);
+        if (!valid && y >= DAY_HEADER_HEIGHT) return;
+        ArrayList<Event> items = valid ? new ArrayList<>(mSelectedEvents) : itemsOnSelectedDay();
+        Event selected = valid ? mSelectedEvent : null;
+        if (valid && selected != null && !items.contains(selected)) {
+            // All-day hit testing can return a nearby event even for an empty cell.
+            setSelectedEvent(null);
+            selected = null;
         }
-
-        boolean hasSelection = mSelectionMode != SELECTION_HIDDEN;
-        boolean pressedSelected = (hasSelection || mTouchExplorationEnabled)
-                && selectedDay == mSelectionDay && selectedHour == mSelectionHour;
-
-        if (pressedSelected && mSavedClickedEvent == null) {
-            // If the tap is on an already selected hour slot, then create a new
-            // event
-            long extraLong = 0;
-            if (mSelectionAllday) {
-                extraLong = CalendarController.EXTRA_CREATE_ALL_DAY;
-            }
-            mSelectionMode = SELECTION_SELECTED;
-            mController.sendEventRelatedEventWithExtra(this, EventType.CREATE_EVENT, -1,
-                    getSelectedTimeInMillis(), 0, (int) ev.getRawX(), (int) ev.getRawY(),
-                    extraLong, -1);
-        } else if (mSelectedEvent != null) {
-            // If the tap is on an event, launch the "View event" view
-            if (mIsAccessibilityEnabled) {
-                mAccessibilityMgr.interrupt();
-            }
-
+        boolean allDay = !valid || mSelectionAllday;
+        long time = getSelectedTimeInMillis();
+        if (!items.isEmpty() && mNumDays > 1) {
+            Time day = getSelectedTime();
+            mController.sendEvent(this, EventType.GO_TO, day, day, -1, ViewType.DAY,
+                    CalendarController.EXTRA_GOTO_DATE
+                            | CalendarController.EXTRA_GOTO_BACK_TO_PREVIOUS, null, null);
+        } else if (selected != null) {
+            if (mIsAccessibilityEnabled) mAccessibilityMgr.interrupt();
             mSelectionMode = SELECTION_HIDDEN;
-
-            int yLocation =
-                (int)((mSelectedEvent.top + mSelectedEvent.bottom)/2);
-            // Y location is affected by the position of the event in the scrolling
-            // view (mViewStartY) and the presence of all day events (mFirstCell)
-            if (!mSelectedEvent.allDay) {
-                yLocation += (mFirstCell - mViewStartY);
-            }
-            mClickedYLocation = yLocation;
-            long clearDelay = (CLICK_DISPLAY_DURATION + mOnDownDelay) -
-                    (System.currentTimeMillis() - mDownTouchTime);
-            if (clearDelay > 0) {
-                this.postDelayed(mClearClick, clearDelay);
+            if (selected.taskId > 0 || getEventAccessLevel(mContext, selected) == ACCESS_LEVEL_EDIT) {
+                com.android.calendar.tasks.TaskCalendarUi.openItem(mContext, mController, selected);
             } else {
-                this.post(mClearClick);
+                mController.sendEventRelatedEvent(this, EventType.VIEW_EVENT_DETAILS, selected.id,
+                        selected.startMillis, selected.endMillis, 0, 0, -1);
             }
         } else {
-            // Select time
-            Time startTime = new Time();
-            startTime.set(mBaseDate);
-            startTime.setJulianDay(mSelectionDay);
-            startTime.setHour(mSelectionHour);
-            startTime.normalize();
-
-            Time endTime = new Time();
-            endTime.set(startTime);
-            endTime.setHour(endTime.getHour() + 1);
-
-            mSelectionMode = SELECTION_SELECTED;
-            mController.sendEvent(this, EventType.GO_TO, startTime, endTime, -1, ViewType.CURRENT,
-                    CalendarController.EXTRA_GOTO_TIME, null, null);
+            focusSlot(time, allDay);
         }
+        invalidate();
+    }
+
+    private ArrayList<Event> itemsOnSelectedDay() {
+        ArrayList<Event> items = new ArrayList<>();
+        for (Event event : mEvents) {
+            if (event.startDay <= mSelectionDay && event.endDay >= mSelectionDay) items.add(event);
+        }
+        return items;
+    }
+
+    private void focusSlot(long time, boolean allDay) {
+        mPopup.dismiss();
+        mSelectionMode = SELECTION_SELECTED;
+        setSelectedEvent(null);
+        mSelectedEvents.clear();
+        mSelectionAllday = allDay;
+        // Avoid dispatching GO_TO back into this view and resetting its selection.
+        mController.setTime(time);
+        com.android.calendar.tasks.TaskCalendarUi.rememberSelection(mController, time, allDay);
         invalidate();
     }
 
     private void doLongPress(MotionEvent ev) {
         eventClickCleanup();
-        if (mScrolling) {
-            return;
-        }
-
-        // Scale gesture in progress
-        if (mStartingSpanY != 0) {
-            return;
-        }
-
+        if (mScrolling || mStartingSpanY != 0) return;
         int x = (int) ev.getX();
         int y = (int) ev.getY();
-
-        boolean validPosition = setSelectionFromPosition(x, y, false);
-        if (!validPosition) {
-            // return if the touch wasn't on an area of concern
-            return;
+        boolean valid = setSelectionFromPosition(x, y, false);
+        if (!valid && y >= DAY_HEADER_HEIGHT) return;
+        ArrayList<Event> items = valid ? new ArrayList<>(mSelectedEvents) : itemsOnSelectedDay();
+        boolean allDay = !valid || mSelectionAllday;
+        long time = getSelectedTimeInMillis();
+        focusSlot(time, allDay);
+        performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+        if (items.isEmpty()) {
+            com.android.calendar.tasks.TaskCalendarUi.showCreate(mContext, mController, time, allDay, true);
+        } else {
+            com.android.calendar.tasks.TaskCalendarUi.showItems(mContext, mController, items);
         }
-
-        mSelectionMode = SELECTION_LONGPRESS;
-        invalidate();
-        performLongClick();
     }
 
     private void doScroll(MotionEvent e1, MotionEvent e2, float deltaX, float deltaY) {
@@ -4595,6 +4559,8 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
     }
 
     private static int getEventAccessLevel(Context context, Event e) {
+        if (e == null) return ACCESS_LEVEL_NONE;
+        if (e.taskId > 0) return ACCESS_LEVEL_EDIT;
         ContentResolver cr = context.getContentResolver();
 
         int accessLevel = Calendars.CAL_ACCESS_NONE;
@@ -5059,31 +5025,16 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
 
     @Override
     public boolean onLongClick(View v) {
-        int flags = DateUtils.FORMAT_SHOW_WEEKDAY;
+        ArrayList<Event> items = new ArrayList<>(mSelectedEvents);
+        if (items.isEmpty() && mSelectedEvent != null) items.add(mSelectedEvent);
         long time = getSelectedTimeInMillis();
-        if (!mSelectionAllday) {
-            flags |= DateUtils.FORMAT_SHOW_TIME;
+        boolean allDay = mSelectionAllday;
+        focusSlot(time, allDay);
+        if (items.isEmpty()) {
+            com.android.calendar.tasks.TaskCalendarUi.showCreate(mContext, mController, time, allDay, true);
+        } else {
+            com.android.calendar.tasks.TaskCalendarUi.showItems(mContext, mController, items);
         }
-        if (DateFormat.is24HourFormat(mContext)) {
-            flags |= DateUtils.FORMAT_24HOUR;
-        }
-        mLongPressTitle = Utils.formatDateRange(mContext, time, time, flags);
-        new MaterialAlertDialogBuilder(mContext)
-                .setTitle(mLongPressTitle)
-                .setItems(mLongPressItems, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        if (which == 0) {
-                            long extraLong = 0;
-                            if (mSelectionAllday) {
-                                extraLong = CalendarController.EXTRA_CREATE_ALL_DAY;
-                            }
-                            mController.sendEventRelatedEventWithExtra(this,
-                                    EventType.CREATE_EVENT, -1, getSelectedTimeInMillis(), 0, -1,
-                                    -1, extraLong, -1);
-                        }
-                    }
-                }).show().setCanceledOnTouchOutside(true);
         return true;
     }
 

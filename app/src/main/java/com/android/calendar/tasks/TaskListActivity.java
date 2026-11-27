@@ -67,9 +67,13 @@ public final class TaskListActivity extends AppCompatActivity {
             if(id==0){
                 long date=getIntent().getLongExtra("date",0);
                 if(date>0){
-                    task.allDay=true;
-                    task.due=Instant.ofEpochMilli(date).atZone(ZoneId.systemDefault()).toLocalDate().atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
+                    task.allDay=!getIntent().getBooleanExtra("timed_task",false);
+                    String calendarZone=getIntent().getStringExtra("calendar_zone");
+                    ZoneId selectedZone=calendarZone==null?ZoneId.systemDefault():ZoneId.of(calendarZone);
+                    task.tz=task.allDay?"UTC":selectedZone.getId();
+                    task.due=task.allDay?Instant.ofEpochMilli(date).atZone(selectedZone).toLocalDate().atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli():date;
                     task.anchor=task.due;
+                    task.alarm=!task.allDay;
                 }
             }
             edit(task);
@@ -179,12 +183,14 @@ public final class TaskListActivity extends AppCompatActivity {
         LinearLayout form=new LinearLayout(this);form.setOrientation(LinearLayout.VERTICAL);form.setPadding(dp(20),0,dp(20),dp(8));
         EditText title=new EditText(this);title.setHint(R.string.tasks_task_name);title.setSingleLine();title.setText(task.title);form.addView(title);
         EditText notes=new EditText(this);notes.setHint(R.string.tasks_notes);notes.setText(task.notes);form.addView(notes);
+        CheckBox completed=new CheckBox(this);completed.setText(R.string.tasks_complete);completed.setChecked(task.done);
+        if(task.id!=0)form.addView(completed);
         List<TaskStore.TaskList> available=store.lists();ArrayList<String> names=new ArrayList<>();int listPos=0;
         for(int i=0;i<available.size();i++){names.add(name(available.get(i)));if(available.get(i).id==task.listId)listPos=i;}
         label(form,R.string.tasks_lists);Spinner list=new Spinner(this);list.setAdapter(adapter(names));list.setSelection(listPos);form.addView(list);
         CheckBox hasDate=new CheckBox(this);hasDate.setText(R.string.tasks_date);hasDate.setChecked(task.due!=null);form.addView(hasDate);
         CheckBox hasTime=new CheckBox(this);hasTime.setText(R.string.tasks_time);hasTime.setChecked(task.due!=null&&!task.allDay);form.addView(hasTime);
-        ZoneId zone=ZoneId.systemDefault();ZonedDateTime initial=task.due==null?ZonedDateTime.now(zone):Instant.ofEpochMilli(task.due).atZone(task.allDay?ZoneOffset.UTC:zone);
+        ZoneId zone=task.tz==null||task.allDay?ZoneId.systemDefault():ZoneId.of(task.tz);ZonedDateTime initial=task.due==null?ZonedDateTime.now(zone):Instant.ofEpochMilli(task.due).atZone(task.allDay?ZoneOffset.UTC:zone);
         LocalDate[] date={initial.toLocalDate()};LocalTime[] time={initial.toLocalTime().withSecond(0).withNano(0)};
         Button dateButton=new Button(this);Button timeButton=new Button(this);
         Runnable update=()->{dateButton.setText(date[0].format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)));timeButton.setText(time[0].format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)));};
@@ -218,10 +224,12 @@ public final class TaskListActivity extends AppCompatActivity {
             task.rule=hasDate.isChecked()?RULES[repeat.getSelectedItemPosition()]:null;
             if(!java.util.Objects.equals(oldDue,task.due)||!java.util.Objects.equals(oldRule,task.rule)||task.anchor==null)task.anchor=task.due;
             task.priority=new int[]{0,1,5,9}[priority.getSelectedItemPosition()];task.alarm=alarm.isChecked()&&alarm.isEnabled();
-            store.save(task);TaskAlarmReceiver.dismiss(this,task.id);
-            finishAfterPermission=editorOnly&&task.alarm;
+            store.save(task);
+            if(completed.isChecked()!=task.done)store.complete(task.id,completed.isChecked());
+            TaskAlarmReceiver.dismiss(this,task.id);
+            finishAfterPermission=editorOnly&&task.alarm&&!completed.isChecked();
             dialog.dismiss();changed();
-            if(task.alarm)checkAlarmPermissions();
+            if(task.alarm&&!completed.isChecked())checkAlarmPermissions();
             });
         });dialog.show();
     }

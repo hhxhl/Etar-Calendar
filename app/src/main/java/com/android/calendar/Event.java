@@ -123,6 +123,7 @@ public class Event implements Cloneable {
 
 
     public long id;
+    public long taskId; // zero for Android calendar events
     public int color;
     public CharSequence title;
     public CharSequence location;
@@ -239,6 +240,7 @@ public class Event implements Cloneable {
 
             buildEventsFromCursor(events, cEvents, context, startDay, endDay);
             buildEventsFromCursor(events, cAllday, context, startDay, endDay);
+            com.android.calendar.tasks.TaskCalendarUi.append(context, events, startDay, endDay);
 
         } finally {
             if (cEvents != null) {
@@ -799,6 +801,8 @@ public class Event implements Cloneable {
         super.clone();
         Event e = new Event();
 
+        e.id = id;
+        e.taskId = taskId;
         e.title = title;
         e.color = color;
         e.location = location;
@@ -821,6 +825,7 @@ public class Event implements Cloneable {
 
     public final void copyTo(Event dest) {
         dest.id = id;
+        dest.taskId = taskId;
         dest.title = title;
         dest.color = color;
         dest.location = location;

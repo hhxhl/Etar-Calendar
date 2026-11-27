@@ -257,6 +257,17 @@ public class CalendarController {
     }
 
     public void sendEvent(Object sender, final EventInfo event) {
+        // Display-only task IDs must never be passed to CalendarProvider.
+        if (event.id < -1 && (event.eventType == EventType.VIEW_EVENT
+                || event.eventType == EventType.VIEW_EVENT_DETAILS
+                || event.eventType == EventType.EDIT_EVENT
+                || event.eventType == EventType.DELETE_EVENT)) {
+            com.android.calendar.tasks.TaskCalendarUi.openTask(mContext, -event.id - 1);
+            return;
+        }
+        if (event.eventType == EventType.GO_TO) {
+            com.android.calendar.tasks.TaskCalendarUi.clearSelection(this);
+        }
         // TODO Throw exception on invalid events
 
         if (DEBUG) {
