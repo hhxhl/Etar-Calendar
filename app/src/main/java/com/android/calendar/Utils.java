@@ -40,7 +40,6 @@ import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.LayerDrawable;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.provider.CalendarContract.Calendars;
@@ -212,27 +211,6 @@ public class Utils {
     public static boolean canScheduleAlarms(Context context) {
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         return alarmManager.canScheduleExactAlarms();
-    }
-
-    /**
-     * Returns whether the SDK is the UpsideDownCake release or later.
-     */
-    public static boolean isUpsideDownCakeOrLater() {
-        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE;
-    }
-
-    /**
-     * Returns whether the SDK is the Q release or later.
-     */
-    public static boolean isQOrLater() {
-        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q;
-    }
-
-    /**
-     * Returns whether the SDK is the Oreo release or later.
-     */
-    public static boolean isOreoOrLater() {
-        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.O;
     }
 
     /**

@@ -26,7 +26,6 @@ import android.content.Context;
 import android.database.Cursor;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
-import android.os.Build;
 import android.provider.CalendarContract;
 import android.provider.CalendarContract.Attendees;
 import android.provider.CalendarContract.Calendars;
@@ -813,8 +812,8 @@ public class EditEventHelper {
         ops.add(ContentProviderOperation.newDelete(
             ContentUris.withAppendedId(Events.CONTENT_URI, eventId)).build());
 
-        // if syncId is not provided, or api level is < 30, return here before trying to move exceptions
-        if (TextUtils.isEmpty(syncId) || Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+        // If syncId is not provided, return before trying to move exceptions.
+        if (TextUtils.isEmpty(syncId)) {
             return ops;
         }
 

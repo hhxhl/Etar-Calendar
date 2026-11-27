@@ -30,7 +30,6 @@ import android.content.pm.ResolveInfo;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.PowerManager;
@@ -634,14 +633,12 @@ public class AlertReceiver extends BroadcastReceiver {
                 geoIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 // If this intent cannot be handled, do not create the map action
                 if (isResolveIntent(context, geoIntent)) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        TaskStackBuilder taskStackBuilder = TaskStackBuilder.create(context);
-                        geoIntent = createMapActivityIntent(context, urlSpans);
-                        if (geoIntent != null) {
-                            taskStackBuilder.addNextIntentWithParentStack(geoIntent);
-                            return taskStackBuilder.getPendingIntent(0,
-                                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-                        }
+                    TaskStackBuilder taskStackBuilder = TaskStackBuilder.create(context);
+                    geoIntent = createMapActivityIntent(context, urlSpans);
+                    if (geoIntent != null) {
+                        taskStackBuilder.addNextIntentWithParentStack(geoIntent);
+                        return taskStackBuilder.getPendingIntent(0,
+                                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
                     }
                     Intent broadcastIntent = new Intent(MAP_ACTION);
                     broadcastIntent.setClass(context, AlertReceiver.class);

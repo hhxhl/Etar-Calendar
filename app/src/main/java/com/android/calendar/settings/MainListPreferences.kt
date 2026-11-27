@@ -18,6 +18,8 @@
 package com.android.calendar.settings
 
 import android.content.Intent
+import android.graphics.BlendMode
+import android.graphics.BlendModeColorFilter
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
@@ -151,7 +153,7 @@ class MainListPreferences : PreferenceFragmentCompat() {
             ContextCompat.getDrawable(requireContext(), R.drawable.circle_outline)
         }
 
-        icon!!.mutate().setColorFilter(color, Mode.SRC_IN)
+        icon!!.mutate().colorFilter = BlendModeColorFilter(color, BlendMode.SRC_IN)
         return icon
     }
 
