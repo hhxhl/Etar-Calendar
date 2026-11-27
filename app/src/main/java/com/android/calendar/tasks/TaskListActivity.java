@@ -18,7 +18,6 @@ import android.widget.CompoundButton;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import com.android.calendar.Utils;
 import com.android.calendar.colorpicker.ColorPickerDialog;
-import com.android.calendar.colorpicker.HsvColorComparator;
 import com.android.calendar.timezonepicker.TimeZonePickerDialog;
 import com.android.calendar.timezonepicker.TimeZonePickerUtils;
 import com.google.android.material.datepicker.MaterialDatePicker;
@@ -284,22 +283,14 @@ public final class TaskListActivity extends AppCompatActivity {
         };
         palette.setOnClickListener(v -> {
             if (getSupportFragmentManager().findFragmentByTag(COLOR_PICKER) != null) return;
-            int[] raw = getResources().getIntArray(R.array.defaultCalendarColors);
-            Integer[] sorted = java.util.Arrays.stream(raw).boxed().toArray(Integer[]::new);
-            java.util.Arrays.sort(sorted, new HsvColorComparator());
-            int[] colors = java.util.Arrays.stream(sorted).mapToInt(Integer::intValue).toArray();
             int pos = list.getSelectedItemPosition();
             int selected = itemColor[0] != 0 ? itemColor[0] : pos < 0 ? 0 : available.get(pos).color;
-            if (selected != 0 && java.util.Arrays.binarySearch(java.util.Arrays.stream(colors).sorted().toArray(), selected) < 0) {
-                int[] extended = java.util.Arrays.copyOf(colors, colors.length + 1);
-                extended[colors.length] = selected;
-                colors = extended;
-            }
+            int[] colors = ColorPickerDialog.defaultColors(this, selected);
             TaskColorPicker picker = new TaskColorPicker();
             picker.initialize(R.string.tasks_choose_color, colors, selected, 4,
-                    Utils.getConfigBool(this, R.bool.tablet_config) ? ColorPickerDialog.SIZE_LARGE : ColorPickerDialog.SIZE_SMALL);
+                    ColorPickerDialog.paletteSize(this));
             picker.setOnColorSelectedListener(colorListener);
-            picker.show(getSupportFragmentManager(), COLOR_PICKER);
+            picker.showOnce(getSupportFragmentManager(), COLOR_PICKER);
         });
         androidx.fragment.app.Fragment colorPicker = getSupportFragmentManager().findFragmentByTag(COLOR_PICKER);
         if (colorPicker instanceof TaskColorPicker)
@@ -403,24 +394,26 @@ public final class TaskListActivity extends AppCompatActivity {
                 R.id.timezone_button, R.id.view2, R.id.rrule_icon, R.id.rrule,
                 R.id.event_countdown, R.id.view4, R.id.reminder_icon, R.id.reminder_items_container, R.id.view5);
 
-        // Capture the original form before restoring changes from a recreated Activity.
-        if (initialDraft == null) {
-            initialDraft = new Bundle();
-            initialDraft.putString("title", title.getText().toString());
-            initialDraft.putString("notes", notes.getText().toString());
-            initialDraft.putString("url", url.getText().toString());
-            initialDraft.putInt("item_color", itemColor[0]);
-            initialDraft.putBoolean("countdown", countdown.isChecked());
-            initialDraft.putBoolean("complete", completed.isChecked());
-            initialDraft.putLong("list_id", available.get(Math.max(0, list.getSelectedItemPosition())).id);
-            initialDraft.putBoolean("has_time", reminder && !allDay.isChecked());
-            initialDraft.putLong("date", date[0].toEpochDay());
-            initialDraft.putLong("time", time[0].toSecondOfDay());
-            initialDraft.putString("zone", zone[0].getId());
-            initialDraft.putBoolean("alarm", alarm.isChecked());
-            initialDraft.putInt("repeat", repeatIndex[0]);
-            initialDraft.putInt("priority", priority.getSelectedItemPosition());
-        }
+        captureDraft = () -> {
+            Bundle draft = new Bundle();
+            draft.putString("title", title.getText().toString());
+            draft.putString("notes", notes.getText().toString());
+            draft.putString("url", url.getText().toString());
+            draft.putInt("item_color", itemColor[0]);
+            draft.putBoolean("countdown", countdown.isChecked());
+            draft.putBoolean("complete", completed.isChecked());
+            int pos = list.getSelectedItemPosition();
+            draft.putLong("list_id", pos < 0 ? task.listId : available.get(pos).id);
+            draft.putBoolean("has_time", reminder && !allDay.isChecked());
+            draft.putLong("date", date[0].toEpochDay());
+            draft.putLong("time", time[0].toSecondOfDay());
+            draft.putString("zone", zone[0].getId());
+            draft.putBoolean("alarm", alarm.isChecked());
+            draft.putInt("repeat", repeatIndex[0]);
+            draft.putInt("priority", priority.getSelectedItemPosition());
+            return draft;
+        };
+        if (initialDraft == null) initialDraft = captureDraft.get();
 
         // Restore only the draft, not the original baseline used for detecting schedule edits.
         if (restoredDraft != null) {
@@ -504,25 +497,6 @@ public final class TaskListActivity extends AppCompatActivity {
         if (zonePicker instanceof TimeZonePickerDialog)
             ((TimeZonePickerDialog) zonePicker).setOnTimeZoneSetListener(zoneListener);
 
-        captureDraft = () -> {
-            Bundle draft = new Bundle();
-            draft.putString("title", title.getText().toString());
-            draft.putString("notes", notes.getText().toString());
-            draft.putString("url", url.getText().toString());
-            draft.putInt("item_color", itemColor[0]);
-            draft.putBoolean("countdown", countdown.isChecked());
-            draft.putBoolean("complete", completed.isChecked());
-            int pos = list.getSelectedItemPosition();
-            draft.putLong("list_id", pos < 0 ? task.listId : available.get(pos).id);
-            draft.putBoolean("has_time", reminder && !allDay.isChecked());
-            draft.putLong("date", date[0].toEpochDay());
-            draft.putLong("time", time[0].toSecondOfDay());
-            draft.putString("zone", zone[0].getId());
-            draft.putBoolean("alarm", alarm.isChecked());
-            draft.putInt("repeat", repeatIndex[0]);
-            draft.putInt("priority", priority.getSelectedItemPosition());
-            return draft;
-        };
         if (task.id != 0) deleteEditor = () -> new MaterialAlertDialogBuilder(this)
                 .setMessage(reminder ? R.string.reminders_delete_confirm : R.string.tasks_delete_confirm)
                 .setNegativeButton(android.R.string.cancel, null)

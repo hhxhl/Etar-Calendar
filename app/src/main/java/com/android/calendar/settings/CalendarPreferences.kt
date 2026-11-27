@@ -225,10 +225,7 @@ class CalendarPreferences : PreferenceFragmentCompat(), com.android.calendar.col
         }
 
         val isTablet = Utils.getConfigBool(context, R.bool.tablet_config)
-        val calendarDialogPicker = CalendarColorPickerDialogX.newInstance(calendarId, isTablet,
-                object : CalendarColorPickerDialogX.OnCalendarColorSelectedListener {
-                    override fun onColorSelected(color: Int) { /* Delivered by target fragment. */ }
-                })
+        val calendarDialogPicker = CalendarColorPickerDialogX.newInstance(calendarId, isTablet)
         @Suppress("DEPRECATION")
         calendarDialogPicker.setTargetFragment(this, 0)
         calendarDialogPicker.showOnce(parentFragmentManager, COLOR_PICKER_DIALOG_TAG)

@@ -202,12 +202,12 @@ class CalendarColorPickerDialogX : ColorPickerDialog() {
                 }
                 .create()
         warningDialog.show()
-        mColors = defaultColors(requireContext(), mSelectedColor)
+        mColors = ColorPickerDialog.defaultColors(requireContext(), mSelectedColor)
         showPaletteView()
     }
 
     private fun setColorPalette(colorsToSort: Array<Int>) {
-        mColors = sortedColors(colorsToSort.toIntArray())
+        mColors = ColorPickerDialog.sortedColors(colorsToSort.toIntArray())
     }
 
     private inner class ThisOnColorSelectedListener : OnColorSelectedListener {
@@ -231,11 +231,11 @@ class CalendarColorPickerDialogX : ColorPickerDialog() {
 
     companion object {
 
-        fun newInstance(calendarId: Long, isTablet: Boolean, newListener: OnCalendarColorSelectedListener): CalendarColorPickerDialogX {
+        fun newInstance(calendarId: Long, isTablet: Boolean, newListener: OnCalendarColorSelectedListener? = null): CalendarColorPickerDialogX {
             val fragment = CalendarColorPickerDialogX()
             fragment.setArguments(R.string.calendar_color_picker_dialog_title, NUM_COLUMNS, if (isTablet) SIZE_LARGE else SIZE_SMALL)
             fragment.setCalendarId(calendarId)
-            fragment.setCalendarColorListener(newListener)
+            if (newListener != null) fragment.setCalendarColorListener(newListener)
             return fragment
         }
 
