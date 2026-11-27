@@ -537,18 +537,36 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         mFab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                //Create new Event
-                Time t = new Time();
-                t.set(mController.getTime());
-                t.setSecond(0);
-                if (t.getMinute() > 30) {
-                    t.setHour(t.getHour() + 1);
-                    t.setMinute(0);
-                } else if (t.getMinute() > 0 && t.getMinute() < 30) {
-                    t.setMinute(30);
-                }
-                mController.sendEventRelatedEvent(
-                        this, EventType.CREATE_EVENT, -1, t.toMillis(), 0, 0, 0, -1);
+                androidx.appcompat.widget.PopupMenu menu =
+                        new androidx.appcompat.widget.PopupMenu(AllInOneActivity.this, v);
+                menu.getMenu().add(0, 1, 0, R.string.tasks_new_event);
+                menu.getMenu().add(0, 2, 1, R.string.tasks_add);
+                menu.getMenu().add(0, 3, 2, R.string.tasks_manage);
+                menu.setOnMenuItemClickListener(item -> {
+                    if (item.getItemId() == 1) {
+                        Time t = new Time();
+                        t.set(mController.getTime());
+                        t.setSecond(0);
+                        if (t.getMinute() > 30) {
+                            t.setHour(t.getHour() + 1);
+                            t.setMinute(0);
+                        } else if (t.getMinute() > 0 && t.getMinute() < 30) {
+                            t.setMinute(30);
+                        }
+                        mController.sendEventRelatedEvent(this, EventType.CREATE_EVENT,
+                                -1, t.toMillis(), 0, 0, 0, -1);
+                    } else {
+                        Intent intent = new Intent(AllInOneActivity.this,
+                                com.android.calendar.tasks.TaskListActivity.class);
+                        if (item.getItemId() == 2) {
+                            intent.putExtra("new_task", true);
+                            intent.putExtra("date", mController.getTime());
+                        }
+                        startActivity(intent);
+                    }
+                    return true;
+                });
+                menu.show();
             }
         });
     }

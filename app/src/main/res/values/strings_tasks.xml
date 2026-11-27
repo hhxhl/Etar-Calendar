@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tasks_title">Reminders</string>
+    <string name="tasks_add">New reminder</string>
+    <string name="tasks_edit">Edit reminder</string>
+    <string name="tasks_manage">Manage reminders</string>
+    <string name="tasks_new_event">New event</string>
+    <string name="tasks_back">Back</string>
+    <string name="tasks_complete">Complete</string>
+    <string name="tasks_lists">Lists</string>
+    <string name="tasks_default_list">Personal</string>
+    <string name="tasks_all">All reminders</string>
+    <string name="tasks_empty">No reminders</string>
+    <string name="tasks_no_date">No date</string>
+    <string name="tasks_new_list">New list</string>
+    <string name="tasks_rename">Rename</string>
+    <string name="tasks_delete">Delete</string>
+    <string name="tasks_delete_list_confirm">Delete this list and all its reminders?</string>
+    <string name="tasks_delete_confirm">Delete this reminder?</string>
+    <string name="tasks_required">Required</string>
+    <string name="tasks_task_name">Title</string>
+    <string name="tasks_notes">Notes</string>
+    <string name="tasks_date">Date</string>
+    <string name="tasks_time">Time</string>
+    <string name="tasks_notify">Notify at scheduled time</string>
+    <string name="tasks_repeat">Repeat</string>
+    <string name="tasks_priority">Priority</string>
+    <string name="tasks_exact_alarm_message">Allow exact alarms for timely reminders. Without this permission, notifications may arrive late.</string>
+    <string name="tasks_settings">Settings</string>
+    <string-array name="tasks_repeat_options">
+        <item>Never</item>
+        <item>Daily</item>
+        <item>Weekly</item>
+        <item>Monthly</item>
+        <item>Yearly</item>
+    </string-array>
+    <string-array name="tasks_priority_options">
+        <item>None</item>
+        <item>High</item>
+        <item>Medium</item>
+        <item>Low</item>
+    </string-array>
+</resources>

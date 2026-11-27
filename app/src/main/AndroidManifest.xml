@@ -22,6 +22,7 @@
     android:installLocation="auto">
 
     <uses-permission android:name="android.permission.GET_ACCOUNTS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.VIBRATE"/>
     <uses-permission android:name="android.permission.READ_CONTACTS"/>
     <uses-permission android:name="android.permission.READ_CALENDAR" />
@@ -60,6 +61,20 @@
         android:requiredAccountType="*"
         android:usesCleartextTraffic="false"
         android:theme="@style/Theme.Etar">
+
+        <activity android:name="com.android.calendar.tasks.TaskListActivity"
+            android:exported="false" android:label="@string/tasks_title" />
+
+        <receiver android:name="com.android.calendar.tasks.TaskAlarmReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
+            </intent-filter>
+        </receiver>
 
         <activity
             android:name="com.android.calendar.AllInOneActivity"

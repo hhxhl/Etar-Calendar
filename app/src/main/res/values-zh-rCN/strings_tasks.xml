@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tasks_title">提醒事项</string>
+    <string name="tasks_add">新建提醒事项</string>
+    <string name="tasks_edit">编辑提醒事项</string>
+    <string name="tasks_manage">管理提醒事项</string>
+    <string name="tasks_new_event">新建日程</string>
+    <string name="tasks_back">返回</string>
+    <string name="tasks_complete">完成</string>
+    <string name="tasks_lists">列表</string>
+    <string name="tasks_default_list">个人</string>
+    <string name="tasks_all">全部提醒事项</string>
+    <string name="tasks_empty">没有提醒事项</string>
+    <string name="tasks_no_date">无日期</string>
+    <string name="tasks_new_list">新建列表</string>
+    <string name="tasks_rename">重命名</string>
+    <string name="tasks_delete">删除</string>
+    <string name="tasks_delete_list_confirm">删除此列表及其中全部提醒事项？</string>
+    <string name="tasks_delete_confirm">删除此提醒事项？</string>
+    <string name="tasks_required">不能为空</string>
+    <string name="tasks_task_name">标题</string>
+    <string name="tasks_notes">备注</string>
+    <string name="tasks_date">日期</string>
+    <string name="tasks_time">时间</string>
+    <string name="tasks_notify">在计划时间通知</string>
+    <string name="tasks_repeat">重复</string>
+    <string name="tasks_priority">优先级</string>
+    <string name="tasks_exact_alarm_message">允许精确闹钟以准时提醒，否则通知可能延迟。</string>
+    <string name="tasks_settings">设置</string>
+    <string-array name="tasks_repeat_options">
+        <item>不重复</item>
+        <item>每天</item>
+        <item>每周</item>
+        <item>每月</item>
+        <item>每年</item>
+    </string-array>
+    <string-array name="tasks_priority_options">
+        <item>无</item>
+        <item>高</item>
+        <item>中</item>
+        <item>低</item>
+    </string-array>
+</resources>
