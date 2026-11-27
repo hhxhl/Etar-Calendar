@@ -35,7 +35,6 @@ import androidx.preference.EditTextPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceFragmentCompat
-import androidx.preference.SwitchPreference
 import com.android.calendar.Utils
 import com.android.calendar.alerts.channelId
 import com.android.calendar.icalendar.IcalExporter
@@ -112,7 +111,7 @@ class CalendarPreferences : PreferenceFragmentCompat() {
         val currentColor = preferenceManager.preferenceDataStore!!.getInt(COLOR_KEY, -1)
         val authenticatorInfo = getAuthenticatorInfo(account)
 
-        val visiblePreference = SwitchPreference(context).apply {
+        val visiblePreference = MaterialSwitchPreference(context).apply {
             key = VISIBLE_KEY
             title = getString(R.string.preferences_calendar_visible)
         }

@@ -157,10 +157,10 @@ public final class TaskListActivity extends AppCompatActivity {
         }
     }
     private void manageList(TaskStore.TaskList l){
-        new AlertDialog.Builder(this).setTitle(name(l))
+        new MaterialAlertDialogBuilder(this).setTitle(name(l))
             .setItems(l.id==1?new String[]{getString(R.string.tasks_rename)}:
                 new String[]{getString(R.string.tasks_rename),getString(R.string.tasks_delete)},(d,w)->{
-                if(w==0)listName(l);else new AlertDialog.Builder(this).setMessage(R.string.tasks_delete_list_confirm)
+                if(w==0)listName(l);else new MaterialAlertDialogBuilder(this).setMessage(R.string.tasks_delete_list_confirm)
                     .setNegativeButton(android.R.string.cancel,null)
                     .setPositiveButton(R.string.tasks_delete,(x,y)->{
                         store.deleteList(l.id);refresh();
@@ -169,7 +169,7 @@ public final class TaskListActivity extends AppCompatActivity {
     }
     private void listName(TaskStore.TaskList l){
         EditText input=new EditText(this);input.setSingleLine();if(l!=null)input.setText(name(l));
-        AlertDialog dialog=new AlertDialog.Builder(this).setTitle(l==null?R.string.tasks_new_list:R.string.tasks_rename).setView(input).setNegativeButton(android.R.string.cancel,null).setPositiveButton(android.R.string.ok,null).create();
+        AlertDialog dialog=new MaterialAlertDialogBuilder(this).setTitle(l==null?R.string.tasks_new_list:R.string.tasks_rename).setView(input).setNegativeButton(android.R.string.cancel,null).setPositiveButton(android.R.string.ok,null).create();
         dialog.setOnShowListener(v->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(b->{String text=input.getText().toString().trim();if(text.isEmpty()){input.setError(getString(R.string.tasks_required));return;}if(l==null)listId=store.addList(text);else store.renameList(l.id,text);refresh();dialog.dismiss();}));dialog.show();
     }
     private static void hide(View root, int... ids) {
@@ -349,7 +349,7 @@ public final class TaskListActivity extends AppCompatActivity {
         priority.setContentDescription(getString(R.string.tasks_priority));
         ((ImageView) form.findViewById(R.id.availability_icon)).setImageResource(R.drawable.ic_task_outline);
 
-        CheckBox completed = reminder ? ReminderCompletion.create(this) : new CheckBox(this);
+        CheckBox completed = reminder ? ReminderCompletion.create(this) : new com.google.android.material.checkbox.MaterialCheckBox(this);
         completed.setText(R.string.tasks_complete);
         completed.setChecked(task.done);
         if (task.id != 0) {
@@ -554,7 +554,7 @@ public final class TaskListActivity extends AppCompatActivity {
     private void checkAlarmPermissions(){
         if(Build.VERSION.SDK_INT>=33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED){requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},42);return;}
         if(Build.VERSION.SDK_INT>=31&&!((AlarmManager)getSystemService(ALARM_SERVICE)).canScheduleExactAlarms()){
-            AlertDialog permissionDialog=new AlertDialog.Builder(this).setMessage(R.string.tasks_exact_alarm_message)
+            AlertDialog permissionDialog=new MaterialAlertDialogBuilder(this).setMessage(R.string.tasks_exact_alarm_message)
                 .setNegativeButton(android.R.string.cancel,null)
                 .setPositiveButton(R.string.tasks_settings,(d,w)->{
                     try{

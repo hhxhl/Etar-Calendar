@@ -11,7 +11,6 @@ import androidx.preference.EditTextPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceFragmentCompat
-import androidx.preference.SwitchPreference
 import com.android.calendar.Utils
 import com.android.calendar.colorpicker.ColorPickerDialog
 import com.android.calendar.colorpicker.ColorPickerSwatch.OnColorSelectedListener
@@ -58,7 +57,7 @@ class TaskListPreferences : PreferenceFragmentCompat(), OnColorSelectedListener 
         preferenceScreen = screen
         val list = store.findList(listId) ?: return
 
-        screen.addPreference(SwitchPreference(context).apply {
+        screen.addPreference(MaterialSwitchPreference(context).apply {
             key = "task_list_visible"
             title = getString(R.string.tasks_list_visible)
             isPersistent = false

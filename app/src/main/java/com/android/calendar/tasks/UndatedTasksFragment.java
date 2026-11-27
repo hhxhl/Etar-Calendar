@@ -114,7 +114,7 @@ public final class UndatedTasksFragment extends Fragment implements CalendarCont
             if (task.due != null) continue;
             LinearLayout row = new LinearLayout(context);
             row.setGravity(Gravity.CENTER_VERTICAL);
-            CheckBox done = new CheckBox(context);
+            CheckBox done = new com.google.android.material.checkbox.MaterialCheckBox(context);
             done.setChecked(task.done);
             done.setButtonTintList(android.content.res.ColorStateList.valueOf(
                     TaskCalendarUi.displayColor(context, task, false)));

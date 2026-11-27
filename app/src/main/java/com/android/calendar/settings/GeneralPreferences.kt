@@ -45,7 +45,6 @@ import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceManager
-import androidx.preference.SwitchPreference
 import com.android.calendar.CalendarController
 import com.android.calendar.CalendarRecentSuggestionsProvider
 import com.android.calendar.CalendarUtils
@@ -64,12 +63,12 @@ class GeneralPreferences : PreferenceFragmentCompat(),
         TimeZonePickerDialog.OnTimeZoneSetListener {
 
     private lateinit var themePref: ListPreference
-    private lateinit var realEventColors: SwitchPreference
-    private lateinit var pureBlackNightModePref: SwitchPreference
-    private lateinit var doNotCheckBatteryOptimizationPref: SwitchPreference
+    private lateinit var realEventColors: MaterialSwitchPreference
+    private lateinit var pureBlackNightModePref: MaterialSwitchPreference
+    private lateinit var doNotCheckBatteryOptimizationPref: MaterialSwitchPreference
     private lateinit var defaultStartPref: ListPreference
-    private lateinit var hideDeclinedPref: SwitchPreference
-    private lateinit var staggeredDisplayPref: SwitchPreference
+    private lateinit var hideDeclinedPref: MaterialSwitchPreference
+    private lateinit var staggeredDisplayPref: MaterialSwitchPreference
     private lateinit var weekStartPref: ListPreference
     private lateinit var dayWeekPref: ListPreference
     private lateinit var defaultEventDurationPref: ListPreference
@@ -87,7 +86,7 @@ class GeneralPreferences : PreferenceFragmentCompat(),
     // < 26
     private lateinit var alertPref: CheckBoxPreference
     private lateinit var ringtonePref: Preference
-    private lateinit var vibratePref: SwitchPreference
+    private lateinit var vibratePref: MaterialSwitchPreference
 
     private lateinit var tzPickerUtils: TimeZonePickerUtils
     private var timeZoneId: String? = null
