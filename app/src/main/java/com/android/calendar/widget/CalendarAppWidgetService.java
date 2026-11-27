@@ -343,6 +343,13 @@ public class CalendarAppWidgetService extends RemoteViewsService {
                 views.setInt(R.id.widget_row, "setBackgroundColor", android.graphics.Color.TRANSPARENT);
 
                 if (!eventInfo.allDay) {
+                    long now = System.currentTimeMillis();
+                    boolean ongoing = eventInfo.start <= now && now < eventInfo.end
+                            && eventInfo.status != Events.STATUS_CANCELED;
+                    views.setViewVisibility(R.id.widget_ongoing_indicator,
+                            ongoing ? View.VISIBLE : View.GONE);
+                    views.setInt(R.id.widget_ongoing_indicator, "setBackgroundColor",
+                            DynamicThemeKt.getColor(mContext, "widget_text"));
                     updateTextView(views, R.id.when, eventInfo.visibWhen, eventInfo.when);
                     updateTextView(views, R.id.where, eventInfo.visibWhere, eventInfo.where);
                 }

@@ -33,6 +33,17 @@
             android:layout_marginEnd="4dp"
             android:scaleType="fitXY" />
 
+    <!-- Independent indicator in the existing start margin of a timed event. -->
+    <FrameLayout
+        android:id="@+id/widget_ongoing_indicator"
+        android:layout_width="2dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        android:layout_marginStart="1dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="4dp"
+        android:visibility="gone" />
+
     <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
