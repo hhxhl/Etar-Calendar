@@ -194,6 +194,13 @@ public class WeekAppWidgetService extends RemoteViewsService {
                     R.id.week_cell_event_time_4,
                     R.id.week_cell_event_time_5,
             };
+            int[] surfaceIds = {
+                    R.id.week_cell_event_surface_1,
+                    R.id.week_cell_event_surface_2,
+                    R.id.week_cell_event_surface_3,
+                    R.id.week_cell_event_surface_4,
+                    R.id.week_cell_event_surface_5,
+            };
             int[] textIds = {
                     R.id.week_cell_event_text_1,
                     R.id.week_cell_event_text_2,
@@ -216,32 +223,19 @@ public class WeekAppWidgetService extends RemoteViewsService {
                     views.setOnClickFillInIntent(rowIds[i],
                             WidgetClickActivity.itemIntent(event.taskId, day.timeMillis));
 
-                    if (event.isAllDay) {
-                        // All-day event: colored background, no bar, no time
-                        views.setViewVisibility(barIds[i], View.GONE);
-                        views.setViewVisibility(timeIds[i], View.GONE);
-                        views.setInt(rowIds[i], "setBackgroundColor", event.color);
-                        views.setTextViewText(textIds[i], event.title);
-                        views.setTextColor(textIds[i], eventTextColor);
-                        views.setViewPadding(rowIds[i], 1, 0, 1, 0);
+                    com.android.calendar.ItemAppearance.widgetBackground(mContext, views, surfaceIds[i], event.color);
+                    com.android.calendar.ItemAppearance.widgetBar(mContext, views, barIds[i], event.color);
+                    views.setViewVisibility(barIds[i], View.VISIBLE);
+                    if (!event.isAllDay && event.timeLabel != null && !event.timeLabel.isEmpty()) {
+                        views.setViewVisibility(timeIds[i], View.VISIBLE);
+                        views.setTextViewText(timeIds[i], event.timeLabel);
+                        com.android.calendar.ItemAppearance.widgetText(mContext, views, timeIds[i], event.color);
                     } else {
-                        // Timed event: color bar + time label + title
-                        views.setViewVisibility(barIds[i], View.VISIBLE);
-                        views.setInt(barIds[i], "setBackgroundColor", event.color);
-                        views.setInt(rowIds[i], "setBackgroundColor", 0);
-
-                        if (event.timeLabel != null && !event.timeLabel.isEmpty()) {
-                            views.setViewVisibility(timeIds[i], View.VISIBLE);
-                            views.setTextViewText(timeIds[i], event.timeLabel);
-                            WidgetUtils.setThemeText(mContext, views, timeIds[i], R.color.widget_live_text, dayTextColor);
-                        } else {
-                            views.setViewVisibility(timeIds[i], View.GONE);
-                        }
-
-                        views.setTextViewText(textIds[i], event.title);
-                        WidgetUtils.setThemeText(mContext, views, textIds[i], R.color.widget_live_text, dayTextColor);
-                        views.setViewPadding(rowIds[i], 1, 0, 1, 0);
+                        views.setViewVisibility(timeIds[i], View.GONE);
                     }
+                    views.setTextViewText(textIds[i], event.title);
+                    com.android.calendar.ItemAppearance.widgetText(mContext, views, textIds[i], event.color);
+                    views.setViewPadding(rowIds[i], 1, 0, 1, 0);
                 } else {
                     views.setViewVisibility(rowIds[i], View.GONE);
                 }

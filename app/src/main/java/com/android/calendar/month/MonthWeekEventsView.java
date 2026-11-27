@@ -1534,14 +1534,28 @@ public class MonthWeekEventsView extends SimpleWeekView {
                             Style.STROKE : Style.FILL_AND_STROKE;
         }
         protected int getRectangleColor() {
-            return isDeclined() ? Utils.getDeclinedColorFromColor(mEvent.color) : mEvent.color;
+            return com.android.calendar.ItemAppearance.foreground(mContext, mEvent.color);
         }
 
-        protected void drawEventRectangle(Canvas canvas, int day)  {
-            mBoundaries.setRectangle(mFormat.getDaySpan(day), mFormat.getEventLines());
-            mEventSquarePaint.setStyle(getRectanglePaintStyle());
-            mEventSquarePaint.setColor(getRectangleColor());
-            canvas.drawRect(r, mEventSquarePaint);
+        protected void drawEventRectangle(Canvas canvas, int day, ViewDetailsPreferences.Preferences preferences) {
+            int span = mFormat.getDaySpan(day);
+            mBoundaries.setRectangle(span, mFormat.getEventLines());
+            float left = r.left;
+            float top = mBoundaries.getY();
+            float right = mBoundaries.getTextRightEdge(span);
+            float bottom = top + mFormat.getEventLines() * mEventHeight
+                    + 2 * mBoundaries.mBorderThickness
+                    + (isTimeInNextLine(preferences) ? mExtrasHeight : 0);
+            float radius = com.android.calendar.ItemAppearance.radius(mContext);
+            mEventSquarePaint.setStyle(Style.FILL);
+            mEventSquarePaint.setAntiAlias(true);
+            mEventSquarePaint.setColor(com.android.calendar.ItemAppearance.background(getRectangleColor()));
+            canvas.drawRoundRect(left, top, right, bottom, radius, radius, mEventSquarePaint);
+            if (!mBoundaries.hasBorder()) {
+                mEventSquarePaint.setColor(getRectangleColor());
+                canvas.drawRoundRect(left, top + 1, Math.min(right, left + 2 * getResources().getDisplayMetrics().density),
+                        bottom - 1, 1, 1, mEventSquarePaint);
+            }
         }
 
         protected int getAvailableSpaceForText(int spanningDays) {
@@ -1597,37 +1611,10 @@ public class MonthWeekEventsView extends SimpleWeekView {
         }
 
         protected Paint getTextPaint() {
-
-            TextPaint paint;
-
-            if (!isAttendeeStatusInvited() && mEvent.drawAsAllday()){
-                // Text color needs to contrast with solid background.
-                // Make a copy of mSolidBackgroundEventPaint to apply the adaptive text color
-                TextPaint mEventTextPaint = new TextPaint(mSolidBackgroundEventPaint);
-                mEventTextPaint.setColor(Utils.getAdaptiveTextColor(mContext, mEventTextPaint.getColor(), mEvent.color));
-                paint = mEventTextPaint;
-            } else if (isDeclined()) {
-                // Use "declined event" color.
-                paint = mDeclinedEventPaint;
-            } else if (mEvent.drawAsAllday()) {
-                // Text inside frame is same color as frame.
-                mFramedEventPaint.setColor(getRectangleColor());
-                paint = mFramedEventPaint;
-            } else {
-                // Use generic event text color.
-                paint = mEventPaint;
-            }
-
-            if (isCanceled()) {
-                // Strike event title if its status is `canceled`
-                // (copy current Paint to conserve other formatting)
-                TextPaint canceledPaint;
-                canceledPaint = new TextPaint();
-                canceledPaint.set(paint);
-                canceledPaint.setStrikeThruText(true);
-                paint = canceledPaint;
-            }
-
+            TextPaint paint = new TextPaint(mEventPaint);
+            paint.setColor(getRectangleColor());
+            if (isDeclined()) paint.setAlpha(102);
+            paint.setStrikeThruText(isCanceled());
             return paint;
         }
 
@@ -1659,7 +1646,10 @@ public class MonthWeekEventsView extends SimpleWeekView {
         }
 
         protected Paint getTimesPaint() {
-            return isDeclined() ? mEventDeclinedExtrasPaint : mEventExtrasPaint;
+            TextPaint paint = new TextPaint(mEventExtrasPaint);
+            paint.setColor(getRectangleColor());
+            if (isDeclined()) paint.setAlpha(102);
+            return paint;
         }
 
         protected CharSequence getFormattedTime(ViewDetailsPreferences.Preferences preferences) {
@@ -1709,7 +1699,7 @@ public class MonthWeekEventsView extends SimpleWeekView {
            if (mFormat.isVisible() && mEvent != null) {
                int span = mFormat.getDaySpan(day);
                int hitTop = mBoundaries.getY();
-               drawEventRectangle(canvas, day);
+               drawEventRectangle(canvas, day, preferences);
                float hitLeft = r.left;
                float hitRight = mBoundaries.hasBorder() ? Math.max(r.right, mBoundaries.getTextRightEdge(span))
                        : mBoundaries.getTextRightEdge(span);

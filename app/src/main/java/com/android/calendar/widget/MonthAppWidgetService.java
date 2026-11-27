@@ -198,6 +198,11 @@ public class MonthAppWidgetService extends RemoteViewsService {
                     R.id.month_cell_event_bar_2,
                     R.id.month_cell_event_bar_3,
             };
+            int[] surfaceIds = {
+                    R.id.month_cell_event_surface_1,
+                    R.id.month_cell_event_surface_2,
+                    R.id.month_cell_event_surface_3,
+            };
             int[] textIds = {
                     R.id.month_cell_event_text_1,
                     R.id.month_cell_event_text_2,
@@ -219,44 +224,14 @@ public class MonthAppWidgetService extends RemoteViewsService {
                     views.setOnClickFillInIntent(rowIds[i],
                             WidgetClickActivity.itemIntent(chip.taskId, cell.timeMillis));
 
-                    if (chip.isAllDay) {
-                        // Spanning event: hide color bar, color the row background
-                        views.setViewVisibility(barIds[i], View.GONE);
-                        views.setInt(rowIds[i], "setBackgroundColor", chip.color);
-                        views.setTextColor(textIds[i], eventTextColor);
-
-                        // Show title only on START/SINGLE
-                        if (chip.spanType == MonthAppWidgetModel.EventChip.SPAN_START
-                                || chip.spanType == MonthAppWidgetModel.EventChip.SPAN_SINGLE) {
-                            views.setTextViewText(textIds[i], chip.title);
-                        } else {
-                            views.setTextViewText(textIds[i], "");
-                        }
-
-                        // Adjust padding based on span type for visual continuity
-                        switch (chip.spanType) {
-                            case MonthAppWidgetModel.EventChip.SPAN_START:
-                                views.setViewPadding(rowIds[i], pad, 0, 0, 0);
-                                break;
-                            case MonthAppWidgetModel.EventChip.SPAN_MIDDLE:
-                                views.setViewPadding(rowIds[i], 0, 0, 0, 0);
-                                break;
-                            case MonthAppWidgetModel.EventChip.SPAN_END:
-                                views.setViewPadding(rowIds[i], 0, 0, pad, 0);
-                                break;
-                            default: // SPAN_SINGLE
-                                views.setViewPadding(rowIds[i], pad, 0, pad, 0);
-                                break;
-                        }
-                    } else {
-                        // Timed event: show color bar, no row background
-                        views.setViewVisibility(barIds[i], View.VISIBLE);
-                        views.setInt(barIds[i], "setBackgroundColor", chip.color);
-                        views.setInt(rowIds[i], "setBackgroundColor", 0);
-                        views.setTextViewText(textIds[i], chip.title);
-                        WidgetUtils.setThemeText(mContext, views, textIds[i], R.color.widget_live_text, dayTextColor);
-                        views.setViewPadding(rowIds[i], pad, 0, pad, 0);
-                    }
+                    com.android.calendar.ItemAppearance.widgetBackground(mContext, views, surfaceIds[i], chip.color);
+                    com.android.calendar.ItemAppearance.widgetBar(mContext, views, barIds[i], chip.color);
+                    boolean showTitle = !chip.isAllDay || chip.spanType == MonthAppWidgetModel.EventChip.SPAN_START
+                            || chip.spanType == MonthAppWidgetModel.EventChip.SPAN_SINGLE;
+                    views.setViewVisibility(barIds[i], showTitle ? View.VISIBLE : View.GONE);
+                    views.setTextViewText(textIds[i], showTitle ? chip.title : "");
+                    com.android.calendar.ItemAppearance.widgetText(mContext, views, textIds[i], chip.color);
+                    views.setViewPadding(rowIds[i], pad, 0, pad, 0);
                 } else {
                     views.setViewVisibility(rowIds[i], View.GONE);
                 }

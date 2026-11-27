@@ -604,11 +604,12 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
             AgendaEntry entry = row.event;
             boolean past = entry.allDay ? !row.day.isAfter(today)
                     : Math.max(entry.begin, millis(row.day)) <= System.currentTimeMillis();
-            root.setBackgroundResource(DynamicThemeKt.getDrawableId(context,
-                    past ? "agenda_item_bg_secondary" : "agenda_item_bg_primary"));
+            int color = com.android.calendar.ItemAppearance.foreground(context,
+                    Utils.getDisplayColorFromColor(context, entry.color));
+            com.android.calendar.ItemAppearance.apply(root, color);
             boolean declined = entry.response == Attendees.ATTENDEE_STATUS_DECLINED;
-            int titleColor = DynamicThemeKt.getColor(context, "agenda_item_standard_color");
-            int textColor = DynamicThemeKt.getColor(context, "agenda_item_where_text_color");
+            int titleColor = color;
+            int textColor = color;
             title.setTextColor(titleColor);
             countdown.setTextColor(textColor);
             when.setTextColor(textColor);
@@ -621,7 +622,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
 
             chip.setText(ItemStateSymbols.event(entry.begin, entry.end, entry.allDay,
                     zone, System.currentTimeMillis()));
-            chip.setTextColor(Utils.getDisplayColorFromColor(context, entry.color));
+            chip.setTextColor(color);
             chip.setAlpha(declined ? 0.4f : 1f);
 
             String tz = entry.allDay ? "UTC" : zone.getId();

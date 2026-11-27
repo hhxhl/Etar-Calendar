@@ -328,20 +328,16 @@ public class CalendarAppWidgetService extends RemoteViewsService {
                 }
                 int displayColor = Utils.getDisplayColorFromColor(mContext, eventInfo.color);
                 boolean declined = eventInfo.selfAttendeeStatus == Attendees.ATTENDEE_STATUS_DECLINED;
-                int markerColor = declined ? Utils.getDeclinedColorFromColor(displayColor) : displayColor;
-                int textColor = DynamicThemeKt.getColor(mContext, "widget_text");
-
-                // Keep the widget surface visible; only the narrow leading bar is tinted.
-                views.setInt(R.id.widget_row, "setBackgroundColor", android.graphics.Color.TRANSPARENT);
-                views.setInt(R.id.agenda_item_color, "setBackgroundColor", markerColor);
-                WidgetUtils.setThemeText(mContext, views, R.id.title, R.color.widget_live_text, textColor);
+                com.android.calendar.ItemAppearance.widgetBackground(mContext, views, R.id.widget_item_surface, displayColor);
+                com.android.calendar.ItemAppearance.widgetBar(mContext, views, R.id.agenda_item_color, displayColor);
+                com.android.calendar.ItemAppearance.widgetText(mContext, views, R.id.title, displayColor);
                 views.setFloat(R.id.title, "setAlpha", declined ? 0.4f : 1f);
 
                 if (!eventInfo.allDay) {
                     updateTextView(views, R.id.when, eventInfo.visibWhen, eventInfo.when);
                     updateTextView(views, R.id.where, eventInfo.visibWhere, eventInfo.where);
-                    WidgetUtils.setThemeText(mContext, views, R.id.when, R.color.widget_live_text, textColor);
-                    WidgetUtils.setThemeText(mContext, views, R.id.where, R.color.widget_live_text, textColor);
+                    com.android.calendar.ItemAppearance.widgetText(mContext, views, R.id.when, displayColor);
+                    com.android.calendar.ItemAppearance.widgetText(mContext, views, R.id.where, displayColor);
                     views.setFloat(R.id.when, "setAlpha", declined ? 0.4f : 1f);
                     views.setFloat(R.id.where, "setAlpha", declined ? 0.4f : 1f);
                 }

@@ -84,11 +84,12 @@ final class TaskListUi {
     static void bindRow(View root, CheckBox done, TextView title, TaskStore.Task task,
             TaskStore store, Runnable afterComplete) {
         Context context = root.getContext();
-        root.setBackgroundResource(DynamicThemeKt.getDrawableId(context,
-                task.done ? "agenda_item_bg_secondary" : "agenda_item_bg_primary"));
+        int color = com.android.calendar.ItemAppearance.foreground(context,
+                TaskCalendarUi.displayColor(context, task, false));
+        com.android.calendar.ItemAppearance.apply(root, color);
         done.setOnCheckedChangeListener(null);
         done.setChecked(task.done);
-        done.setTextColor(TaskCalendarUi.displayColor(context, task, false));
+        done.setTextColor(color);
         done.setText(stateSymbol(context, task, task.done));
         done.setContentDescription(context.getString(R.string.tasks_complete) + " " + task.title);
         done.setOnCheckedChangeListener((button, checked) -> {
@@ -97,7 +98,7 @@ final class TaskListUi {
             if (afterComplete != null) afterComplete.run();
         });
         title.setText(task.title);
-        title.setTextColor(DynamicThemeKt.getColor(context, "agenda_item_standard_color"));
+        title.setTextColor(color);
         title.setTypeface(task.done ? Typeface.DEFAULT : Typeface.DEFAULT_BOLD);
         title.setPaintFlags(task.done ? title.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG
                 : title.getPaintFlags() & ~Paint.STRIKE_THRU_TEXT_FLAG);

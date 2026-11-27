@@ -2818,19 +2818,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
                         MAX_EVENT_TEXT_LEN - bob.length()));
             }
 
-            switch (event.selfAttendeeStatus) {
-                case Attendees.ATTENDEE_STATUS_INVITED:
-                    paint.setColor(event.color);
-                    break;
-                case Attendees.ATTENDEE_STATUS_DECLINED:
-                    paint.setAlpha(Utils.DECLINED_EVENT_TEXT_ALPHA);
-                case Attendees.ATTENDEE_STATUS_NONE: // Your own events
-                case Attendees.ATTENDEE_STATUS_ACCEPTED:
-                case Attendees.ATTENDEE_STATUS_TENTATIVE:
-                default:
-                    paint.setColor(Utils.getAdaptiveTextColor(mContext, mEventTextColor, event.color));
-                    break;
-            }
+            paint.setColor(ItemAppearance.foreground(mContext, event.color));
 
             if (event.status == Events.STATUS_CANCELED) {
                 // Strike event title if its status is `canceled`
@@ -2846,7 +2834,9 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
 
             layouts[i] = layout;
         }
-        layout.getPaint().setAlpha(Utils.getAdaptiveTextAlpha(mContext, mEventsAlpha, event.color));
+        layout.getPaint().setColor(ItemAppearance.foreground(mContext, event.color));
+        layout.getPaint().setAlpha(event.selfAttendeeStatus == Attendees.ATTENDEE_STATUS_DECLINED
+                ? Math.round(mEventsAlpha * 0.4f) : mEventsAlpha);
         return layout;
     }
 
@@ -3474,61 +3464,22 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         r.left = (int) event.left + EVENT_RECT_LEFT_MARGIN;
         r.right = (int) event.right;
 
-        int color;
-        if (event == mClickedEvent) {
-                color = mClickedColor;
-        } else {
-            color = event.color;
-        }
-
-        switch (event.selfAttendeeStatus) {
-            case Attendees.ATTENDEE_STATUS_INVITED:
-                if (event != mClickedEvent) {
-                    p.setStyle(Style.STROKE);
-                }
-                break;
-            case Attendees.ATTENDEE_STATUS_DECLINED:
-                if (event != mClickedEvent) {
-                    color = Utils.getDeclinedColorFromColor(color);
-                }
-            case Attendees.ATTENDEE_STATUS_NONE: // Your own events
-            case Attendees.ATTENDEE_STATUS_ACCEPTED:
-            case Attendees.ATTENDEE_STATUS_TENTATIVE:
-            default:
-                p.setStyle(Style.FILL_AND_STROKE);
-                break;
-        }
-
-        p.setAntiAlias(false);
-
-        int floorHalfStroke = (int) Math.floor(EVENT_RECT_STROKE_WIDTH / 2.0f);
-        int ceilHalfStroke = (int) Math.ceil(EVENT_RECT_STROKE_WIDTH / 2.0f);
-        r.top = Math.max((int) event.top + EVENT_RECT_TOP_MARGIN + floorHalfStroke, visibleTop);
-        r.bottom = Math.min((int) event.bottom - EVENT_RECT_BOTTOM_MARGIN - ceilHalfStroke,
-                visibleBot);
-        r.left += floorHalfStroke;
-        r.right -= ceilHalfStroke;
-        p.setStrokeWidth(EVENT_RECT_STROKE_WIDTH);
-        p.setColor(color);
-        int alpha = p.getAlpha();
-        p.setAlpha(mEventsAlpha);
-
-        // Draw the event rectangle
-        if (!event.drawAsAllday() && event.isDrawStaggered() && event.getColumn() > 0) {
-            canvas.save();
-            if (canvas.clipRect(visibleLeft, visibleTop, visibleRight, visibleBot)) {
-                p.setShadowLayer(STAGGERED_EVENT_SHADOW_WIDTH, 0f, 0f, mStaggeredEventShadowColor);
-                canvas.drawRect(r, p);
-                p.clearShadowLayer();
-            }
-            canvas.restore();
-        } else {
-            canvas.drawRect(r, p);
-        }
-
-        // Restore paint settings
-        p.setAlpha(alpha);
+        int color = ItemAppearance.foreground(mContext, event.color);
+        int oldColor = p.getColor();
+        boolean oldAntiAlias = p.isAntiAlias();
+        p.setAntiAlias(true);
         p.setStyle(Style.FILL);
+        p.setColor(ItemAppearance.background(color));
+        p.setAlpha(Math.round(Color.alpha(p.getColor()) * mEventsAlpha / 255f
+                * (event.selfAttendeeStatus == Attendees.ATTENDEE_STATUS_DECLINED ? 0.4f : 1f)));
+        float radius = ItemAppearance.radius(mContext);
+        canvas.save();
+        if (canvas.clipRect(visibleLeft, visibleTop, visibleRight, visibleBot)) {
+            canvas.drawRoundRect(r.left, r.top, r.right, r.bottom, radius, radius, p);
+        }
+        canvas.restore();
+        p.setColor(oldColor);
+        p.setAntiAlias(oldAntiAlias);
 
         // If this event is selected, then use the selection color
         if (mSelectedEvent == event && mClickedEvent != null) {
@@ -3548,7 +3499,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
 
             if (paintIt) {
                 p.setColor(color);
-                canvas.drawRect(r, p);
+                canvas.drawRoundRect(r.left, r.top, r.right, r.bottom, radius, radius, p);
             }
             p.setAntiAlias(true);
         }
