@@ -704,13 +704,12 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
             return view;
         }
 
-        void bind(Row row, Context context) {
+        void bind(Row row, Context context, LocalDate today) {
             Entry entry = row.event;
-            // Like pending reminders, ordinary events keep the primary background
-            // regardless of their date. Only canceled events use the inactive style.
-            boolean canceled = entry.status == Events.STATUS_CANCELED;
+            boolean past = entry.allDay ? !row.day.isAfter(today)
+                    : Math.max(entry.begin, millis(row.day)) <= System.currentTimeMillis();
             root.setBackgroundResource(DynamicThemeKt.getDrawableId(context,
-                    canceled ? "agenda_item_bg_secondary" : "agenda_item_bg_primary"));
+                    past ? "agenda_item_bg_secondary" : "agenda_item_bg_primary"));
             boolean declined = entry.response == Attendees.ATTENDEE_STATUS_DECLINED;
             boolean invited = entry.response == Attendees.ATTENDEE_STATUS_INVITED;
             boolean ownNonResponding = !entry.organizerCanRespond && TextUtils.equals(entry.owner, entry.organizer);
@@ -720,8 +719,8 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
             countdown.setTextColor(textColor);
             when.setTextColor(textColor);
             where.setTextColor(textColor);
-            title.setTypeface(canceled ? Typeface.DEFAULT : Typeface.DEFAULT_BOLD);
-            title.setPaintFlags(canceled
+            title.setTypeface(past ? Typeface.DEFAULT : Typeface.DEFAULT_BOLD);
+            title.setPaintFlags(entry.status == Events.STATUS_CANCELED
                     ? title.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG
                     : title.getPaintFlags() & ~Paint.STRIKE_THRU_TEXT_FLAG);
             title.setText(TextUtils.isEmpty(entry.title) ? context.getString(R.string.no_title_label) : entry.title);
@@ -782,7 +781,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
 
             AgendaRowView holder = convertView != null && convertView.getTag() instanceof AgendaRowView
                     ? (AgendaRowView) convertView.getTag() : new AgendaRowView(context);
-            holder.bind(row, context);
+            holder.bind(row, context, today);
             return holder.root;
         }
     }
