@@ -2323,25 +2323,13 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
             p.setColor(mBgColor);
             canvas.drawRect(r, p);
 
-            int startIndex = -1;
-
-            int todayIndex = mTodayJulianDay - mFirstJulianDay;
-            if (todayIndex < 0) {
-                // Future
-                startIndex = 0;
-            } else if (todayIndex >= 1 && todayIndex + 1 < mNumDays) {
-                // Multiday - tomorrow is visible.
-                startIndex = todayIndex + 1;
-            }
-
-            if (startIndex >= 0) {
-                // Keep the future highlight below the date header.
+            // Keep the time-label column unchanged; fill only the event area.
+            if (mNumDays > 1 || mTodayJulianDay < mFirstJulianDay) {
                 r.top = DAY_HEADER_HEIGHT;
                 r.bottom = mFirstCell - 1;
-                r.left = computeDayLeftPosition(startIndex) + 1;
-                r.right = computeDayLeftPosition(mNumDays);
+                r.left = mHoursWidth;
+                r.right = mViewWidth;
                 p.setColor(mFutureBgColor);
-                p.setStyle(Style.FILL);
                 canvas.drawRect(r, p);
             }
         }
@@ -2659,9 +2647,17 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         p.setAntiAlias(false);
         canvas.drawRect(r, p);
 
-        // Draw background for grid area
-        if (mNumDays == 1 && todayIndex == 0) {
-            // Draw a white background for the time later than current time
+        // Week view uses a uniform future-date background for the event grid.
+        // The hours column above retains mBgColor.
+        if (mNumDays > 1) {
+            r.left = mHoursWidth;
+            r.right = mViewWidth;
+            r.top = mDestRect.top;
+            r.bottom = mDestRect.bottom;
+            p.setColor(mFutureBgColor);
+            canvas.drawRect(r, p);
+        } else if (todayIndex == 0) {
+            // Single-day view retains its elapsed-time shading.
             int lineY = mCurrentTime.getHour() * (mCellHeight + HOUR_GAP)
                     + ((mCurrentTime.getMinute() * mCellHeight) / 60) + 1;
             if (lineY < mViewStartY + mViewHeight) {
@@ -2673,31 +2669,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
                 p.setColor(mFutureBgColor);
                 canvas.drawRect(r, p);
             }
-        } else if (todayIndex >= 0 && todayIndex < mNumDays) {
-            // Draw today with a white background for the time later than current time
-            int lineY = mCurrentTime.getHour() * (mCellHeight + HOUR_GAP)
-                    + ((mCurrentTime.getMinute() * mCellHeight) / 60) + 1;
-            if (lineY < mViewStartY + mViewHeight) {
-                lineY = Math.max(lineY, mViewStartY);
-                r.left = computeDayLeftPosition(todayIndex) + 1;
-                r.right = computeDayLeftPosition(todayIndex + 1);
-                r.top = lineY;
-                r.bottom = mViewStartY + mViewHeight;
-                p.setColor(mFutureBgColor);
-                canvas.drawRect(r, p);
-            }
-
-            // Paint Tomorrow and later days with future color
-            if (todayIndex + 1 < mNumDays) {
-                r.left = computeDayLeftPosition(todayIndex + 1) + 1;
-                r.right = computeDayLeftPosition(mNumDays);
-                r.top = mDestRect.top;
-                r.bottom = mDestRect.bottom;
-                p.setColor(mFutureBgColor);
-                canvas.drawRect(r, p);
-            }
         } else if (todayIndex < 0) {
-            // Future
             r.left = computeDayLeftPosition(0) + 1;
             r.right = computeDayLeftPosition(mNumDays);
             r.top = mDestRect.top;
