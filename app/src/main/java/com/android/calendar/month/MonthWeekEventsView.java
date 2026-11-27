@@ -26,6 +26,7 @@ import android.content.res.Resources;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.RectF;
 import android.graphics.Paint.Align;
 import android.graphics.Paint.Style;
 import android.graphics.Typeface;
@@ -65,6 +66,27 @@ import java.util.Locale;
 import ws.xsoh.etar.R;
 
 public class MonthWeekEventsView extends SimpleWeekView {
+
+    // Hit regions are recorded from the actual rendered rows, not from the
+    // raw day-event list (which also contains hidden and reordered items).
+    private final ArrayList<EventHit> mEventHits = new ArrayList<>();
+
+    private static final class EventHit {
+        final Event event;
+        final RectF bounds;
+        EventHit(Event event, float left, float top, float right, float bottom) {
+            this.event = event;
+            this.bounds = new RectF(left, top, right, bottom);
+        }
+    }
+
+    public Event getEventAtLocation(float x, float y) {
+        for (int i = mEventHits.size() - 1; i >= 0; i--) {
+            EventHit hit = mEventHits.get(i);
+            if (hit.bounds.contains(x, y)) return hit.event;
+        }
+        return null;
+    }
 
     public static final String VIEW_PARAMS_ORIENTATION = "orientation";
     public static final String VIEW_PARAMS_ANIMATE_TODAY = "animate_today";
@@ -219,6 +241,7 @@ public class MonthWeekEventsView extends SimpleWeekView {
     }
 
     public void setEvents(List<ArrayList<Event>> sortedEvents) {
+        mEventHits.clear();
         mEvents = sortedEvents;
         if (sortedEvents == null) {
             return;
@@ -402,6 +425,7 @@ public class MonthWeekEventsView extends SimpleWeekView {
     @Override
     public void setWeekParams(HashMap<String, Integer> params, String tz) {
         super.setWeekParams(params, tz);
+        mEventHits.clear();
 
         if (params.containsKey(VIEW_PARAMS_ORIENTATION)) {
             mOrientation = params.get(VIEW_PARAMS_ORIENTATION);
@@ -453,6 +477,7 @@ public class MonthWeekEventsView extends SimpleWeekView {
 
     @Override
     protected void onDraw(Canvas canvas) {
+        mEventHits.clear();
         drawBackground(canvas);
         drawWeekNums(canvas);
         drawDaySeparators(canvas);
@@ -1677,11 +1702,22 @@ public class MonthWeekEventsView extends SimpleWeekView {
         @Override
         public void draw(Canvas canvas, ViewDetailsPreferences.Preferences preferences, int day) {
            if (mFormat.isVisible() && mEvent != null) {
+               int span = mFormat.getDaySpan(day);
+               int hitTop = mBoundaries.getY();
                drawEventRectangle(canvas, day);
+               float hitLeft = r.left;
+               float hitRight = mBoundaries.hasBorder() ? Math.max(r.right, mBoundaries.getTextRightEdge(span))
+                       : mBoundaries.getTextRightEdge(span);
                mBoundaries.moveToFirstLine();
                drawText(canvas, preferences, day);
                if (isTimeInNextLine(preferences)) {
                    drawTimes(canvas, preferences);
+               }
+               // Exclude the gap between adjacent rows, the date/lunar header,
+               // and the hidden-event indicator. Spanning rows keep their full width.
+               float hitBottom = Math.min(mHeight, mBoundaries.getY() + mBoundaries.mBorderThickness);
+               if (hitRight > hitLeft && hitBottom > hitTop) {
+                   mEventHits.add(new EventHit(mEvent, hitLeft, hitTop, hitRight, hitBottom));
                }
                mBoundaries.moveToNextItem();
            }
@@ -1774,7 +1810,9 @@ public class MonthWeekEventsView extends SimpleWeekView {
             return -1;
         }
         // Selection is (x - start) / (pixels/day) == (x -s) * day / pixels
-        return ((int) ((x - dayStart) * mNumDays / (mWidth - dayStart - mPadding)));
+        int width = mWidth - dayStart - mPadding;
+        if (width <= 0) return -1;
+        return Math.min(mNumDays - 1, (int) ((x - dayStart) * mNumDays / width));
     }
 
     @Override

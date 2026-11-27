@@ -67,6 +67,8 @@ public class MonthByWeekAdapter extends SimpleWeeksAdapter {
     protected ArrayList<Event> mEvents = null;
     MonthWeekEventsView mClickedView;
     MonthWeekEventsView mSingleTapUpView;
+    private Time mSingleTapDay;
+    private Event mSingleTapEvent;
     MonthWeekEventsView mLongClickedView;
     float mClickedXLocation;                // Used to find which day was clicked
     // Perform the tap animation in a runnable to allow a delay before showing the tap color.
@@ -92,15 +94,17 @@ public class MonthByWeekAdapter extends SimpleWeeksAdapter {
         @Override
         public void run() {
             if (mSingleTapUpView != null) {
-                Time day = mSingleTapUpView.getDayFromLocation(mClickedXLocation);
-                if (Log.isLoggable(TAG, Log.DEBUG)) {
-                    Log.d(TAG, "Touched day at Row=" + mSingleTapUpView.mWeek + " day=" + day.toString());
-                }
-                if (day != null) {
-                    onDayTapped(day);
-                }
+                Time day = mSingleTapDay;
+                Event event = mSingleTapEvent;
                 clearClickedView(mSingleTapUpView);
                 mSingleTapUpView = null;
+                mSingleTapDay = null;
+                mSingleTapEvent = null;
+                if (!mIsMiniMonth && event != null) {
+                    com.android.calendar.tasks.TaskCalendarUi.openItem(mContext, mController, event);
+                } else if (day != null) {
+                    onDayTapped(day);
+                }
             }
         }
     };
@@ -324,19 +328,7 @@ public class MonthByWeekAdapter extends SimpleWeeksAdapter {
                     ViewType.CURRENT, CalendarController.EXTRA_GOTO_DATE, null, null);
             return;
         }
-        if (!itemsOnDay(day).isEmpty()) {
-            mController.sendEvent(mContext, EventType.GO_TO, day, day, -1,
-                    ViewType.DAY, CalendarController.EXTRA_GOTO_DATE
-                            | CalendarController.EXTRA_GOTO_BACK_TO_PREVIOUS, null, null);
-        } else {
-            focusDay(day);
-        }
-    }
-
-    private ArrayList<Event> itemsOnDay(Time day) {
-        int dayIndex = Time.getJulianDay(day.normalize(), day.getGmtOffset()) - mFirstJulianDay;
-        if (dayIndex < 0 || dayIndex >= mEventDayList.size()) return new ArrayList<>();
-        return new ArrayList<>(mEventDayList.get(dayIndex));
+        focusDay(day);
     }
 
     private void focusDay(Time day) {
@@ -365,10 +357,13 @@ public class MonthByWeekAdapter extends SimpleWeeksAdapter {
 
         int action = event.getAction();
 
-        // Event was tapped - switch to the detailed view making sure the click animation
-        // is done first.
+        // Capture the displayed item and date at the actual tap position, before
+        // the delayed click animation or a row rebind can change the coordinates.
         if (mGestureDetector.onTouchEvent(event)) {
             mSingleTapUpView = (MonthWeekEventsView) v;
+            mSingleTapDay = mSingleTapUpView.getDayFromLocation(event.getX());
+            mSingleTapEvent = mIsMiniMonth ? null
+                    : mSingleTapUpView.getEventAtLocation(event.getX(), event.getY());
             long delay = System.currentTimeMillis() - mClickTime;
             // Make sure the animation is visible for at least mOnTapDelay - mOnDownDelay ms
             mListView.postDelayed(mDoSingleTapUp,
@@ -379,6 +374,14 @@ public class MonthByWeekAdapter extends SimpleWeeksAdapter {
             // On Up/scroll/move/cancel: hide the "clicked" color.
             switch (action) {
                 case MotionEvent.ACTION_DOWN:
+                    // A new gesture must not reuse a pending tap from an older row.
+                    if (mSingleTapUpView != null) {
+                        mListView.removeCallbacks(mDoSingleTapUp);
+                        clearClickedView(mSingleTapUpView);
+                        mSingleTapUpView = null;
+                        mSingleTapDay = null;
+                        mSingleTapEvent = null;
+                    }
                     mLongClickedView = null;
                     mClickedView = (MonthWeekEventsView) v;
                     mClickedXLocation = event.getX();

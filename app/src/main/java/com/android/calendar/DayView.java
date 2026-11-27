@@ -3757,7 +3757,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         Event oldSelectedEvent = mSelectedEvent;
         int oldSelectionDay = mSelectionDay;
         int oldSelectionHour = mSelectionHour;
-        if (setSelectionFromPosition(x, y, false)) {
+        if (setSelectionFromPosition(x, y, false, mNumDays > 1)) {
             // If a time was selected (a blue selection box is visible) and the click location
             // is in the selected time, do not show a click on an event to prevent a situation
             // of both a selection and an event are clicked when they overlap.
@@ -3932,45 +3932,27 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         }
 
         eventClickCleanup();
-        boolean valid = setSelectionFromPosition(x, y, false);
+        boolean valid = setSelectionFromPosition(x, y, false, mNumDays > 1);
         if (!valid && y >= DAY_HEADER_HEIGHT) return;
-        ArrayList<Event> items = valid ? new ArrayList<>(mSelectedEvents) : itemsOnSelectedDay();
         Event selected = valid ? mSelectedEvent : null;
-        if (valid && selected != null && !items.contains(selected)) {
+        if (selected != null && !mSelectedEvents.contains(selected)) {
             // All-day hit testing can return a nearby event even for an empty cell.
             setSelectedEvent(null);
             selected = null;
         }
         boolean allDay = !valid || mSelectionAllday;
         long time = getSelectedTimeInMillis();
-        // A reminder is directly editable in either day or week view.
-        // Do this before the week-view routing for ordinary calendar events.
-        if (selected != null && selected.taskId > 0) {
+        // Day and week share the same item-opening path. An empty slot only
+        // changes the selection, even if there are other events on that day.
+        if (selected != null) {
             if (mIsAccessibilityEnabled) mAccessibilityMgr.interrupt();
             mSelectionMode = SELECTION_HIDDEN;
             mPopup.dismiss();
-            com.android.calendar.tasks.TaskCalendarUi.openTask(mContext, selected.taskId);
-        } else if (!items.isEmpty() && mNumDays > 1) {
-            Time day = getSelectedTime();
-            mController.sendEvent(this, EventType.GO_TO, day, day, -1, ViewType.DAY,
-                    CalendarController.EXTRA_GOTO_DATE
-                            | CalendarController.EXTRA_GOTO_BACK_TO_PREVIOUS, null, null);
-        } else if (selected != null) {
-            if (mIsAccessibilityEnabled) mAccessibilityMgr.interrupt();
-            mSelectionMode = SELECTION_HIDDEN;
             com.android.calendar.tasks.TaskCalendarUi.openItem(mContext, mController, selected);
         } else {
             focusSlot(time, allDay);
         }
         invalidate();
-    }
-
-    private ArrayList<Event> itemsOnSelectedDay() {
-        ArrayList<Event> items = new ArrayList<>();
-        for (Event event : mEvents) {
-            if (event.startDay <= mSelectionDay && event.endDay >= mSelectionDay) items.add(event);
-        }
-        return items;
     }
 
     private void focusSlot(long time, boolean allDay) {
@@ -4600,6 +4582,12 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
      * @return true if the touch position is valid
      */
     private boolean setSelectionFromPosition(int x, final int y, boolean keepOldSelection) {
+        return setSelectionFromPosition(x, y, keepOldSelection, false);
+    }
+
+    private boolean setSelectionFromPosition(int x, final int y, boolean keepOldSelection,
+            boolean exactHit) {
+        boolean outsideGrid = x < mHoursWidth;
 
         Event savedEvent = null;
         int savedDay = 0;
@@ -4647,7 +4635,12 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
             mSelectionAllday = false;
         }
 
-        findSelectedEvent(x, y);
+        if (exactHit && outsideGrid) {
+            setSelectedEvent(null);
+            mSelectedEvents.clear();
+        } else {
+            findSelectedEvent(x, y, exactHit);
+        }
 
 //        Log.i("Cal", "setSelectionFromPosition( " + x + ", " + y + " ) day: " + day + " hour: "
 //                + mSelectionHour + " mFirstCell: " + mFirstCell + " mFirstHourOffset: "
@@ -4675,13 +4668,20 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         return true;
     }
 
-    private void findSelectedEvent(int x, int y) {
+    private void findSelectedEvent(int x, int y, boolean exactHit) {
         int date = mSelectionDay;
+        int dayIndex = mSelectionDay - mFirstJulianDay;
         int cellWidth = mCellWidth;
         ArrayList<Event> events = mEvents;
         int numEvents = events.size();
-        int left = computeDayLeftPosition(mSelectionDay - mFirstJulianDay);
+        int left = computeDayLeftPosition(dayIndex);
         int top = 0;
+        if (exactHit) {
+            // Match the same geometry arguments used by drawEvents().
+            left++;
+            cellWidth = computeDayLeftPosition(dayIndex + 1) - left + 1;
+            top = HOUR_GAP;
+        }
         setSelectedEvent(null);
 
         mSelectedEvents.clear();
@@ -4710,8 +4710,11 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
                 float eventBottom = eventTop + height - ALL_DAY_EVENT_RECT_BOTTOM_MARGIN;
                 if (eventTop >= clip || (collapsed && eventBottom > clip)) continue;
                 eventBottom = Math.min(eventBottom, clip);
-                if (y >= eventTop && y <= eventBottom
-                        && x >= event.left && x <= event.right) {
+                float hitLeft = event.left + (exactHit ? EVENT_RECT_LEFT_MARGIN : 0);
+                float hitTop = eventTop + (exactHit ? EVENT_RECT_TOP_MARGIN : 0);
+                float hitBottom = eventBottom - (exactHit ? EVENT_RECT_BOTTOM_MARGIN : 0);
+                if (y >= hitTop && y <= hitBottom
+                        && x >= hitLeft && x <= event.right) {
                     mSelectedEvents.add(event);
                     closestEvent = event;
                     break;
@@ -4724,7 +4727,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
                     closestEvent = event;
                 }
             }
-            setSelectedEvent(closestEvent);
+            setSelectedEvent(exactHit && mSelectedEvents.isEmpty() ? null : closestEvent);
             return;
         }
 
@@ -4749,7 +4752,11 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
 
             // If the event intersects the selection region, then add it to
             // mSelectedEvents.
-            if (geometry.eventIntersectsSelection(event, region)) {
+            if (exactHit
+                    ? x >= event.left + EVENT_RECT_LEFT_MARGIN && x <= event.right
+                        && y >= event.top + EVENT_RECT_TOP_MARGIN
+                        && y <= event.bottom - EVENT_RECT_BOTTOM_MARGIN
+                    : geometry.eventIntersectsSelection(event, region)) {
                 mSelectedEvents.add(event);
             }
         }
@@ -4768,7 +4775,8 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
             float minDist = mViewWidth + mViewHeight; // some large distance
             for (int index = 0; index < len; index++) {
                 Event ev = mSelectedEvents.get(index);
-                float dist = geometry.pointToEvent(x, y, ev);
+                // Exact hits are equally near; preserve the visual stacking order.
+                float dist = exactHit ? 0f : geometry.pointToEvent(x, y, ev);
                 if (dist < minDist) {
                     minDist = dist;
                     closestEvent = ev;
