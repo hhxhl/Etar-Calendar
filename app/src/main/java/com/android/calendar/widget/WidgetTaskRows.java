@@ -6,6 +6,10 @@ import android.database.MatrixCursor;
 import android.provider.CalendarContract.Attendees;
 import android.provider.CalendarContract.Instances;
 import com.android.calendar.Event;
+import com.android.calendar.ItemStateSymbols;
+import com.android.calendar.Utils;
+import java.time.ZoneId;
+import ws.xsoh.etar.R;
 import com.android.calendar.tasks.TaskCalendarUi;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -79,7 +83,23 @@ final class WidgetTaskRows {
                 .thenComparing(row -> title < 0 || row[title] == null ? "" : row[title].toString());
         rows.sort(comparator);
         MatrixCursor result = new MatrixCursor(columns, rows.size());
-        for (Object[] row : rows) result.addRow(row);
+        int end = index(projection, Instances.END);
+        int id = index(projection, Instances.EVENT_ID);
+        long now = System.currentTimeMillis();
+        ZoneId zone = ZoneId.of(Utils.getTimeZone(context, null));
+        for (Object[] row : rows) {
+            if (title >= 0 && begin >= 0 && end >= 0 && id >= 0) {
+                boolean wholeDay = number(row, allDay) != 0;
+                String symbol = number(row, id) < -1
+                        ? ItemStateSymbols.reminder(number(row, projection.length) != 0,
+                            number(row, begin), wholeDay, zone, now)
+                        : ItemStateSymbols.event(number(row, begin), number(row, end), wholeDay, zone, now);
+                String label = row[title] == null || row[title].toString().isEmpty()
+                        ? context.getString(R.string.no_title_label) : row[title].toString();
+                row[title] = ItemStateSymbols.prefix(symbol, label);
+            }
+            result.addRow(row);
+        }
         return result;
     }
 

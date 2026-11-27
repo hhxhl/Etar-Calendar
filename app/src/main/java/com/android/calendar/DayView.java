@@ -2802,11 +2802,13 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         // Check if we have already initialized the StaticLayout and that
         // the width hasn't changed (due to vertical resizing which causes
         // re-layout of events at min height)
-        if (layout == null || r.width() != layout.getWidth()) {
-            SpannableStringBuilder bob = new SpannableStringBuilder();
+        String marker = ItemStateSymbols.forEvent(mContext, event, mCurrentTime.toMillis()) + " ";
+        if (layout == null || r.width() != layout.getWidth()
+                || !layout.getText().toString().startsWith(marker)) {
+            SpannableStringBuilder bob = new SpannableStringBuilder(marker);
             if (event.title != null) {
                 // MAX - 1 since we add a space
-                bob.append(drawTextSanitizer(event.title.toString(), MAX_EVENT_TEXT_LEN - 1));
+                bob.append(drawTextSanitizer(event.title.toString(), MAX_EVENT_TEXT_LEN - bob.length() - 1));
                 bob.setSpan(new StyleSpan(android.graphics.Typeface.BOLD), 0,
                             bob.length(), 0);
                 bob.append(' ');

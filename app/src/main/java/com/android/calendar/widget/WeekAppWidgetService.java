@@ -68,6 +68,8 @@ public class WeekAppWidgetService extends RemoteViewsService {
                 Instances.END_DAY,
                 Instances.SELF_ATTENDEE_STATUS,
                 Instances.EVENT_ID,
+                Instances.BEGIN,
+                Instances.END,
         };
         private static final int INDEX_TITLE = 0;
         private static final int INDEX_DISPLAY_COLOR = 1;

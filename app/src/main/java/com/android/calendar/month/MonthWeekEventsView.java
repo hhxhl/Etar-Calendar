@@ -486,6 +486,7 @@ public class MonthWeekEventsView extends SimpleWeekView {
         }
         if (mShowDetailsInMonth) {
             drawEvents(canvas);
+            if (mHasToday) postInvalidateDelayed(60_000 - System.currentTimeMillis() % 60_000);
         } else {
             if (mDna == null && mUnsortedEvents != null) {
                 createDna(mUnsortedEvents);
@@ -1510,6 +1511,7 @@ public class MonthWeekEventsView extends SimpleWeekView {
     protected class FormattedEvent extends FormattedEventBase {
         private Event mEvent;
         private DynamicLayout mTextLayout;
+        private CharSequence mFormattedText;
         public FormattedEvent(Event event, EventFormat format, BoundariesSetter boundaries) {
             super(format, boundaries);
             mEvent = event;
@@ -1569,7 +1571,9 @@ public class MonthWeekEventsView extends SimpleWeekView {
                 baseText.append(getFormattedTime(preferences));
                 baseText.append(" ");
             }
-            baseText.append(mEvent.title);
+            baseText.append(com.android.calendar.ItemStateSymbols.prefix(
+                    com.android.calendar.ItemStateSymbols.forEvent(getContext(), mEvent,
+                            System.currentTimeMillis()), mEvent.title));
             if (preferences.LOCATION_VISIBILITY && mEvent.location != null && mEvent.location.length() > 0) {
                 baseText.append("\n@ ");
                 baseText.append(mEvent.location);
@@ -1581,7 +1585,8 @@ public class MonthWeekEventsView extends SimpleWeekView {
             if (mEvent == null) {
                 return;
             }
-            mTextLayout = new DynamicLayout(getBaseText(preferences), mEventPaint,
+            mFormattedText = getBaseText(preferences);
+            mTextLayout = new DynamicLayout(mFormattedText, mEventPaint,
                     Math.max(1, getAvailableSpaceForText(span)), Layout.Alignment.ALIGN_CENTER,
                     0.0f, 0.0f, false);
         }
@@ -1627,13 +1632,13 @@ public class MonthWeekEventsView extends SimpleWeekView {
         }
 
         protected void drawText(Canvas canvas, ViewDetailsPreferences.Preferences preferences, int day) {
-            CharSequence baseText = getBaseText(preferences);
             final int linesNo = mFormat.getEventLines();
             final int span = mFormat.getDaySpan(day);
             if (mFormat.isPartiallyHidden()) {
                 preFormatText(preferences, span);
             }
-            for (int i = 0; i < linesNo; i++) {
+            CharSequence baseText = mFormattedText;
+            for (int i = 0; i < Math.min(linesNo, mTextLayout.getLineCount()); i++) {
                 CharSequence lineText;
                 if (i == linesNo - 1) {
                     lineText = getFormattedText(baseText.subSequence(mTextLayout.getLineStart(i),

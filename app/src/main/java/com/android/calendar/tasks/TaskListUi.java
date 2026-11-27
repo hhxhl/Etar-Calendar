@@ -1,10 +1,8 @@
 package com.android.calendar.tasks;
 
 import android.content.Context;
-import android.content.res.ColorStateList;
 import android.graphics.Paint;
 import android.graphics.Typeface;
-import android.graphics.drawable.InsetDrawable;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.AdapterView;
@@ -14,7 +12,9 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import com.android.calendar.DatedListUi;
 import com.android.calendar.theme.DynamicThemeKt;
-import com.google.android.material.checkbox.MaterialCheckBox;
+import com.android.calendar.ItemStateSymbols;
+import com.android.calendar.Utils;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.LongConsumer;
@@ -67,15 +67,19 @@ final class TaskListUi {
     }
 
     static CheckBox completion(Context context, boolean reminder) {
-        CheckBox box = reminder ? ReminderCompletion.create(context) : new MaterialCheckBox(context);
-        if (reminder && box.getButtonDrawable() != null) {
-            box.setButtonDrawable(new InsetDrawable(box.getButtonDrawable(),
-                    DatedListUi.dp(context, 16), 0, DatedListUi.dp(context, 8), 0));
-        } else {
-            box.setPadding(DatedListUi.dp(context, 8), 0, 0, 0);
-        }
-        box.setGravity(Gravity.CENTER_VERTICAL);
+        CheckBox box = new CheckBox(context);
+        box.setButtonDrawable((android.graphics.drawable.Drawable) null);
+        box.setPadding(0, 0, 0, 0);
+        box.setGravity(Gravity.CENTER);
+        box.setTextSize(18);
+        box.setSingleLine(true);
         return box;
+    }
+
+    private static String stateSymbol(Context context, TaskStore.Task task, boolean checked) {
+        return task.due == null ? ItemStateSymbols.task(checked)
+                : ItemStateSymbols.reminder(checked, task.due, task.allDay,
+                    ZoneId.of(Utils.getTimeZone(context, null)), System.currentTimeMillis());
     }
 
     static void bindRow(View root, CheckBox done, TextView title, TaskStore.Task task,
@@ -85,9 +89,11 @@ final class TaskListUi {
                 task.done ? "agenda_item_bg_secondary" : "agenda_item_bg_primary"));
         done.setOnCheckedChangeListener(null);
         done.setChecked(task.done);
-        done.setButtonTintList(ColorStateList.valueOf(TaskCalendarUi.displayColor(context, task, false)));
+        done.setTextColor(TaskCalendarUi.displayColor(context, task, false));
+        done.setText(stateSymbol(context, task, task.done));
         done.setContentDescription(context.getString(R.string.tasks_complete) + " " + task.title);
         done.setOnCheckedChangeListener((button, checked) -> {
+            done.setText(stateSymbol(context, task, checked));
             store.complete(task.id, checked, task.due);
             if (afterComplete != null) afterComplete.run();
         });

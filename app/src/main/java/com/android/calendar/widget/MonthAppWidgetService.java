@@ -67,6 +67,8 @@ public class MonthAppWidgetService extends RemoteViewsService {
                 Instances.ALL_DAY,
                 Instances.START_MINUTE,
                 Instances.EVENT_ID,
+                Instances.BEGIN,
+                Instances.END,
         };
         private static final int INDEX_START_DAY = 0;
         private static final int INDEX_DISPLAY_COLOR = 1;

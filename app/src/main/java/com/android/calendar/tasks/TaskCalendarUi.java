@@ -137,7 +137,7 @@ public final class TaskCalendarUi {
             item.taskCompleted = task.done;
             // Negative identity is reserved for tasks in the display model only.
             item.id = -task.id - 1;
-            item.title = ReminderCompletion.title(task.done, task.title);
+            item.title = task.title;
             item.allDay = task.allDay;
             item.hasAlarm = task.alarm;
             item.isRepeating = task.rule != null;

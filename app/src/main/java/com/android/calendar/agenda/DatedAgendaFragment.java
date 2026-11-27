@@ -34,7 +34,7 @@ import com.android.calendar.CalendarController;
 import com.android.calendar.CalendarController.EventInfo;
 import com.android.calendar.CalendarController.EventType;
 import com.android.calendar.CalendarController.ViewType;
-import com.android.calendar.ColorChipView;
+import com.android.calendar.ItemStateSymbols;
 import com.android.calendar.DatedItemsRepository;
 import com.android.calendar.DatedItemsRepository.AgendaEntry;
 import com.android.calendar.DatedListUi;
@@ -569,20 +569,16 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
      */
     private final class AgendaRowView {
         final LinearLayout root;
-        final ColorChipView chip;
+        final TextView chip;
         final TextView title, when, where, countdown;
 
         AgendaRowView(Context context) {
             DatedListUi.RowLayout layout = new DatedListUi.RowLayout(context);
             root = layout.root;
 
-            FrameLayout leading = new FrameLayout(context);
-            chip = new ColorChipView(context);
-            FrameLayout.LayoutParams chipParams = new FrameLayout.LayoutParams(dp(24), dp(24),
-                    Gravity.CENTER_VERTICAL | Gravity.START);
-            chipParams.setMarginStart(dp(16));
-            leading.addView(chip, chipParams);
-            layout.addLeading(leading);
+            chip = DatedListUi.RowLayout.textView(context, 18);
+            chip.setGravity(Gravity.CENTER);
+            layout.addLeading(chip);
             title = layout.addText(18);
             when = layout.addText(14);
             where = layout.addText(14);
@@ -600,8 +596,6 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
             root.setBackgroundResource(DynamicThemeKt.getDrawableId(context,
                     past ? "agenda_item_bg_secondary" : "agenda_item_bg_primary"));
             boolean declined = entry.response == Attendees.ATTENDEE_STATUS_DECLINED;
-            boolean invited = entry.response == Attendees.ATTENDEE_STATUS_INVITED;
-            boolean ownNonResponding = !entry.organizerCanRespond && TextUtils.equals(entry.owner, entry.organizer);
             int titleColor = DynamicThemeKt.getColor(context, "agenda_item_standard_color");
             int textColor = DynamicThemeKt.getColor(context, "agenda_item_where_text_color");
             title.setTextColor(titleColor);
@@ -614,13 +608,10 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
                     : title.getPaintFlags() & ~Paint.STRIKE_THRU_TEXT_FLAG);
             title.setText(TextUtils.isEmpty(entry.title) ? context.getString(R.string.no_title_label) : entry.title);
 
-            chip.setColor(Utils.getDisplayColorFromColor(context, entry.color));
-            chip.setDrawStyle(ownNonResponding ? ColorChipView.DRAW_FULL : declined ? ColorChipView.DRAW_FADED
-                    : invited ? ColorChipView.DRAW_BORDER : ColorChipView.DRAW_FULL);
-            ViewGroup.LayoutParams chipParams = chip.getLayoutParams();
-            chipParams.height = dp(getResources().getInteger(entry.allDay
-                    ? R.integer.color_chip_all_day_height : R.integer.color_chip_height));
-            chip.setLayoutParams(chipParams);
+            chip.setText(ItemStateSymbols.event(entry.begin, entry.end, entry.allDay,
+                    zone, System.currentTimeMillis()));
+            chip.setTextColor(Utils.getDisplayColorFromColor(context, entry.color));
+            chip.setAlpha(declined ? 0.4f : 1f);
 
             String tz = entry.allDay ? "UTC" : zone.getId();
             int flags = entry.allDay ? 0 : DateUtils.FORMAT_SHOW_TIME;
