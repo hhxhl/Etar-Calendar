@@ -266,12 +266,8 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
             if (WidgetUtils.usesLiveTheme(context)) {
                 views.setColorStateList(R.id.grid_widget_settings, "setImageTintList", R.color.widget_live_text);
             } else {
-                if (android.os.Build.VERSION.SDK_INT >= 31) {
-                    views.setColorStateList(R.id.grid_widget_settings, "setImageTintList",
-                            android.content.res.ColorStateList.valueOf(headerTextColor));
-                } else {
-                    views.setInt(R.id.grid_widget_settings, "setColorFilter", headerTextColor);
-                }
+                views.setColorStateList(R.id.grid_widget_settings, "setImageTintList",
+                        android.content.res.ColorStateList.valueOf(headerTextColor));
             }
             WidgetUtils.applyWidgetBackground(context, views, getBackgroundViewId(), appWidgetId);
 

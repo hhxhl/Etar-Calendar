@@ -20,11 +20,9 @@ public final class TaskAlarmReceiver extends BroadcastReceiver {
     private static final String COMPLETE="com.android.calendar.tasks.COMPLETE";
     public static final String CHANNEL="task_reminders";
     public static void ensureChannel(Context context) {
-        if (Build.VERSION.SDK_INT >= 26) {
-            NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-            nm.createNotificationChannel(new NotificationChannel(CHANNEL,
-                    context.getString(R.string.reminders_title), NotificationManager.IMPORTANCE_HIGH));
-        }
+        NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        nm.createNotificationChannel(new NotificationChannel(CHANNEL,
+                context.getString(R.string.reminders_title), NotificationManager.IMPORTANCE_HIGH));
     }
     private static PendingIntent alarm(Context c) {
         return PendingIntent.getBroadcast(c,0,new Intent(c,TaskAlarmReceiver.class).setAction(FIRE),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
@@ -36,7 +34,7 @@ public final class TaskAlarmReceiver extends BroadcastReceiver {
         Long next=TaskStore.get(c).nextAlarm();if(next==null)return;
         long when=Math.max(System.currentTimeMillis()+1000,next);
         try {
-            if(Build.VERSION.SDK_INT<31 || manager.canScheduleExactAlarms())manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,when,pi);
+            if(manager.canScheduleExactAlarms())manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,when,pi);
             else manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,when,pi);
         } catch(SecurityException e){manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,when,pi);}
     }

@@ -209,7 +209,6 @@ public class Utils {
     private static boolean mAllowWeekForDetailView = false;
     private static String sVersion = null;
 
-    @RequiresApi(api = Build.VERSION_CODES.S)
     public static boolean canScheduleAlarms(Context context) {
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         return alarmManager.canScheduleExactAlarms();
@@ -244,10 +243,6 @@ public class Utils {
      * exist but cannot be configured by the user.
      */
     public static boolean isMonetAvailable(Context context) {
-        if (Build.VERSION.SDK_INT < 31) {
-            return false;
-        }
-
         // Wallpaper-based theming requires a color extraction engine and is enabled when the `flag_monet`
         // config flag is enabled in SystemUI. It's unclear how to access this information from a
         // normal application.

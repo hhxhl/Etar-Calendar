@@ -519,7 +519,7 @@ public final class TaskListActivity extends AppCompatActivity {
 
     private void checkAlarmPermissions(){
         if(Build.VERSION.SDK_INT>=33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED){requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},42);return;}
-        if(Build.VERSION.SDK_INT>=31&&!((AlarmManager)getSystemService(ALARM_SERVICE)).canScheduleExactAlarms()){
+        if(!((AlarmManager)getSystemService(ALARM_SERVICE)).canScheduleExactAlarms()){
             AlertDialog permissionDialog=new MaterialAlertDialogBuilder(this).setMessage(R.string.tasks_exact_alarm_message)
                 .setNegativeButton(android.R.string.cancel,null)
                 .setPositiveButton(R.string.tasks_settings,(d,w)->{

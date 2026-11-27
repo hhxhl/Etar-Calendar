@@ -10,7 +10,6 @@ import android.util.TypedValue
 import android.view.View
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -46,29 +45,17 @@ fun AppCompatActivity.applyTheme() {
     // Set selected theme mode to the app
     when (selectedTheme) {
         Theme.SYSTEM -> {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                uiModeManager.setApplicationNightMode(UiModeManager.MODE_NIGHT_CUSTOM)
-            } else {
-                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
-            }
+            uiModeManager.setApplicationNightMode(UiModeManager.MODE_NIGHT_CUSTOM)
         }
 
         Theme.LIGHT -> {
             setSystemBarConfiguration(light = true)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                uiModeManager.setApplicationNightMode(UiModeManager.MODE_NIGHT_NO)
-            } else {
-                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
-            }
+            uiModeManager.setApplicationNightMode(UiModeManager.MODE_NIGHT_NO)
         }
 
         else -> {
             setSystemBarConfiguration(light = false)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                uiModeManager.setApplicationNightMode(UiModeManager.MODE_NIGHT_YES)
-            } else {
-                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
-            }
+            uiModeManager.setApplicationNightMode(UiModeManager.MODE_NIGHT_YES)
         }
     }
 }
@@ -79,10 +66,8 @@ private fun AppCompatActivity.setSystemBarConfiguration(light: Boolean) {
         isAppearanceLightStatusBars = light
 
         // Navigation bar color
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-            isAppearanceLightNavigationBars = light
-            window.navigationBarColor = getStyledAttributeColor(android.R.attr.colorBackground)
-        }
+        isAppearanceLightNavigationBars = light
+        window.navigationBarColor = getStyledAttributeColor(android.R.attr.colorBackground)
     }
 }
 
@@ -153,7 +138,7 @@ fun getColor(context: Context, id: String?): Int {
     // application, but not for the resources. This is to find the package name of a known
     // resource to know what package to lookup the colors in.
     val packageName = res.getResourcePackageName(R.string.app_label)
-    val explicitLight = if (suffix.isEmpty() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    val explicitLight = if (suffix.isEmpty()) {
         res.getIdentifier(id + "_light", "color", packageName)
     } else 0
     val colorId = if (explicitLight != 0) explicitLight

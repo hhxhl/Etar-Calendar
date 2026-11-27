@@ -681,12 +681,9 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         mController.registerFirstEventHandler(HANDLER_KEY, this);
         mOnSaveInstanceStateCalled = false;
 
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-            if (!Utils.canScheduleAlarms(this)) {
-                Intent intent = new Intent();
-                intent.setAction(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
-                startActivity(intent);
-            }
+        if (!Utils.canScheduleAlarms(this)) {
+            Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
+            startActivity(intent);
         }
 
         if (!Utils.isCalendarPermissionGranted(this, true)) {

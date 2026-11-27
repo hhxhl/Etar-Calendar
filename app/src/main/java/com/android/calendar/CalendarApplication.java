@@ -59,7 +59,6 @@ public class CalendarApplication extends Application {
     }
 
     private int paletteSignature() {
-        if (android.os.Build.VERSION.SDK_INT < 31) return 0;
         return java.util.Arrays.hashCode(new int[]{
                 getColor(android.R.color.system_accent1_500),
                 getColor(android.R.color.system_accent2_500),

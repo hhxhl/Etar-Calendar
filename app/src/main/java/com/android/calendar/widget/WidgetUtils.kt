@@ -20,7 +20,6 @@ import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import com.android.calendar.theme.ThemeUtils
 import com.android.calendar.theme.ThemeUtils.isPureBlackModeEnabled
 import com.android.calendar.theme.model.Theme
@@ -99,7 +98,7 @@ object WidgetUtils {
 
     @JvmStatic
     fun usesLiveTheme(context: Context): Boolean =
-        Build.VERSION.SDK_INT >= 31 && ThemeUtils.getTheme(context) == Theme.SYSTEM
+        ThemeUtils.getTheme(context) == Theme.SYSTEM
 
     // Use the same background shape and host-resolved color for every widget.
     @Suppress("UNUSED_PARAMETER")
@@ -117,12 +116,8 @@ object WidgetUtils {
         val id = R.id.widget_background_image
         // The rounded surface is already declared in each widget layout.
         // Replacing the white source drawable on every update can flash before tint is applied.
-        if (Build.VERSION.SDK_INT >= 31) {
-            // Resolve at RemoteViews application time in the host, not the provider.
-            views.setColorStateList(id, "setImageTintList", color)
-        } else {
-            views.setInt(id, "setColorFilter", context.getColor(color))
-        }
+        // Resolve at RemoteViews application time in the host, not the provider.
+        views.setColorStateList(id, "setImageTintList", color)
         applyOpacity(views, id, getBackgroundOpacity(context, appWidgetId))
     }
 
