@@ -29,6 +29,7 @@ public final class UndatedTasksFragment extends Fragment implements CalendarCont
     private Spinner filter;
     private CheckBox scheduled;
     private LinearLayout rows;
+    private ScrollView scroll;
     private long listId;
     private boolean showScheduled;
     private List<TaskStore.TaskList> lists;
@@ -54,7 +55,7 @@ public final class UndatedTasksFragment extends Fragment implements CalendarCont
             refresh();
         });
         root.addView(scheduled);
-        ScrollView scroll = new ScrollView(context);
+        scroll = new ScrollView(context);
         rows = new LinearLayout(context);
         rows.setOrientation(LinearLayout.VERTICAL);
         scroll.addView(rows);
@@ -85,6 +86,7 @@ public final class UndatedTasksFragment extends Fragment implements CalendarCont
 
     @Override public void onDestroyView() {
         rows = null;
+        scroll = null;
         filter = null;
         scheduled = null;
         super.onDestroyView();
@@ -164,7 +166,17 @@ public final class UndatedTasksFragment extends Fragment implements CalendarCont
         }
     }
 
-    @Override public long getSupportedEventTypes() { return CalendarController.EventType.EVENTS_CHANGED; }
-    @Override public void handleEvent(CalendarController.EventInfo event) { eventsChanged(); }
+    @Override public long getSupportedEventTypes() {
+        return CalendarController.EventType.EVENTS_CHANGED | CalendarController.EventType.GO_TO;
+    }
+    @Override public void handleEvent(CalendarController.EventInfo event) {
+        if (event.eventType == CalendarController.EventType.GO_TO) {
+            if ((event.extraLong & CalendarController.EXTRA_GOTO_TODAY) != 0 && scroll != null) {
+                scroll.scrollTo(0, 0);
+            }
+        } else if (event.eventType == CalendarController.EventType.EVENTS_CHANGED) {
+            eventsChanged();
+        }
+    }
     @Override public void eventsChanged() { refresh(); }
 }
