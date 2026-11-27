@@ -155,11 +155,12 @@ class TaskListPreferences : PreferenceFragmentCompat(), OnColorSelectedListener 
                 .toTypedArray().sortedWith(HsvColorComparator()).toIntArray()
         val size = if (Utils.getConfigBool(context, R.bool.tablet_config))
             ColorPickerDialog.SIZE_LARGE else ColorPickerDialog.SIZE_SMALL
-        ColorPickerDialog.newInstance(R.string.calendar_color_picker_dialog_title,
-                colors, displayColor(list), 4, size).apply {
-            setTargetFragment(this@TaskListPreferences, 0)
-            show(parentFragmentManager, COLOR_DIALOG_TAG)
-        }
+        // Resolve the manager from the attached preference fragment, not the
+        // new dialog (which has not been added to a FragmentManager yet).
+        val picker = ColorPickerDialog.newInstance(R.string.calendar_color_picker_dialog_title,
+                colors, displayColor(list), 4, size)
+        picker.setTargetFragment(this, 0)
+        picker.show(parentFragmentManager, COLOR_DIALOG_TAG)
     }
 
     override fun onColorSelected(color: Int) {
