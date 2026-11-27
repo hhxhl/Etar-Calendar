@@ -549,6 +549,21 @@ public class MonthWeekEventsView extends SimpleWeekView {
             r.right = computeDayLeftPosition(mTodayIndex + 1);
             canvas.drawRect(r, p);
         }
+
+        // Keep the selected date highlighted after the touch animation ends.
+        // Draw beneath date labels and events, preserving their original colors.
+        if (mHasSelectedDay) {
+            int selected = Math.floorMod(mSelectedDay - mWeekStart, 7);
+            if (selected < mNumDays) {
+                int previousAlpha = p.getAlpha();
+                p.setColor(mClickedDayColor);
+                p.setAlpha(mClickedAlpha);
+                r.left = computeDayLeftPosition(selected);
+                r.right = computeDayLeftPosition(selected + 1);
+                canvas.drawRect(r, p);
+                p.setAlpha(previousAlpha);
+            }
+        }
     }
 
     // Draw the "clicked" color on the tapped day

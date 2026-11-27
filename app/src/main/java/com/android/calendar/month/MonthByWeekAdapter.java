@@ -434,13 +434,9 @@ public class MonthByWeekAdapter extends SimpleWeeksAdapter {
                 if (day != null) {
                     clicked.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
                     setDayParameters(day);
-                    ArrayList<Event> items = itemsOnDay(day);
                     focusDay(day);
-                    if (items.isEmpty()) {
-                        com.android.calendar.tasks.TaskCalendarUi.showCreate(mContext, mController, day.toMillis(), false, false);
-                    } else {
-                        com.android.calendar.tasks.TaskCalendarUi.showItems(mContext, mController, items);
-                    }
+                    com.android.calendar.tasks.TaskCalendarUi.showCreate(
+                            mContext, mController, day.toMillis(), false, false);
                 }
             }
         }
