@@ -46,10 +46,9 @@ import java.util.ArrayList;
 import java.util.List;
 import ws.xsoh.etar.R;
 
-/** Lightweight local task editor and list manager. */
+/** Local task and reminder editor. List management lives in Settings. */
 public final class TaskListActivity extends AppCompatActivity {
     private TaskStore store;
-    private LinearLayout rows;
     private long listId=0;
     private boolean editorOnly, finishAfterPermission, waitingForPermissionSettings;
     private boolean restoredPermissionFlow;
@@ -119,30 +118,10 @@ public final class TaskListActivity extends AppCompatActivity {
             edit(task);
             return;
         }
-        // All normal task browsing now lives in UndatedTasksFragment.
-        if (!getIntent().getBooleanExtra("manage_lists", false)) {
-            finish();
-            return;
+        if (getIntent().getBooleanExtra("manage_lists", false)) {
+            startActivity(new Intent(this, com.android.calendar.settings.SettingsActivity.class));
         }
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(16),dp(8),dp(16),dp(8));
-        LinearLayout header = new LinearLayout(this);
-        header.addView(button(R.string.tasks_back, () -> finish()));
-        TextView heading = new TextView(this);
-        heading.setText(R.string.tasks_manage_lists);
-        heading.setTextSize(22);
-        heading.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        header.addView(heading,new LinearLayout.LayoutParams(0,-1,1));
-        header.addView(button(R.string.tasks_new_list, () -> listName(null)));
-        root.addView(header);
-        ScrollView scroll = new ScrollView(this);
-        rows = new LinearLayout(this);
-        rows.setOrientation(LinearLayout.VERTICAL);
-        scroll.addView(rows);
-        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
-        setContentView(root);
-        refresh();
+        finish();
     }
 
     @Override protected void onSaveInstanceState(Bundle state) {
@@ -156,7 +135,6 @@ public final class TaskListActivity extends AppCompatActivity {
 
     @Override protected void onResume() {
         super.onResume();
-        if (store != null) refresh();
         if (waitingForPermissionSettings || restoredPermissionFlow) {
             waitingForPermissionSettings = false;
             restoredPermissionFlow = false;
@@ -165,35 +143,8 @@ public final class TaskListActivity extends AppCompatActivity {
         }
     }
 
-    private Button button(int label,Runnable callback){Button b=new Button(this);b.setText(label);b.setOnClickListener(v->callback.run());return b;}
     private TaskStore.Task newTask(){TaskStore.Task t=new TaskStore.Task();t.listId=listId==0?1:listId;return t;}
     private ArrayAdapter<String> adapter(List<String> labels){ArrayAdapter<String> a=new ArrayAdapter<>(this,android.R.layout.simple_spinner_item,labels);a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);return a;}
-    private void refresh() {
-        if (rows == null) return;
-        rows.removeAllViews();
-        for (TaskStore.TaskList list : store.lists()) {
-            Button entry = new Button(this);
-            entry.setText(name(list));
-            entry.setOnClickListener(v -> manageList(list));
-            rows.addView(entry);
-        }
-    }
-    private void manageList(TaskStore.TaskList l){
-        new MaterialAlertDialogBuilder(this).setTitle(name(l))
-            .setItems(l.id==1?new String[]{getString(R.string.tasks_rename)}:
-                new String[]{getString(R.string.tasks_rename),getString(R.string.tasks_delete)},(d,w)->{
-                if(w==0)listName(l);else new MaterialAlertDialogBuilder(this).setMessage(R.string.tasks_delete_list_confirm)
-                    .setNegativeButton(android.R.string.cancel,null)
-                    .setPositiveButton(R.string.tasks_delete,(x,y)->{
-                        store.deleteList(l.id);refresh();
-                    }).show();
-            }).show();
-    }
-    private void listName(TaskStore.TaskList l){
-        EditText input=new EditText(this);input.setSingleLine();if(l!=null)input.setText(name(l));
-        AlertDialog dialog=new MaterialAlertDialogBuilder(this).setTitle(l==null?R.string.tasks_new_list:R.string.tasks_rename).setView(input).setNegativeButton(android.R.string.cancel,null).setPositiveButton(android.R.string.ok,null).create();
-        dialog.setOnShowListener(v->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(b->{String text=input.getText().toString().trim();if(text.isEmpty()){input.setError(getString(R.string.tasks_required));return;}if(l==null)listId=store.addList(text);else store.renameList(l.id,text);refresh();dialog.dismiss();}));dialog.show();
-    }
     private static void hide(View root, int... ids) {
         for (int id : ids) root.findViewById(id).setVisibility(View.GONE);
     }

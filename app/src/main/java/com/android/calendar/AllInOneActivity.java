@@ -30,7 +30,6 @@ import android.app.Activity;
 import android.content.AsyncQueryHandler;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
-import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -47,7 +46,6 @@ import android.os.Handler;
 import android.os.PowerManager;
 import android.provider.CalendarContract;
 import android.provider.CalendarContract.Attendees;
-import android.provider.CalendarContract.Events;
 import android.provider.Settings;
 import android.text.TextUtils;
 import android.text.format.DateFormat;
@@ -79,7 +77,6 @@ import com.android.calendar.CalendarController.EventHandler;
 import com.android.calendar.CalendarController.EventInfo;
 import com.android.calendar.CalendarController.EventType;
 import com.android.calendar.CalendarController.ViewType;
-import com.android.calendar.agenda.AgendaFragment;
 import com.android.calendar.agenda.DatedAgendaFragment;
 import com.android.calendar.alerts.AlertService;
 import com.android.calendar.month.MonthByWeekFragment;
@@ -119,7 +116,6 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         OnSharedPreferenceChangeListener, SearchView.OnQueryTextListener, SearchView.OnSuggestionListener, NavigationView.OnNavigationItemSelectedListener {
     private static final String TAG = "AllInOneActivity";
     private static final boolean DEBUG = false;
-    private static final String EVENT_INFO_FRAGMENT_TAG = "EventInfoFragment";
     private static final String BUNDLE_KEY_RESTORE_TIME = "key_restore_time";
     private static final String BUNDLE_KEY_EVENT_ID = "key_event_id";
     private static final String BUNDLE_KEY_RESTORE_VIEW = "key_restore_view";
@@ -145,7 +141,6 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
     private static boolean mIsMultipane;
     private static boolean mIsTabletConfig;
     private static boolean mShowAgendaWithMonth;
-    private static boolean mShowEventDetailsWithAgenda;
     int mOrientation;
     BroadcastReceiver mCalIntentReceiver;
     private CalendarController mController;
@@ -211,8 +206,6 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
     private View mSecondaryPane;
     private String mTimeZone;
     private boolean mShowCalendarControls;
-    private boolean mShowEventInfoFullScreenAgenda;
-    private boolean mShowEventInfoFullScreen;
     private int mWeekNum;
     private int mCalendarControlsAnimationTime;
     private int mControlsAnimateWidth;
@@ -377,12 +370,6 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         mShowAgendaWithMonth = Utils.getConfigBool(this, R.bool.show_agenda_with_month);
         mShowCalendarControls =
                 Utils.getConfigBool(this, R.bool.show_calendar_controls);
-        mShowEventDetailsWithAgenda =
-                Utils.getConfigBool(this, R.bool.show_event_details_with_agenda);
-        mShowEventInfoFullScreenAgenda =
-                Utils.getConfigBool(this, R.bool.agenda_show_event_info_full_screen);
-        mShowEventInfoFullScreen =
-                Utils.getConfigBool(this, R.bool.show_event_info_full_screen);
         mCalendarControlsAnimationTime = res.getInteger(R.integer.calendar_controls_animation_time);
         Utils.setAllowWeekForDetailView(mIsMultipane);
 
@@ -1207,17 +1194,6 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         // Remove this when transition to and from month view looks fine.
         boolean doTransition = viewType != ViewType.MONTH && mCurrentView != ViewType.MONTH;
         FragmentManager fragmentManager = getSupportFragmentManager();
-        // Check if our previous view was an Agenda view
-        // TODO remove this if framework ever supports nested fragments
-        if (mCurrentView == ViewType.AGENDA) {
-            // If it was, we need to do some cleanup on it to prevent the
-            // edit/delete buttons from coming back on a rotation.
-            Fragment oldFrag = fragmentManager.findFragmentById(viewId);
-            if (oldFrag instanceof AgendaFragment) {
-                ((AgendaFragment) oldFrag).removeFragments(fragmentManager);
-            }
-        }
-
         if (viewType != mCurrentView) {
             // The rules for this previous view are different than the
             // controller's and are used for intercepting the back button.
@@ -1271,7 +1247,7 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
                 mNavigationView.getMenu().findItem(R.id.month_menu_item).setChecked(true);
                 frag = new MonthByWeekFragment(timeMillis, false);
                 if (mShowAgendaWithMonth) {
-                    secFrag = new AgendaFragment(timeMillis, false);
+                    secFrag = DatedAgendaFragment.newInstance(timeMillis, null);
                 }
                 if (mIsTabletConfig) {
                     mToolbar.setTitle(R.string.month_view);
@@ -1347,7 +1323,7 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         // If the key is already registered this will replace it
         mController.registerEventHandler(viewId, (EventHandler) frag);
         if (secFrag != null) {
-            mController.registerEventHandler(viewId, (EventHandler) secFrag);
+            mController.registerEventHandler(R.id.secondary_pane, (EventHandler) secFrag);
         }
 
         if (doCommit) {
@@ -1502,7 +1478,7 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
 
     @Override
     public long getSupportedEventTypes() {
-        return EventType.GO_TO | EventType.VIEW_EVENT | EventType.UPDATE_TITLE;
+        return EventType.GO_TO | EventType.UPDATE_TITLE;
     }
 
     @Override
@@ -1583,74 +1559,6 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
                 mTodayIconRangeStart = mTodayIconRangeEnd = displayTime;
                 updateTodayIconTint();
             }
-        } else if (event.eventType == EventType.VIEW_EVENT) {
-
-            // If in Agenda view and "show_event_details_with_agenda" is "true",
-            // do not create the event info fragment here, it will be created by the Agenda
-            // fragment
-
-            if (mCurrentView == ViewType.AGENDA && mShowEventDetailsWithAgenda) {
-                if (event.startTime != null && event.endTime != null) {
-                    // Event is all day , adjust the goto time to local time
-                    if (event.isAllDay()) {
-                        long start = Utils.convertAlldayUtcToLocal(
-                                null, event.startTime.toMillis(), mTimeZone);
-                        long end = Utils.convertAlldayUtcToLocal(
-                                null, event.endTime.toMillis(), mTimeZone);
-                        event.startTime.setTimezone(mTimeZone);
-                        event.startTime.set(start);
-                        event.endTime.setTimezone(mTimeZone);
-                        event.endTime.set(end);
-                    }
-                    mController.sendEvent(this, EventType.GO_TO, event.startTime, event.endTime,
-                            event.selectedTime, event.id, ViewType.AGENDA,
-                            CalendarController.EXTRA_GOTO_TIME, null, null);
-                } else if (event.selectedTime != null) {
-                    mController.sendEvent(this, EventType.GO_TO, event.selectedTime,
-                        event.selectedTime, event.id, ViewType.AGENDA);
-                }
-            } else {
-                // TODO Fix the temp hack below: && mCurrentView !=
-                // ViewType.AGENDA
-                if (event.selectedTime != null && mCurrentView != ViewType.AGENDA) {
-                    mController.sendEvent(this, EventType.GO_TO, event.selectedTime,
-                            event.selectedTime, -1, ViewType.CURRENT);
-                }
-                int response = event.getResponse();
-                if ((mCurrentView == ViewType.AGENDA && mShowEventInfoFullScreenAgenda) ||
-                        ((mCurrentView == ViewType.DAY || (mCurrentView == ViewType.WEEK) ||
-                                mCurrentView == ViewType.MONTH) && mShowEventInfoFullScreen)){
-                    // start event info as activity
-                    Intent intent = new Intent(Intent.ACTION_VIEW);
-                    Uri eventUri = ContentUris.withAppendedId(Events.CONTENT_URI, event.id);
-                    intent.setData(eventUri);
-                    intent.setClass(this, EventInfoActivity.class);
-                    intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT |
-                            Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                    intent.putExtra(EXTRA_EVENT_BEGIN_TIME, event.startTime.toMillis());
-                    intent.putExtra(EXTRA_EVENT_END_TIME, event.endTime.toMillis());
-                    intent.putExtra(ATTENDEE_STATUS, response);
-                    startActivity(intent);
-                } else {
-                    // start event info as a dialog
-                    EventInfoFragment fragment = new EventInfoFragment(this,
-                            event.id, event.startTime.toMillis(),
-                            event.endTime.toMillis(), response, true,
-                            EventInfoFragment.DIALOG_WINDOW_STYLE,
-                            null /* No reminders to explicitly pass in. */);
-                    fragment.setDialogParams(event.x, event.y, mActionBar.getHeight());
-                    FragmentManager fm = getSupportFragmentManager();
-                    FragmentTransaction ft = fm.beginTransaction();
-                    // if we have an old popup replace it
-                    Fragment fOld = fm.findFragmentByTag(EVENT_INFO_FRAGMENT_TAG);
-                    if (fOld != null && fOld.isAdded()) {
-                        ft.remove(fOld);
-                    }
-                    ft.add(fragment, EVENT_INFO_FRAGMENT_TAG);
-                    ft.commit();
-                }
-            }
-            displayTime = event.startTime.toMillis();
         } else if (event.eventType == EventType.UPDATE_TITLE) {
             if (mCurrentView == ViewType.MONTH && event.startTime != null) {
                 mMonthViewDisplayedMillis = event.startTime.toMillis();

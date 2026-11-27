@@ -71,7 +71,6 @@ import com.android.calendar.CalendarEventModel;
 import com.android.calendar.CalendarEventModel.Attendee;
 import com.android.calendar.CalendarEventModel.ReminderEntry;
 import com.android.calendar.EmailAddressAdapter;
-import com.android.calendar.EventInfoFragment;
 import com.android.calendar.EventRecurrenceFormatter;
 import com.android.calendar.RecipientAdapter;
 import com.android.calendar.Utils;
@@ -519,7 +518,7 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
                     mReminderItems, mReminderMinuteValues, mReminderMethodValues);
         mModel.mReminders.addAll(mUnsupportedReminders);
         mModel.normalizeReminders();
-        int status = EventInfoFragment.getResponseFromButtonId(
+        int status = EventViewUtils.getResponseFromButtonId(
                 mResponseRadioGroup.getCheckedRadioButtonId());
         if (status != Attendees.ATTENDEE_STATUS_NONE) {
             mModel.mSelfAttendeeStatus = status;
@@ -733,7 +732,7 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
             mModel.mUrl = null;
         }
 
-        int status = EventInfoFragment.getResponseFromButtonId(mResponseRadioGroup
+        int status = EventViewUtils.getResponseFromButtonId(mResponseRadioGroup
                 .getCheckedRadioButtonId());
         if (status != Attendees.ATTENDEE_STATUS_NONE) {
             mModel.mSelfAttendeeStatus = status;
@@ -1108,7 +1107,7 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
 
         View responseLabel = mView.findViewById(R.id.response_label);
         if (canRespond) {
-            int buttonToCheck = EventInfoFragment
+            int buttonToCheck = EventViewUtils
                     .findButtonIdForResponse(model.mSelfAttendeeStatus);
             mResponseRadioGroup.check(buttonToCheck); // -1 clear all radio buttons
             mResponseRadioGroup.setVisibility(View.VISIBLE);

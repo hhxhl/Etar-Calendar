@@ -2225,9 +2225,9 @@ public class Utils {
         ArrayList<ReminderEntry> reminders = null;
 
         ArrayList<Integer> reminderMinutes = bundle.getIntegerArrayList(
-                        EventInfoFragment.BUNDLE_KEY_REMINDER_MINUTES);
+                        "key_reminder_minutes");
         ArrayList<Integer> reminderMethods = bundle.getIntegerArrayList(
-                EventInfoFragment.BUNDLE_KEY_REMINDER_METHODS);
+                "key_reminder_methods");
         if (reminderMinutes == null || reminderMethods == null) {
             if (reminderMinutes != null || reminderMethods != null) {
                 String nullList = (reminderMinutes == null?

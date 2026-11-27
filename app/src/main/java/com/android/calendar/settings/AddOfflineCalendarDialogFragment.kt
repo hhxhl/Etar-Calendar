@@ -36,7 +36,6 @@ import ws.xsoh.etar.R
 class AddOfflineCalendarDialogFragment : DialogFragment() {
 
     private val isTaskList: Boolean get() = arguments?.getBoolean(ARG_TASK_LIST) == true
-    private val listId: Long get() = arguments?.getLong(ARG_LIST_ID) ?: 0L
 
     private lateinit var nameEditText: EditText
     private lateinit var nameEditTextLayout: TextInputLayout
@@ -48,10 +47,6 @@ class AddOfflineCalendarDialogFragment : DialogFragment() {
             val view = inflater.inflate(R.layout.add_offline_calendar_dialog, null)
             nameEditText = view.findViewById(R.id.offline_calendar_name)
             nameEditTextLayout = view.findViewById(R.id.offline_calendar_name_layout)
-            if (isTaskList && listId > 0) {
-                val list = TaskStore.get(requireContext()).lists().firstOrNull { it.id == listId }
-                nameEditText.setText(list?.name?.ifBlank { getString(R.string.tasks_default_list) } ?: "")
-            }
             nameEditText.addTextChangedListener(object : TextWatcher {
                 override fun afterTextChanged(s: Editable) {
                     nameEditTextLayout.error = null
@@ -67,8 +62,8 @@ class AddOfflineCalendarDialogFragment : DialogFragment() {
             val builder = MaterialAlertDialogBuilder(it).apply {
                 setView(view)
                 if (isTaskList) {
-                    setTitle(if (listId == 0L) R.string.tasks_add_offline_list else R.string.tasks_edit_list)
-                    if (listId == 0L) setMessage(R.string.tasks_offline_list_message)
+                    setTitle(R.string.tasks_add_offline_list)
+                    setMessage(R.string.tasks_offline_list_message)
                 } else {
                     setTitle(R.string.preferences_list_add_offline_title)
                     setMessage(R.string.preferences_list_add_offline_message)
@@ -80,11 +75,8 @@ class AddOfflineCalendarDialogFragment : DialogFragment() {
             // https://stackoverflow.com/a/10661281/1600685
             val emptyClickListener: DialogInterface.OnClickListener? = null
             val positiveLabel = if (!isTaskList) R.string.preferences_list_add_offline_button
-                    else if (listId == 0L) R.string.tasks_add_list_button else android.R.string.ok
+                    else R.string.tasks_add_list_button
             dialog.setButton(AlertDialog.BUTTON_POSITIVE, getString(positiveLabel), emptyClickListener)
-            if (isTaskList && listId > 1L) {
-                dialog.setButton(AlertDialog.BUTTON_NEUTRAL, getString(R.string.tasks_delete), emptyClickListener)
-            }
             dialog.setButton(AlertDialog.BUTTON_NEGATIVE, getString(R.string.preferences_list_add_offline_cancel), emptyClickListener)
 
             return dialog
@@ -100,18 +92,6 @@ class AddOfflineCalendarDialogFragment : DialogFragment() {
         alertDialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
             alertDialog.cancel()
         }
-        if (isTaskList && listId > 1L) {
-            alertDialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
-                MaterialAlertDialogBuilder(requireContext())
-                        .setMessage(R.string.tasks_delete_list_confirm)
-                        .setNegativeButton(android.R.string.cancel, null)
-                        .setPositiveButton(R.string.tasks_delete) { _, _ ->
-                            TaskStore.get(requireContext()).deleteList(listId)
-                            notifyTaskListsChanged()
-                            dismiss()
-                        }.show()
-            }
-        }
     }
 
     private fun saveItem() {
@@ -123,7 +103,7 @@ class AddOfflineCalendarDialogFragment : DialogFragment() {
         }
         if (isTaskList) {
             val store = TaskStore.get(requireContext())
-            if (listId == 0L) store.addList(displayName) else store.renameList(listId, displayName)
+            store.addList(displayName)
             notifyTaskListsChanged()
         } else {
             val repository = CalendarRepository(requireActivity().application)
@@ -139,12 +119,10 @@ class AddOfflineCalendarDialogFragment : DialogFragment() {
     companion object {
         const val TASK_LIST_CHANGED = "offline_task_lists_changed"
         private const val ARG_TASK_LIST = "task_list"
-        private const val ARG_LIST_ID = "list_id"
 
-        fun forTaskList(listId: Long = 0L) = AddOfflineCalendarDialogFragment().apply {
+        fun forTaskList() = AddOfflineCalendarDialogFragment().apply {
             arguments = Bundle().apply {
                 putBoolean(ARG_TASK_LIST, true)
-                putLong(ARG_LIST_ID, listId)
             }
         }
     }
