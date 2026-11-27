@@ -78,4 +78,8 @@
     </plurals>
     <string name="tasks_choose_color">事项颜色</string>
     <string name="tasks_default_list_color">使用列表颜色</string>
+    <string name="agenda_search_previous_range">搜索更早的日期</string>
+    <string name="agenda_search_next_range">搜索更晚的日期</string>
+    <string name="agenda_search_enter_query">请输入搜索关键词</string>
+    <string name="agenda_search_no_results">此日期范围内没有匹配的日程</string>
 </resources>

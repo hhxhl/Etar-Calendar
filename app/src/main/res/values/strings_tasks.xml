@@ -80,4 +80,8 @@
     </plurals>
     <string name="tasks_choose_color">Item color</string>
     <string name="tasks_default_list_color">Use list color</string>
+    <string name="agenda_search_previous_range">Search earlier dates</string>
+    <string name="agenda_search_next_range">Search later dates</string>
+    <string name="agenda_search_enter_query">Enter a search term</string>
+    <string name="agenda_search_no_results">No matching events in this date range</string>
 </resources>

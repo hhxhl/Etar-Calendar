@@ -68,10 +68,19 @@ public final class DatedItemsRepository {
     /** Invoke on a worker; CalendarProvider expands instances in a bounded range. */
     public static List<Item<AgendaEntry>> agenda(Context context, LocalDate first, LocalDate last,
             long selected, boolean hideDeclined, CancellationSignal signal) {
+        return agenda(context, first, last, selected, hideDeclined, null, signal);
+    }
+
+    /** Search uses the same instance projection, visibility filters and date grouping. */
+    public static List<Item<AgendaEntry>> agenda(Context context, LocalDate first, LocalDate last,
+            long selected, boolean hideDeclined, String searchQuery, CancellationSignal signal) {
+        if (searchQuery != null && searchQuery.trim().isEmpty()) return new ArrayList<>();
         ContentResolver resolver = context.getContentResolver();
-        Uri.Builder builder = Instances.CONTENT_BY_DAY_URI.buildUpon();
+        Uri.Builder builder = (searchQuery == null ? Instances.CONTENT_BY_DAY_URI
+                : Instances.CONTENT_SEARCH_BY_DAY_URI).buildUpon();
         ContentUris.appendId(builder, julian(first));
         ContentUris.appendId(builder, julian(last));
+        if (searchQuery != null) builder.appendPath(searchQuery);
         String selection = Calendars.VISIBLE + "=1";
         if (hideDeclined) selection += " AND " + Instances.SELF_ATTENDEE_STATUS
                 + "!=" + Attendees.ATTENDEE_STATUS_DECLINED;

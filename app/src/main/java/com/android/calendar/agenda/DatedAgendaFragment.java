@@ -58,9 +58,7 @@ import java.util.concurrent.Future;
 
 import ws.xsoh.etar.R;
 
-/** Main agenda: bounded instance queries, immutable display rows and a single ListView adapter.
- * Search and the optional tablet month side pane retain their original agenda implementation.
- */
+/** Shared agenda and search results: bounded queries and a single ListView adapter. */
 public final class DatedAgendaFragment extends Fragment implements CalendarController.EventHandler {
     private static final String TAG = "DatedAgendaFragment";
     private static final int BLOCK_DAYS = 90;
@@ -71,7 +69,9 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
     private CalendarController controller;
     private Spinner filter;
     private ListView list;
-    private TextView status;
+    private TextView status, searchRange;
+    // Null means ordinary agenda; an empty string means search is waiting for a query.
+    private String searchQuery;
     private AgendaRows adapter;
     private ExecutorService worker;
     private Future<?> future;
@@ -97,6 +97,29 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         if (saved != null) args.putBundle("saved_agenda", new Bundle(saved));
         fragment.setArguments(args);
         return fragment;
+    }
+
+    public static DatedAgendaFragment forSearch(long time, String query) {
+        DatedAgendaFragment fragment = newInstance(time, null);
+        fragment.requireArguments().putString("search_query", query == null ? "" : query);
+        return fragment;
+    }
+
+    public void setSearchQuery(String query) {
+        String normalized = query == null ? "" : query.trim();
+        if (java.util.Objects.equals(searchQuery, normalized)) return;
+        searchQuery = normalized;
+        if (list == null) {
+            requireArguments().putString("search_query", normalized);
+            return;
+        }
+        LocalDate center = LocalDate.now(zone);
+        request(center.minusDays(BLOCK_DAYS), center.plusDays(BLOCK_DAYS),
+                new Anchor(center.minusDays(BLOCK_DAYS), -1, -1, -1, 0), true);
+    }
+
+    public void showToday() {
+        if (list != null) goTo(LocalDate.now(zone));
     }
 
     private static final class Row {
@@ -131,6 +154,8 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         Bundle state = saved != null ? saved : args == null ? null : args.getBundle("saved_agenda");
         long time = args == null ? controller.getTime() : args.getLong("initial_time", controller.getTime());
         targetDay = date(time);
+        searchQuery = state != null && state.containsKey("search_query")
+                ? state.getString("search_query") : args == null ? null : args.getString("search_query");
         if (state != null) {
             calendarId = state.getLong("calendar_id", -1);
             targetDay = date(state.getLong("anchor_time", time));
@@ -149,7 +174,8 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
             firstDay = targetDay.minusDays(BLOCK_DAYS);
             lastDay = targetDay.plusDays(BLOCK_DAYS);
         }
-        if (pendingAnchor == null) pendingAnchor = new Anchor(targetDay, -1, -1, -1, 0);
+        if (pendingAnchor == null) pendingAnchor = new Anchor(
+                searchQuery == null ? targetDay : firstDay, -1, -1, -1, 0);
         worker = Executors.newSingleThreadExecutor();
         hasLoaded = false;
         loadedFirstDay = loadedLastDay = null;
@@ -159,6 +185,30 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         root.setOrientation(LinearLayout.VERTICAL);
         filter = new Spinner(context);
         root.addView(filter, new LinearLayout.LayoutParams(-1, -2));
+        if (searchQuery != null) {
+            LinearLayout navigation = new LinearLayout(context);
+            navigation.setGravity(Gravity.CENTER_VERTICAL);
+            com.google.android.material.button.MaterialButton previous =
+                    new com.google.android.material.button.MaterialButton(context, null,
+                            com.google.android.material.R.attr.materialButtonOutlinedStyle);
+            previous.setText("‹");
+            previous.setContentDescription(getString(R.string.agenda_search_previous_range));
+            previous.setOnClickListener(v -> shiftSearchRange(false));
+            navigation.addView(previous, new LinearLayout.LayoutParams(dp(56), -2));
+            searchRange = new TextView(context);
+            searchRange.setGravity(Gravity.CENTER);
+            searchRange.setTextSize(12);
+            navigation.addView(searchRange, new LinearLayout.LayoutParams(0, -2, 1));
+            com.google.android.material.button.MaterialButton next =
+                    new com.google.android.material.button.MaterialButton(context, null,
+                            com.google.android.material.R.attr.materialButtonOutlinedStyle);
+            next.setText("›");
+            next.setContentDescription(getString(R.string.agenda_search_next_range));
+            next.setOnClickListener(v -> shiftSearchRange(true));
+            navigation.addView(next, new LinearLayout.LayoutParams(dp(56), -2));
+            root.addView(navigation, new LinearLayout.LayoutParams(-1, -2));
+            updateSearchRange();
+        }
         status = new TextView(context);
         status.setPadding(dp(16), dp(20), dp(16), dp(20));
         status.setTextColor(DynamicThemeKt.getColor(context, "agenda_item_where_text_color"));
@@ -189,6 +239,19 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         });
         DatedListUi.listenToScroll(list, this::updateScrolledTitle);
         return root;
+    }
+
+    private void shiftSearchRange(boolean forward) {
+        if (searchQuery == null || firstDay == null || lastDay == null) return;
+        LocalDate first = forward ? lastDay.plusDays(1) : firstDay.minusDays(2 * BLOCK_DAYS + 1);
+        LocalDate last = first.plusDays(2 * BLOCK_DAYS);
+        request(first, last, new Anchor(first, -1, -1, -1, 0), true);
+    }
+
+    private void updateSearchRange() {
+        if (searchRange == null || firstDay == null || lastDay == null) return;
+        searchRange.setText(Utils.formatDateRange(requireContext(), millis(firstDay), millis(lastDay),
+                DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_SHOW_YEAR));
     }
 
     private void reloadCalendars() {
@@ -258,6 +321,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         list = null;
         filter = null;
         status = null;
+        searchRange = null;
         adapter = null;
         rows.clear();
         super.onDestroyView();
@@ -296,6 +360,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         state.putLong("begin", anchor.begin);
         state.putInt("offset", anchor.offset);
         state.putLong("calendar_id", calendarId);
+        if (searchQuery != null) state.putString("search_query", searchQuery);
         if (firstDay != null) state.putLong("first_day", firstDay.toEpochDay());
         if (lastDay != null) state.putLong("last_day", lastDay.toEpochDay());
         return state;
@@ -339,6 +404,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         pendingAnchor = anchor;
         firstDay = first;
         lastDay = last;
+        updateSearchRange();
         loading = true;
         if (clear) {
             binding = true;
@@ -361,10 +427,11 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         CancellationSignal signal = new CancellationSignal();
         cancellation = signal;
         int ticket = generation;
+        String queryText = searchQuery;
         future = worker.submit(() -> {
             try {
-                List<Row> result = query(context, first, last, selected, hideDeclined, today, signal);
-                if (result.stream().noneMatch(row -> row.event != null)
+                List<Row> result = query(context, first, last, selected, hideDeclined, today, queryText, signal);
+                if (queryText == null && result.stream().noneMatch(row -> row.event != null)
                         && result.stream().noneMatch(row -> row.day.equals(anchor.day))) {
                     // Keep an actual date anchor even when no instances exist in this window.
                     result.add(new Row(anchor.day, null));
@@ -383,7 +450,9 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
                     rows.addAll(result);
                     adapter.notifyDataSetChanged();
                     if (result.stream().noneMatch(row -> row.event != null)) {
-                        status.setText(R.string.agenda_no_events_in_range);
+                        status.setText(queryText == null ? R.string.agenda_no_events_in_range
+                                : queryText.isEmpty() ? R.string.agenda_search_enter_query
+                                : R.string.agenda_search_no_results);
                         status.setVisibility(View.VISIBLE);
                     } else status.setVisibility(View.GONE);
                     restoreAnchor(anchor);
@@ -400,6 +469,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
                     if (loadedFirstDay != null && loadedLastDay != null) {
                         firstDay = loadedFirstDay;
                         lastDay = loadedLastDay;
+                        updateSearchRange();
                     }
                     pendingAnchor = null;
                     status.setText(Utils.isCalendarPermissionGranted(requireContext(), false)
@@ -411,12 +481,12 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
     }
 
     private static List<Row> query(Context context, LocalDate first, LocalDate last,
-            long selected, boolean hideDeclined, LocalDate today, CancellationSignal signal) {
+            long selected, boolean hideDeclined, LocalDate today, String searchQuery, CancellationSignal signal) {
         List<DatedItemsRepository.Item<AgendaEntry>> items =
-                DatedItemsRepository.agenda(context, first, last, selected, hideDeclined, signal);
+                DatedItemsRepository.agenda(context, first, last, selected, hideDeclined, searchQuery, signal);
         ArrayList<Row> result = new ArrayList<>();
         DatedListUi.appendDays(result, items,
-                today.isBefore(first) || today.isAfter(last) ? null : today,
+                searchQuery != null || today.isBefore(first) || today.isAfter(last) ? null : today,
                 date -> new Row(date, null), item -> new Row(item.day, item.value));
         return result;
     }
@@ -437,7 +507,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
             }
         }
         boolean exact = index >= 0;
-        if (index < 0 && rows.stream().noneMatch(row -> row.event != null)) {
+        if (searchQuery == null && index < 0 && rows.stream().noneMatch(row -> row.event != null)) {
             // No event is available to jump to; do not change the requested date.
             binding = true;
             rows.add(new Row(anchor.day, null));
@@ -462,6 +532,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
 
     private void publishDay(LocalDate day) {
         targetDay = day;
+        if (searchQuery != null) return;
         if (day.equals(publishedDay)) return;
         publishedDay = day;
         main.post(() -> {
@@ -495,7 +566,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
     }
 
     /** Main agenda rows mirror the dated reminders' layout and theme palette.
-     * The legacy agenda_item layout remains unchanged for search and tablet panes.
+     * The legacy agenda_item layout remains for the optional tablet pane.
      */
     private final class AgendaRowView {
         final LinearLayout root;
