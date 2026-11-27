@@ -24,10 +24,24 @@ final class WidgetTaskRows {
     /** Shared grid query: the source cursor is closed before the merged snapshot is returned. */
     static MatrixCursor queryGrid(Context context, int widgetId, long start, long end,
             String[] projection, String sortOrder, int firstDay, int lastDay) {
-        Uri uri = Uri.withAppendedPath(Instances.CONTENT_URI, start + "/" + end);
-        try (Cursor source = context.getContentResolver().query(uri, projection,
-                WidgetUtils.getWidgetSelection(context, widgetId), null, sortOrder)) {
+        try (Cursor source = queryCalendar(context, widgetId, start, end, projection, sortOrder)) {
             return merge(context, widgetId, source, projection, firstDay, lastDay, true);
+        }
+    }
+
+    /** The local task source does not require CalendarProvider permission. */
+    static Cursor queryCalendar(Context context, int widgetId, long start, long end,
+            String[] projection, String sortOrder) {
+        if (!Utils.isCalendarPermissionGranted(context, false)) return null;
+        Uri uri = Uri.withAppendedPath(Instances.CONTENT_URI, start + "/" + end);
+        try {
+            Cursor cursor = context.getContentResolver().query(uri, projection,
+                    WidgetUtils.getWidgetSelection(context, widgetId), null, sortOrder);
+            if (cursor == null) throw new IllegalStateException("CalendarProvider returned no cursor");
+            return cursor;
+        } catch (SecurityException denied) {
+            if (!Utils.isCalendarPermissionGranted(context, false)) return null;
+            throw denied;
         }
     }
 

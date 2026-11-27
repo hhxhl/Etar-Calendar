@@ -271,10 +271,6 @@ public class WeekAppWidgetService extends RemoteViewsService {
         }
 
         private void queryAndAttachEvents() {
-            if (!Utils.isCalendarPermissionGranted(mContext, false)) {
-                return;
-            }
-
             if (mModel == null || mModel.mDays.isEmpty()) {
                 return;
             }

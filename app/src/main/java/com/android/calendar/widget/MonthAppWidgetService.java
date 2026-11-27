@@ -270,10 +270,6 @@ public class MonthAppWidgetService extends RemoteViewsService {
                 int year, int month, int firstDayOfWeek) {
             Map<Integer, List<MonthAppWidgetModel.EventChip>> eventsByDay = new HashMap<>();
 
-            if (!Utils.isCalendarPermissionGranted(mContext, false)) {
-                return eventsByDay;
-            }
-
             // Compute the time range for the month
             Calendar start = Calendar.getInstance();
             start.clear();

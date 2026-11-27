@@ -79,11 +79,16 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
      * @param context Context to use when building broadcast.
      */
     static PendingIntent getUpdateIntent(Context context) {
+        return getUpdateIntent(context, AppWidgetManager.INVALID_APPWIDGET_ID);
+    }
+
+    static PendingIntent getUpdateIntent(Context context, int widgetId) {
         Intent intent = new Intent(Utils.getWidgetScheduledUpdateAction(context));
         intent.setClass(context, CalendarAppWidgetService.CalendarFactory.class);
         intent.setDataAndType(CalendarContract.CONTENT_URI, Utils.APPWIDGET_DATA_TYPE);
-        return PendingIntent.getBroadcast(context, 0 /* no requestCode */, intent,
-                PendingIntent.FLAG_IMMUTABLE);
+        intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
+        return PendingIntent.getBroadcast(context, widgetId == AppWidgetManager.INVALID_APPWIDGET_ID ? 0 : widgetId,
+                intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
     /**
@@ -175,6 +180,8 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
     public void onDeleted(Context context, int[] appWidgetIds) {
         super.onDeleted(context, appWidgetIds);
         for (int appWidgetId : appWidgetIds) {
+            ((AlarmManager) context.getSystemService(Context.ALARM_SERVICE))
+                    .cancel(getUpdateIntent(context, appWidgetId));
             WidgetUtils.INSTANCE.deleteWidgetCalendarIds(context, appWidgetId);
             sHeaders.remove(appWidgetId);
             sBackgrounds.remove(appWidgetId);
