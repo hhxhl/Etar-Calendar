@@ -40,38 +40,86 @@ public final class TaskListActivity extends AppCompatActivity {
     private LinearLayout root, rows;
     private Spinner filter;
     private long listId=0;
+    private boolean editorOnly, listsOnly, showScheduled, finishAfterPermission;
+    private boolean waitingForPermissionSettings;
+    private CheckBox scheduledFilter;
     private List<TaskStore.TaskList> lists;
     private static final String[] RULES={null,"FREQ=DAILY","FREQ=WEEKLY","FREQ=MONTHLY","FREQ=YEARLY"};
     private int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
     private String name(TaskStore.TaskList l){return l.name.isEmpty()?getString(R.string.tasks_default_list):l.name;}
     @Override public void onCreate(Bundle state) {
-        DynamicThemeKt.applyTheme(this);
         super.onCreate(state);
+        DynamicThemeKt.applyTheme(this);
         store=TaskStore.get(this);
+        editorOnly=getIntent().getBooleanExtra("new_task",false)||getIntent().hasExtra("task_id");
+        listsOnly=getIntent().getBooleanExtra("manage_lists",false);
+        if(state!=null){
+            listId=state.getLong("list_id");
+            showScheduled=state.getBoolean("show_scheduled");
+            finishAfterPermission=state.getBoolean("finish_after_permission");
+            waitingForPermissionSettings=state.getBoolean("waiting_for_permission_settings");
+        }
+        if(editorOnly){
+            if(finishAfterPermission||waitingForPermissionSettings)return;
+            long id=getIntent().getLongExtra("task_id",0);
+            TaskStore.Task task=id==0?newTask():store.find(id);
+            if(task==null){finish();return;}
+            if(id==0){
+                long date=getIntent().getLongExtra("date",0);
+                if(date>0){
+                    task.allDay=true;
+                    task.due=Instant.ofEpochMilli(date).atZone(ZoneId.systemDefault()).toLocalDate().atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
+                    task.anchor=task.due;
+                }
+            }
+            edit(task);
+            return;
+        }
         root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(16),dp(8),dp(16),dp(8));
         LinearLayout header=new LinearLayout(this);
         Button back=button(R.string.tasks_back,()->finish());header.addView(back);
         TextView heading=new TextView(this);heading.setText(R.string.tasks_title);heading.setTextSize(22);heading.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        header.addView(heading,new LinearLayout.LayoutParams(0,-1,1));header.addView(button(R.string.tasks_add,()->edit(newTask())));root.addView(header);
-        LinearLayout controls=new LinearLayout(this);filter=new Spinner(this);controls.addView(filter,new LinearLayout.LayoutParams(0,-2,1));controls.addView(button(R.string.tasks_lists,this::manageLists));root.addView(controls);
+        header.addView(heading,new LinearLayout.LayoutParams(0,-1,1));
+        if(listsOnly){
+            heading.setText(R.string.tasks_manage_lists);
+            header.addView(button(R.string.tasks_new_list,()->listName(null)));
+        }else{
+            header.addView(button(R.string.tasks_add,()->edit(newTask())));
+        }
+        root.addView(header);
+        if(!listsOnly){
+            filter=new Spinner(this);root.addView(filter);
+            // Temporary access to dated tasks until calendar views support them.
+            scheduledFilter=new CheckBox(this);scheduledFilter.setText(R.string.tasks_show_scheduled);
+            scheduledFilter.setChecked(showScheduled);
+            scheduledFilter.setOnCheckedChangeListener((button,checked)->{showScheduled=checked;refresh();});
+            root.addView(scheduledFilter);
+        }
         ScrollView scroll=new ScrollView(this);rows=new LinearLayout(this);rows.setOrientation(LinearLayout.VERTICAL);scroll.addView(rows);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));setContentView(root);
-        if(state!=null)listId=state.getLong("list_id");
         reloadLists();
-        filter.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
+        if(filter!=null)filter.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
             public void onNothingSelected(android.widget.AdapterView<?> parent){}
             public void onItemSelected(android.widget.AdapterView<?> parent,View view,int position,long id){listId=position==0?0:lists.get(position-1).id;refresh();}
         });
-        if(state==null){long id=getIntent().getLongExtra("task_id",0);TaskStore.Task t=store.find(id);
-            if(t!=null)edit(t);else if(getIntent().getBooleanExtra("new_task",false)){TaskStore.Task n=newTask();long date=getIntent().getLongExtra("date",0);if(date>0){n.allDay=true;n.due=Instant.ofEpochMilli(date).atZone(ZoneId.systemDefault()).toLocalDate().atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();n.anchor=n.due;}edit(n);}
-        }
     }
-    @Override protected void onSaveInstanceState(Bundle state){state.putLong("list_id",listId);super.onSaveInstanceState(state);}
-    @Override protected void onResume(){super.onResume();if(store!=null){refresh();TaskAlarmReceiver.schedule(this);}}
+    @Override protected void onSaveInstanceState(Bundle state){
+        state.putLong("list_id",listId);state.putBoolean("show_scheduled",showScheduled);
+        state.putBoolean("finish_after_permission",finishAfterPermission);
+        state.putBoolean("waiting_for_permission_settings",waitingForPermissionSettings);
+        super.onSaveInstanceState(state);
+    }
+    @Override protected void onResume(){
+        super.onResume();
+        if(store!=null){refresh();TaskAlarmReceiver.schedule(this);}
+        if(waitingForPermissionSettings){waitingForPermissionSettings=false;finish();}
+    }
     private Button button(int label,Runnable callback){Button b=new Button(this);b.setText(label);b.setOnClickListener(v->callback.run());return b;}
     private TaskStore.Task newTask(){TaskStore.Task t=new TaskStore.Task();t.listId=listId==0?1:listId;return t;}
     private ArrayAdapter<String> adapter(List<String> labels){ArrayAdapter<String> a=new ArrayAdapter<>(this,android.R.layout.simple_spinner_item,labels);a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);return a;}
     private void reloadLists(){
-        lists=store.lists();ArrayList<String> labels=new ArrayList<>();labels.add(getString(R.string.tasks_all));int selected=0;
+        lists=store.lists();
+        if(filter==null){refresh();return;}
+        ArrayList<String> labels=new ArrayList<>();labels.add(getString(R.string.tasks_all));int selected=0;
         for(int i=0;i<lists.size();i++){labels.add(name(lists.get(i)));if(lists.get(i).id==listId)selected=i+1;}
         if(selected==0)listId=0;filter.setAdapter(adapter(labels));filter.setSelection(selected);refresh();
     }
@@ -84,7 +132,16 @@ public final class TaskListActivity extends AppCompatActivity {
     }
     private void refresh(){
         if(rows==null)return;rows.removeAllViews();
-        List<TaskStore.Task> tasks=store.tasks(listId);
+        if(listsOnly){
+            for(TaskStore.TaskList l:store.lists()){
+                Button entry=new Button(this);entry.setText(name(l));entry.setOnClickListener(v->manageList(l));rows.addView(entry);
+            }
+            return;
+        }
+        List<TaskStore.Task> tasks=new ArrayList<>();
+        for(TaskStore.Task task:store.tasks(listId)){
+            if(showScheduled?(task.due!=null):(task.due==null))tasks.add(task);
+        }
         if(tasks.isEmpty()){TextView empty=new TextView(this);empty.setPadding(0,dp(20),0,0);empty.setText(R.string.tasks_empty);rows.addView(empty);}
         for(TaskStore.Task t:tasks){
             LinearLayout row=new LinearLayout(this);row.setGravity(android.view.Gravity.CENTER_VERTICAL);
@@ -94,21 +151,23 @@ public final class TaskListActivity extends AppCompatActivity {
             LinearLayout details=new LinearLayout(this);details.setOrientation(LinearLayout.VERTICAL);details.setPadding(dp(6),dp(10),dp(6),dp(10));
             TextView title=new TextView(this);title.setText(t.title);title.setTextSize(18);
             if(t.done)title.setPaintFlags(title.getPaintFlags()|android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
-            TextView date=new TextView(this);date.setText(dateLabel(t));details.addView(title);details.addView(date);
+            details.addView(title);
+            if(showScheduled){TextView date=new TextView(this);date.setText(dateLabel(t));details.addView(date);}
             details.setOnClickListener(v->edit(t));row.addView(details,new LinearLayout.LayoutParams(0,-2,1));rows.addView(row);
         }
     }
     private void changed(){refresh();TaskAlarmReceiver.schedule(this);}
-    private void manageLists(){
-        List<TaskStore.TaskList> current=store.lists();String[] labels=new String[current.size()+1];labels[0]=getString(R.string.tasks_new_list);
-        for(int i=0;i<current.size();i++)labels[i+1]=name(current.get(i));
-        new AlertDialog.Builder(this).setTitle(R.string.tasks_lists).setItems(labels,(d,w)->{
-            if(w==0)listName(null);else{TaskStore.TaskList l=current.get(w-1);new AlertDialog.Builder(this).setTitle(name(l))
-                .setItems(l.id==1?new String[]{getString(R.string.tasks_rename)}:new String[]{getString(R.string.tasks_rename),getString(R.string.tasks_delete)},(dd,ww)->{
-                    if(ww==0)listName(l);else new AlertDialog.Builder(this).setMessage(R.string.tasks_delete_list_confirm).setNegativeButton(android.R.string.cancel,null)
-                        .setPositiveButton(R.string.tasks_delete,(x,y)->{for(TaskStore.Task t:store.tasks(l.id))TaskAlarmReceiver.dismiss(this,t.id);store.deleteList(l.id);reloadLists();TaskAlarmReceiver.schedule(this);}).show();
-                }).show();}
-        }).show();
+    private void manageList(TaskStore.TaskList l){
+        new AlertDialog.Builder(this).setTitle(name(l))
+            .setItems(l.id==1?new String[]{getString(R.string.tasks_rename)}:
+                new String[]{getString(R.string.tasks_rename),getString(R.string.tasks_delete)},(d,w)->{
+                if(w==0)listName(l);else new AlertDialog.Builder(this).setMessage(R.string.tasks_delete_list_confirm)
+                    .setNegativeButton(android.R.string.cancel,null)
+                    .setPositiveButton(R.string.tasks_delete,(x,y)->{
+                        for(TaskStore.Task t:store.tasks(l.id))TaskAlarmReceiver.dismiss(this,t.id);
+                        store.deleteList(l.id);reloadLists();TaskAlarmReceiver.schedule(this);
+                    }).show();
+            }).show();
     }
     private void listName(TaskStore.TaskList l){
         EditText input=new EditText(this);input.setSingleLine();if(l!=null)input.setText(name(l));
@@ -139,9 +198,17 @@ public final class TaskListActivity extends AppCompatActivity {
         hasDate.setOnCheckedChangeListener((b,c)->enabled.run());hasTime.setOnCheckedChangeListener((b,c)->enabled.run());enabled.run();
         ScrollView scroll=new ScrollView(this);scroll.addView(form);
         AlertDialog.Builder builder=new AlertDialog.Builder(this).setTitle(task.id==0?R.string.tasks_add:R.string.tasks_edit).setView(scroll).setNegativeButton(android.R.string.cancel,null).setPositiveButton(android.R.string.ok,null);
-        if(task.id!=0)builder.setNeutralButton(R.string.tasks_delete,(d,w)->new AlertDialog.Builder(this).setMessage(R.string.tasks_delete_confirm).setNegativeButton(android.R.string.cancel,null).setPositiveButton(R.string.tasks_delete,(dd,ww)->{store.delete(task.id);TaskAlarmReceiver.dismiss(this,task.id);changed();}).show());
+        if(task.id!=0)builder.setNeutralButton(R.string.tasks_delete,null);
         AlertDialog dialog=builder.create();
-        dialog.setOnShowListener(v->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(b->{
+        dialog.setOnDismissListener(d->{if(editorOnly&&!finishAfterPermission)finish();});
+        dialog.setOnShowListener(v->{
+            if(task.id!=0)dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(b->
+                new AlertDialog.Builder(this).setMessage(R.string.tasks_delete_confirm)
+                    .setNegativeButton(android.R.string.cancel,null)
+                    .setPositiveButton(R.string.tasks_delete,(dd,ww)->{
+                        store.delete(task.id);TaskAlarmReceiver.dismiss(this,task.id);changed();dialog.dismiss();
+                    }).show());
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(b->{
             String text=title.getText().toString().trim();if(text.isEmpty()){title.setError(getString(R.string.tasks_required));return;}
             task.title=text;task.notes=notes.getText().toString();task.listId=available.get(list.getSelectedItemPosition()).id;
             Long oldDue=task.due;String oldRule=task.rule;
@@ -151,15 +218,34 @@ public final class TaskListActivity extends AppCompatActivity {
             task.rule=hasDate.isChecked()?RULES[repeat.getSelectedItemPosition()]:null;
             if(!java.util.Objects.equals(oldDue,task.due)||!java.util.Objects.equals(oldRule,task.rule)||task.anchor==null)task.anchor=task.due;
             task.priority=new int[]{0,1,5,9}[priority.getSelectedItemPosition()];task.alarm=alarm.isChecked()&&alarm.isEnabled();
-            store.save(task);TaskAlarmReceiver.dismiss(this,task.id);dialog.dismiss();changed();if(task.alarm)checkAlarmPermissions();
-        }));dialog.show();
+            store.save(task);TaskAlarmReceiver.dismiss(this,task.id);
+            finishAfterPermission=editorOnly&&task.alarm;
+            dialog.dismiss();changed();
+            if(task.alarm)checkAlarmPermissions();
+            });
+        });dialog.show();
     }
     private void checkAlarmPermissions(){
         if(Build.VERSION.SDK_INT>=33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED){requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},42);return;}
         if(Build.VERSION.SDK_INT>=31&&!((AlarmManager)getSystemService(ALARM_SERVICE)).canScheduleExactAlarms()){
-            new AlertDialog.Builder(this).setMessage(R.string.tasks_exact_alarm_message).setNegativeButton(android.R.string.cancel,null)
-                .setPositiveButton(R.string.tasks_settings,(d,w)->{try{startActivity(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,Uri.parse("package:"+getPackageName())));}catch(android.content.ActivityNotFoundException ignored){}}).show();
-        }
+            AlertDialog permissionDialog=new AlertDialog.Builder(this).setMessage(R.string.tasks_exact_alarm_message)
+                .setNegativeButton(android.R.string.cancel,null)
+                .setPositiveButton(R.string.tasks_settings,(d,w)->{
+                    try{
+                        waitingForPermissionSettings=editorOnly;
+                        startActivity(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,Uri.parse("package:"+getPackageName())));
+                    }catch(android.content.ActivityNotFoundException ignored){waitingForPermissionSettings=false;}
+                }).create();
+            permissionDialog.setOnDismissListener(d->{if(!waitingForPermissionSettings)finishEditorAfterPermission();});
+            permissionDialog.show();
+        }else finishEditorAfterPermission();
     }
-    @Override public void onRequestPermissionsResult(int code,String[] permissions,int[] grants){super.onRequestPermissionsResult(code,permissions,grants);TaskAlarmReceiver.schedule(this);if(code==42&&grants.length>0&&grants[0]==PackageManager.PERMISSION_GRANTED)checkAlarmPermissions();}
+    private void finishEditorAfterPermission(){
+        if(editorOnly){finishAfterPermission=false;finish();}
+    }
+    @Override public void onRequestPermissionsResult(int code,String[] permissions,int[] grants){
+        super.onRequestPermissionsResult(code,permissions,grants);
+        TaskAlarmReceiver.schedule(this);
+        if(code==42){if(grants.length>0&&grants[0]==PackageManager.PERMISSION_GRANTED)checkAlarmPermissions();else finishEditorAfterPermission();}
+    }
 }

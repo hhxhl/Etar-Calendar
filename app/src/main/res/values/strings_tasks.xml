@@ -40,4 +40,7 @@
         <item>Medium</item>
         <item>Low</item>
     </string-array>
+    <string name="tasks_create_event_type">Event</string>
+    <string name="tasks_show_scheduled">Show dated reminders</string>
+    <string name="tasks_manage_lists">Reminder lists</string>
 </resources>

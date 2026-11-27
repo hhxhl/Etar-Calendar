@@ -40,4 +40,7 @@
         <item>中</item>
         <item>低</item>
     </string-array>
+    <string name="tasks_create_event_type">日程</string>
+    <string name="tasks_show_scheduled">显示有日期的提醒事项</string>
+    <string name="tasks_manage_lists">提醒事项列表</string>
 </resources>

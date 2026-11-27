@@ -184,6 +184,12 @@ class MainListPreferences : PreferenceFragmentCompat() {
         screen.addPreference(addCaldavPreference)
         screen.addPreference(addEtesyncPreference)
         screen.addPreference(addOfflinePreference)
+        screen.addPreference(Preference(requireContext()).apply {
+            title = getString(R.string.tasks_manage_lists)
+            icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_task_outline)
+            intent = Intent(requireContext(), com.android.calendar.tasks.TaskListActivity::class.java)
+                    .putExtra("manage_lists", true)
+        })
     }
 
     private fun addOfflineCalendar() {

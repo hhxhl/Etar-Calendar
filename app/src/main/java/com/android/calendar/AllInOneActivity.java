@@ -539,9 +539,8 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
             public void onClick(View v) {
                 androidx.appcompat.widget.PopupMenu menu =
                         new androidx.appcompat.widget.PopupMenu(AllInOneActivity.this, v);
-                menu.getMenu().add(0, 1, 0, R.string.tasks_new_event);
-                menu.getMenu().add(0, 2, 1, R.string.tasks_add);
-                menu.getMenu().add(0, 3, 2, R.string.tasks_manage);
+                menu.getMenu().add(0, 1, 0, R.string.tasks_create_event_type);
+                menu.getMenu().add(0, 2, 1, R.string.tasks_title);
                 menu.setOnMenuItemClickListener(item -> {
                     if (item.getItemId() == 1) {
                         Time t = new Time();
@@ -1044,6 +1043,8 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
             if (mCurrentView != ViewType.AGENDA) {
                 switchToView(ViewType.AGENDA);
             }
+        } else if (itemId == R.id.reminders_menu_item) {
+            startActivity(new Intent(this, com.android.calendar.tasks.TaskListActivity.class));
         } else if (itemId == R.id.action_settings) {
             mController.sendEvent(this, EventType.LAUNCH_SETTINGS, null, null, 0, 0);
         } else if (itemId == R.id.action_about) {
