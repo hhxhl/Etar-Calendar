@@ -2,8 +2,6 @@ package com.android.calendar.tasks;
 
 import android.Manifest;
 import android.app.AlarmManager;
-import android.app.DatePickerDialog;
-import android.app.TimePickerDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
@@ -11,6 +9,21 @@ import android.os.Bundle;
 import android.provider.Settings;
 import android.net.Uri;
 import android.view.View;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ImageView;
+import android.widget.CompoundButton;
+import androidx.constraintlayout.widget.ConstraintLayout;
+import com.android.calendar.Utils;
+import com.android.calendar.timezonepicker.TimeZonePickerDialog;
+import com.android.calendar.timezonepicker.TimeZonePickerUtils;
+import com.google.android.material.datepicker.MaterialDatePicker;
+import com.google.android.material.timepicker.MaterialTimePicker;
+import com.google.android.material.timepicker.TimeFormat;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import ws.xsoh.etar.databinding.SimpleFrameLayoutMaterialBinding;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -29,7 +42,6 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.List;
 import ws.xsoh.etar.R;
@@ -43,12 +55,14 @@ public final class TaskListActivity extends AppCompatActivity {
     private boolean restoredPermissionFlow;
     private Bundle restoredDraft;
     private java.util.function.Supplier<Bundle> captureDraft;
+    private Runnable saveEditor, deleteEditor;
+    private static final String DATE_PICKER = "TaskDatePicker", TIME_PICKER = "TaskTimePicker", ZONE_PICKER = "TaskZonePicker";
     private static final String[] RULES={null,"FREQ=DAILY","FREQ=WEEKLY","FREQ=MONTHLY","FREQ=YEARLY"};
     private int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
     private String name(TaskStore.TaskList l){return l.name.isEmpty()?getString(R.string.tasks_default_list):l.name;}
     @Override public void onCreate(Bundle state) {
-        super.onCreate(state);
         DynamicThemeKt.applyTheme(this);
+        super.onCreate(state);
         store=TaskStore.get(this);
         editorOnly=getIntent().getBooleanExtra("new_task",false)||getIntent().hasExtra("task_id");
 
@@ -155,35 +169,181 @@ public final class TaskListActivity extends AppCompatActivity {
         AlertDialog dialog=new AlertDialog.Builder(this).setTitle(l==null?R.string.tasks_new_list:R.string.tasks_rename).setView(input).setNegativeButton(android.R.string.cancel,null).setPositiveButton(android.R.string.ok,null).create();
         dialog.setOnShowListener(v->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(b->{String text=input.getText().toString().trim();if(text.isEmpty()){input.setError(getString(R.string.tasks_required));return;}if(l==null)listId=store.addList(text);else store.renameList(l.id,text);refresh();dialog.dismiss();}));dialog.show();
     }
-    private void label(LinearLayout parent,int text){TextView v=new TextView(this);v.setText(text);v.setPadding(0,dp(10),0,0);parent.addView(v);}
-    private void edit(TaskStore.Task task){
+    private static void hide(View root, int... ids) {
+        for (int id : ids) root.findViewById(id).setVisibility(View.GONE);
+    }
+
+    @Override public boolean onCreateOptionsMenu(Menu menu) {
+        if (saveEditor == null) return super.onCreateOptionsMenu(menu);
+        getMenuInflater().inflate(R.menu.edit_event_title_bar, menu);
+        if (deleteEditor != null) menu.add(0, R.id.info_action_delete, 13, R.string.delete_label);
+        return true;
+    }
+
+    @Override public boolean onOptionsItemSelected(MenuItem item) {
+        int id = item.getItemId();
+        if (saveEditor != null && id == R.id.action_done) { saveEditor.run(); return true; }
+        if (saveEditor != null && (id == R.id.action_cancel || id == android.R.id.home)) {
+            finish(); return true;
+        }
+        if (deleteEditor != null && id == R.id.info_action_delete) { deleteEditor.run(); return true; }
+        return super.onOptionsItemSelected(item);
+    }
+
+    /** Reuse the event editor's layout, toolbar, separators and Material date/time controls.
+     * Only the task-specific binding and persistence are different. */
+    private void edit(TaskStore.Task task) {
         final boolean reminder = task.due != null;
-        LinearLayout form=new LinearLayout(this);form.setOrientation(LinearLayout.VERTICAL);form.setPadding(dp(20),0,dp(20),dp(8));
-        EditText title=new EditText(this);title.setHint(R.string.tasks_task_name);title.setSingleLine();title.setText(task.title);form.addView(title);
-        EditText notes=new EditText(this);notes.setHint(R.string.tasks_notes);notes.setText(task.notes);form.addView(notes);
-        CheckBox completed=reminder?ReminderCompletion.create(this):new CheckBox(this);
-        completed.setText(R.string.tasks_complete);completed.setChecked(task.done);
-        if(task.id!=0)form.addView(completed);
-        List<TaskStore.TaskList> available=store.lists();ArrayList<String> names=new ArrayList<>();int listPos=0;
-        for(int i=0;i<available.size();i++){names.add(name(available.get(i)));if(available.get(i).id==task.listId)listPos=i;}
-        label(form,R.string.tasks_lists);Spinner list=new Spinner(this);list.setAdapter(adapter(names));list.setSelection(listPos);form.addView(list);
-        CheckBox hasDate=new CheckBox(this);hasDate.setText(R.string.tasks_date);hasDate.setChecked(reminder);hasDate.setEnabled(false);
-        CheckBox hasTime=new CheckBox(this);hasTime.setText(R.string.tasks_time);hasTime.setChecked(reminder&&!task.allDay);
-        ZoneId zone=task.tz==null||task.allDay?ZoneId.systemDefault():ZoneId.of(task.tz);ZonedDateTime initial=task.due==null?ZonedDateTime.now(zone):Instant.ofEpochMilli(task.due).atZone(task.allDay?ZoneOffset.UTC:zone);
-        LocalDate[] date={initial.toLocalDate()};LocalTime[] time={initial.toLocalTime().withSecond(0).withNano(0)};
-        Button dateButton=new Button(this);Button timeButton=new Button(this);
-        Runnable update=()->{dateButton.setText(date[0].format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)));timeButton.setText(time[0].format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)));};
-        dateButton.setOnClickListener(v->new DatePickerDialog(this,(p,y,m,d)->{date[0]=LocalDate.of(y,m+1,d);update.run();},date[0].getYear(),date[0].getMonthValue()-1,date[0].getDayOfMonth()).show());
-        timeButton.setOnClickListener(v->new TimePickerDialog(this,(p,h,m)->{time[0]=LocalTime.of(h,m);update.run();},time[0].getHour(),time[0].getMinute(),android.text.format.DateFormat.is24HourFormat(this)).show());
-        if(reminder){form.addView(dateButton);form.addView(hasTime);form.addView(timeButton);}update.run();
-        CheckBox alarm=new CheckBox(this);alarm.setText(R.string.tasks_notify);alarm.setChecked(task.alarm);if(reminder)form.addView(alarm);
-        if(reminder)label(form,R.string.tasks_repeat);Spinner repeat=new Spinner(this);repeat.setAdapter(adapter(java.util.Arrays.asList(getResources().getStringArray(R.array.tasks_repeat_options))));for(int i=0;i<RULES.length;i++)if(java.util.Objects.equals(task.rule,RULES[i]))repeat.setSelection(i);if(reminder)form.addView(repeat);
-        label(form,R.string.tasks_priority);Spinner priority=new Spinner(this);priority.setAdapter(adapter(java.util.Arrays.asList(getResources().getStringArray(R.array.tasks_priority_options))));priority.setSelection(task.priority==1?1:task.priority==5?2:task.priority==9?3:0);form.addView(priority);
-        Runnable enabled=()->{dateButton.setEnabled(hasDate.isChecked());hasTime.setEnabled(hasDate.isChecked());timeButton.setEnabled(hasDate.isChecked()&&hasTime.isChecked());alarm.setEnabled(hasDate.isChecked()&&hasTime.isChecked());repeat.setEnabled(hasDate.isChecked());};
-        hasDate.setOnCheckedChangeListener((b,c)->enabled.run());hasTime.setOnCheckedChangeListener((b,c)->enabled.run());
+        SimpleFrameLayoutMaterialBinding binding =
+                SimpleFrameLayoutMaterialBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
+        setSupportActionBar(binding.include.toolbar);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setTitle(reminder
+                    ? (task.id == 0 ? R.string.reminders_add : R.string.reminders_edit)
+                    : (task.id == 0 ? R.string.tasks_add : R.string.tasks_edit));
+        }
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        binding.bodyFrame.addView(scroll, new ViewGroup.LayoutParams(-1, -1));
+        LinearLayout form = (LinearLayout) getLayoutInflater().inflate(R.layout.edit_event_all, scroll, false);
+        scroll.addView(form);
+        form.setFocusableInTouchMode(true);
+        form.requestFocus();
+
+        EditText title = form.findViewById(R.id.title);
+        title.setText(task.title);
+        EditText notes = form.findViewById(R.id.description);
+        notes.setText(task.notes);
+        Spinner list = form.findViewById(R.id.calendars_spinner);
+        List<TaskStore.TaskList> available = store.lists();
+        if (available.isEmpty()) { finish(); return; }
+        ArrayList<String> names = new ArrayList<>();
+        int listPos = 0;
+        for (int i = 0; i < available.size(); i++) {
+            names.add(name(available.get(i)));
+            if (available.get(i).id == task.listId) listPos = i;
+        }
+        list.setAdapter(adapter(names));
+        list.setSelection(listPos);
+        list.setContentDescription(getString(R.string.tasks_lists));
+        ((ImageView) form.findViewById(R.id.calendar_selector_group_icon)).setImageResource(R.drawable.ic_task_outline);
+        View listColor = form.findViewById(R.id.calendar_selector_group_background);
+        Runnable updateColor = () -> {
+            int pos = list.getSelectedItemPosition();
+            if (pos < 0 || pos >= available.size()) return;
+            int color = available.get(pos).color;
+            listColor.setBackgroundColor(color == 0 ? getColor(R.color.event_center)
+                    : Utils.getDisplayColorFromColor(this, color));
+        };
+        list.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
+                updateColor.run();
+            }
+            @Override public void onNothingSelected(AdapterView<?> parent) {}
+        });
+        updateColor.run();
+
+        // The shared layout also contains event-only fields; collapse those sections.
+        hide(form, R.id.change_color, R.id.end_date, R.id.end_time,
+                R.id.response_group, R.id.response_row, R.id.organizer_row,
+                R.id.add_attendees_group, R.id.attendees_icon, R.id.add_attendees_row,
+                R.id.where_icon, R.id.where_row, R.id.url_icon, R.id.url_row,
+                R.id.event_countdown, R.id.reminder_add, R.id.view6,
+                R.id.visibility_icon, R.id.visibility);
+        ConstraintLayout.LayoutParams descriptionParams =
+                (ConstraintLayout.LayoutParams) form.findViewById(R.id.description_row).getLayoutParams();
+        descriptionParams.topToBottom = reminder ? R.id.view2 : R.id.view1;
+        descriptionParams.topMargin = dp(10);
+        form.findViewById(R.id.description_row).setLayoutParams(descriptionParams);
+        ConstraintLayout.LayoutParams afterAlarm =
+                (ConstraintLayout.LayoutParams) form.findViewById(R.id.view5).getLayoutParams();
+        afterAlarm.topToBottom = R.id.reminder_items_container;
+        form.findViewById(R.id.view5).setLayoutParams(afterAlarm);
+
+        CompoundButton allDay = form.findViewById(R.id.is_all_day);
+        allDay.setChecked(reminder && task.allDay);
+        String defaultZone = getIntent().getStringExtra("calendar_zone");
+        if (defaultZone == null) defaultZone = Utils.getTimeZone(this, null);
+        ZoneId[] zone = {ZoneId.of(task.tz == null || task.allDay ? defaultZone : task.tz)};
+        ZoneId initialZone = zone[0];
+        ZonedDateTime initial = task.due == null ? ZonedDateTime.now(zone[0])
+                : Instant.ofEpochMilli(task.due).atZone(task.allDay ? ZoneOffset.UTC : zone[0]);
+        LocalDate[] date = {initial.toLocalDate()};
+        LocalTime[] time = {initial.toLocalTime().withSecond(0).withNano(0)};
         LocalDate initialDate = date[0];
         LocalTime initialTime = time[0];
-        boolean initialHasDate = hasDate.isChecked(), initialHasTime = hasTime.isChecked();
+        boolean initialAllDay = allDay.isChecked();
+
+        Button dateButton = form.findViewById(R.id.start_date);
+        Button timeButton = form.findViewById(R.id.start_time);
+        Button zoneButton = form.findViewById(R.id.timezone_button);
+        View zoneRow = form.findViewById(R.id.timezone_button_row);
+        TimeZonePickerUtils zoneLabels = new TimeZonePickerUtils(this);
+        CompoundButton alarm = new com.google.android.material.materialswitch.MaterialSwitch(this);
+        alarm.setText(R.string.tasks_notify);
+        alarm.setChecked(task.alarm);
+        ((LinearLayout) form.findViewById(R.id.reminder_items_container)).addView(alarm,
+                new LinearLayout.LayoutParams(-1, -2));
+
+        Button repeat = form.findViewById(R.id.rrule);
+        String[] repeatOptions = getResources().getStringArray(R.array.tasks_repeat_options);
+        int[] repeatIndex = {0};
+        for (int i = 0; i < RULES.length; i++)
+            if (java.util.Objects.equals(task.rule, RULES[i])) repeatIndex[0] = i;
+        int initialRepeat = repeatIndex[0];
+        repeat.setText(repeatOptions[repeatIndex[0]]);
+        repeat.setOnClickListener(v -> new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.tasks_repeat)
+                .setSingleChoiceItems(repeatOptions, repeatIndex[0], (dialog, which) -> {
+                    repeatIndex[0] = which;
+                    repeat.setText(repeatOptions[which]);
+                    dialog.dismiss();
+                }).setNegativeButton(android.R.string.cancel, null).show());
+
+        // Reuse the existing spinner slot, but bind the task priority rather than event availability.
+        Spinner priority = form.findViewById(R.id.availability);
+        ArrayList<String> priorityNames = new ArrayList<>();
+        for (String option : getResources().getStringArray(R.array.tasks_priority_options))
+            priorityNames.add(getString(R.string.tasks_priority) + " · " + option);
+        priority.setAdapter(adapter(priorityNames));
+        priority.setSelection(task.priority == 1 ? 1 : task.priority == 5 ? 2 : task.priority == 9 ? 3 : 0);
+        priority.setContentDescription(getString(R.string.tasks_priority));
+        ((ImageView) form.findViewById(R.id.availability_icon)).setImageResource(R.drawable.ic_task_outline);
+
+        CheckBox completed = reminder ? ReminderCompletion.create(this) : new CheckBox(this);
+        completed.setText(R.string.tasks_complete);
+        completed.setChecked(task.done);
+        if (task.id != 0) {
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
+            params.setMargins(dp(48), dp(8), dp(24), dp(16));
+            form.addView(completed, params);
+        }
+
+        Runnable update = () -> {
+            long dateMillis = date[0].atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
+            dateButton.setText(android.text.format.DateUtils.formatDateRange(this, new java.util.Formatter(),
+                    dateMillis, dateMillis, android.text.format.DateUtils.FORMAT_SHOW_DATE
+                            | android.text.format.DateUtils.FORMAT_SHOW_YEAR
+                            | android.text.format.DateUtils.FORMAT_SHOW_WEEKDAY, "UTC").toString());
+            String pattern = android.text.format.DateFormat.getBestDateTimePattern(
+                    java.util.Locale.getDefault(),
+                    android.text.format.DateFormat.is24HourFormat(this) ? "Hm" : "hm");
+            timeButton.setText(time[0].format(DateTimeFormatter.ofPattern(pattern)));
+            long localMillis = date[0].atTime(time[0]).atZone(zone[0]).toInstant().toEpochMilli();
+            zoneButton.setText(zoneLabels.getGmtDisplayName(this, zone[0].getId(), localMillis, true));
+            timeButton.setVisibility(reminder && !allDay.isChecked() ? View.VISIBLE : View.GONE);
+            zoneRow.setVisibility(reminder && !allDay.isChecked() ? View.VISIBLE : View.GONE);
+            alarm.setEnabled(reminder && !allDay.isChecked());
+        };
+        allDay.setOnCheckedChangeListener((v, checked) -> update.run());
+        if (!reminder) hide(form, R.id.imageView, R.id.is_all_day_label, R.id.is_all_day,
+                R.id.start_date, R.id.start_time, R.id.timezone_button_row, R.id.timezone_icon,
+                R.id.timezone_button, R.id.view2, R.id.rrule_icon, R.id.rrule,
+                R.id.view4, R.id.reminder_icon, R.id.reminder_items_container, R.id.view5);
+
+        // Restore only the draft, not the original baseline used for detecting schedule edits.
         if (restoredDraft != null) {
             Bundle draft = restoredDraft;
             restoredDraft = null;
@@ -191,76 +351,148 @@ public final class TaskListActivity extends AppCompatActivity {
             notes.setText(draft.getString("notes", task.notes));
             completed.setChecked(draft.getBoolean("complete", task.done));
             long selectedList = draft.getLong("list_id", task.listId);
-            for (int i = 0; i < available.size(); i++) {
+            for (int i = 0; i < available.size(); i++)
                 if (available.get(i).id == selectedList) list.setSelection(i);
-            }
-            hasDate.setChecked(reminder);
-            hasTime.setChecked(reminder && draft.getBoolean("has_time", initialHasTime));
+            allDay.setChecked(reminder && !draft.getBoolean("has_time", !initialAllDay));
             date[0] = LocalDate.ofEpochDay(draft.getLong("date", initialDate.toEpochDay()));
             time[0] = LocalTime.ofSecondOfDay(draft.getLong("time", initialTime.toSecondOfDay()));
+            zone[0] = ZoneId.of(draft.getString("zone", initialZone.getId()));
             alarm.setChecked(draft.getBoolean("alarm", task.alarm));
-            repeat.setSelection(draft.getInt("repeat", repeat.getSelectedItemPosition()));
+            repeatIndex[0] = draft.getInt("repeat", repeatIndex[0]);
+            repeat.setText(repeatOptions[repeatIndex[0]]);
             priority.setSelection(draft.getInt("priority", priority.getSelectedItemPosition()));
-            update.run();
         }
-        enabled.run();
+        update.run();
+        updateColor.run();
+
+        // The Material picker fragments survive Activity recreation; rebind their listeners.
+        java.util.function.Consumer<MaterialDatePicker<Long>> bindDate = picker -> {
+            picker.clearOnPositiveButtonClickListeners();
+            picker.addOnPositiveButtonClickListener(selection -> {
+                date[0] = Instant.ofEpochMilli(selection).atZone(ZoneOffset.UTC).toLocalDate();
+                update.run();
+            });
+        };
+        dateButton.setOnClickListener(v -> {
+            if (getSupportFragmentManager().findFragmentByTag(DATE_PICKER) != null) return;
+            MaterialDatePicker<Long> picker = MaterialDatePicker.Builder.datePicker()
+                    .setSelection(date[0].atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli())
+                    .setTitleText(R.string.goto_date).build();
+            bindDate.accept(picker);
+            picker.show(getSupportFragmentManager(), DATE_PICKER);
+        });
+        androidx.fragment.app.Fragment datePicker = getSupportFragmentManager().findFragmentByTag(DATE_PICKER);
+        if (datePicker instanceof MaterialDatePicker) {
+            @SuppressWarnings("unchecked") MaterialDatePicker<Long> restored = (MaterialDatePicker<Long>) datePicker;
+            bindDate.accept(restored);
+        }
+
+        java.util.function.Consumer<MaterialTimePicker> bindTime = picker -> {
+            picker.clearOnPositiveButtonClickListeners();
+            picker.addOnPositiveButtonClickListener(v -> {
+                time[0] = LocalTime.of(picker.getHour(), picker.getMinute());
+                update.run();
+            });
+        };
+        timeButton.setOnClickListener(v -> {
+            if (getSupportFragmentManager().findFragmentByTag(TIME_PICKER) != null) return;
+            MaterialTimePicker picker = new MaterialTimePicker.Builder()
+                    .setHour(time[0].getHour()).setMinute(time[0].getMinute())
+                    .setTimeFormat(android.text.format.DateFormat.is24HourFormat(this)
+                            ? TimeFormat.CLOCK_24H : TimeFormat.CLOCK_12H)
+                    .setInputMode(MaterialTimePicker.INPUT_MODE_CLOCK).build();
+            bindTime.accept(picker);
+            picker.show(getSupportFragmentManager(), TIME_PICKER);
+        });
+        androidx.fragment.app.Fragment timePicker = getSupportFragmentManager().findFragmentByTag(TIME_PICKER);
+        if (timePicker instanceof MaterialTimePicker) bindTime.accept((MaterialTimePicker) timePicker);
+
+        TimeZonePickerDialog.OnTimeZoneSetListener zoneListener = tzi -> {
+            zone[0] = ZoneId.of(tzi.mTzId);
+            update.run();
+        };
+        zoneButton.setOnClickListener(v -> {
+            if (getSupportFragmentManager().findFragmentByTag(ZONE_PICKER) != null) return;
+            Bundle args = new Bundle();
+            args.putLong(TimeZonePickerDialog.BUNDLE_START_TIME_MILLIS,
+                    date[0].atTime(time[0]).atZone(zone[0]).toInstant().toEpochMilli());
+            args.putString(TimeZonePickerDialog.BUNDLE_TIME_ZONE, zone[0].getId());
+            TimeZonePickerDialog picker = new TimeZonePickerDialog();
+            picker.setArguments(args);
+            picker.setOnTimeZoneSetListener(zoneListener);
+            picker.show(getSupportFragmentManager(), ZONE_PICKER);
+        });
+        androidx.fragment.app.Fragment zonePicker = getSupportFragmentManager().findFragmentByTag(ZONE_PICKER);
+        if (zonePicker instanceof TimeZonePickerDialog)
+            ((TimeZonePickerDialog) zonePicker).setOnTimeZoneSetListener(zoneListener);
+
         captureDraft = () -> {
             Bundle draft = new Bundle();
             draft.putString("title", title.getText().toString());
             draft.putString("notes", notes.getText().toString());
             draft.putBoolean("complete", completed.isChecked());
-            draft.putLong("list_id", available.get(list.getSelectedItemPosition()).id);
-            draft.putBoolean("has_date", hasDate.isChecked());
-            draft.putBoolean("has_time", hasTime.isChecked());
+            int pos = list.getSelectedItemPosition();
+            draft.putLong("list_id", pos < 0 ? task.listId : available.get(pos).id);
+            draft.putBoolean("has_time", reminder && !allDay.isChecked());
             draft.putLong("date", date[0].toEpochDay());
             draft.putLong("time", time[0].toSecondOfDay());
+            draft.putString("zone", zone[0].getId());
             draft.putBoolean("alarm", alarm.isChecked());
-            draft.putInt("repeat", repeat.getSelectedItemPosition());
+            draft.putInt("repeat", repeatIndex[0]);
             draft.putInt("priority", priority.getSelectedItemPosition());
             return draft;
         };
-        ScrollView scroll=new ScrollView(this);scroll.addView(form);
-        AlertDialog.Builder builder=new AlertDialog.Builder(this).setTitle(reminder ? (task.id==0?R.string.reminders_add:R.string.reminders_edit) : (task.id==0?R.string.tasks_add:R.string.tasks_edit)).setView(scroll).setNegativeButton(android.R.string.cancel,null).setPositiveButton(android.R.string.ok,null);
-        if(task.id!=0)builder.setNeutralButton(R.string.tasks_delete,null);
-        AlertDialog dialog=builder.create();
-        dialog.setOnDismissListener(d->{
-            captureDraft = null;
-            if(editorOnly&&!finishAfterPermission&&!isChangingConfigurations())finish();
-        });
-        dialog.setOnShowListener(v->{
-            if(task.id!=0)dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(b->
-                new AlertDialog.Builder(this).setMessage(reminder ? R.string.reminders_delete_confirm : R.string.tasks_delete_confirm)
-                    .setNegativeButton(android.R.string.cancel,null)
-                    .setPositiveButton(R.string.tasks_delete,(dd,ww)->{
-                        store.delete(task.id);dialog.dismiss();
-                    }).show());
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(b->{
-            String text=title.getText().toString().trim();if(text.isEmpty()){title.setError(getString(R.string.tasks_required));return;}
-            task.title=text;task.notes=notes.getText().toString();task.listId=available.get(list.getSelectedItemPosition()).id;
-            Long oldDue=task.due;String oldRule=task.rule;
-            boolean scheduleEdited = initialHasDate != hasDate.isChecked()
-                    || (hasDate.isChecked() && (initialHasTime != hasTime.isChecked()
+        if (task.id != 0) deleteEditor = () -> new MaterialAlertDialogBuilder(this)
+                .setMessage(reminder ? R.string.reminders_delete_confirm : R.string.tasks_delete_confirm)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.tasks_delete, (dialog, which) -> {
+                    store.delete(task.id);
+                    captureDraft = null;
+                    finish();
+                }).show();
+
+        saveEditor = () -> {
+            String text = title.getText().toString().trim();
+            if (text.isEmpty()) { title.setError(getString(R.string.tasks_required)); title.requestFocus(); return; }
+            int pos = list.getSelectedItemPosition();
+            if (pos < 0 || pos >= available.size()) return;
+            task.title = text;
+            task.notes = notes.getText().toString();
+            task.listId = available.get(pos).id;
+            Long oldDue = task.due;
+            String oldRule = task.rule;
+            boolean scheduleEdited = reminder && (initialAllDay != allDay.isChecked()
                     || !initialDate.equals(date[0])
-                    || (hasTime.isChecked() && !initialTime.equals(time[0]))));
-            task.allDay=hasDate.isChecked()&&!hasTime.isChecked();
-            if (scheduleEdited || task.id == 0) {
-                task.tz=task.allDay?"UTC":zone.getId();
-                task.due=!hasDate.isChecked()?null:task.allDay?date[0].atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli():date[0].atTime(time[0]).atZone(zone).toInstant().toEpochMilli();
+                    || (!allDay.isChecked() && (!initialTime.equals(time[0]) || !initialZone.equals(zone[0]))));
+            task.allDay = reminder && allDay.isChecked();
+            if (reminder && (scheduleEdited || task.id == 0)) {
+                task.tz = task.allDay ? "UTC" : zone[0].getId();
+                task.due = task.allDay ? date[0].atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+                        : date[0].atTime(time[0]).atZone(zone[0]).toInstant().toEpochMilli();
             }
-            task.rule=hasDate.isChecked()?RULES[repeat.getSelectedItemPosition()]:null;
-            if(scheduleEdited || !java.util.Objects.equals(oldDue,task.due)||!java.util.Objects.equals(oldRule,task.rule)||task.anchor==null) {
-                task.anchor=task.due;
-                task.repeatMinute=task.due==null||task.allDay?null:time[0].getHour()*60+time[0].getMinute();
+            task.rule = reminder ? (repeatIndex[0] == initialRepeat ? oldRule : RULES[repeatIndex[0]]) : null;
+            if (scheduleEdited || !java.util.Objects.equals(oldDue, task.due)
+                    || !java.util.Objects.equals(oldRule, task.rule) || task.anchor == null) {
+                task.anchor = task.due;
+                task.repeatMinute = task.due == null || task.allDay ? null
+                        : time[0].getHour() * 60 + time[0].getMinute();
             }
-            task.priority=new int[]{0,1,5,9}[priority.getSelectedItemPosition()];task.alarm=reminder&&alarm.isChecked()&&alarm.isEnabled();
-            if(!reminder){task.due=null;task.anchor=null;task.repeatMinute=null;task.tz=null;task.allDay=false;task.rule=null;}
+            task.priority = new int[]{0,1,5,9}[Math.max(0, priority.getSelectedItemPosition())];
+            task.alarm = reminder && !task.allDay && alarm.isChecked();
+            if (!reminder) {
+                task.due = null; task.anchor = null; task.repeatMinute = null;
+                task.tz = null; task.allDay = false; task.rule = null;
+            }
             long saved = store.save(task, completed.isChecked());
-            finishAfterPermission=saved>0&&editorOnly&&task.alarm&&!task.done;
-            dialog.dismiss();
-            if(finishAfterPermission)checkAlarmPermissions();
-            });
-        });dialog.show();
+            finishAfterPermission = saved > 0 && editorOnly && task.alarm && !task.done;
+            captureDraft = null;
+            saveEditor = null;
+            deleteEditor = null;
+            if (finishAfterPermission) checkAlarmPermissions(); else finish();
+        };
+        invalidateOptionsMenu();
     }
+
     private void checkAlarmPermissions(){
         if(Build.VERSION.SDK_INT>=33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED){requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},42);return;}
         if(Build.VERSION.SDK_INT>=31&&!((AlarmManager)getSystemService(ALARM_SERVICE)).canScheduleExactAlarms()){
