@@ -22,7 +22,6 @@ import android.text.format.DateUtils;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AbsListView;
@@ -68,9 +67,7 @@ import ws.xsoh.etar.R;
 public final class DatedAgendaFragment extends Fragment implements CalendarController.EventHandler {
     private static final String TAG = "DatedAgendaFragment";
     private static final int BLOCK_DAYS = 90;
-    private static final int MAX_WINDOW_DAYS = 361;
     private static final long JULIAN_EPOCH = 2440588L;
-    private static final int PREFETCH_ROWS = 5;
     private static final String[] PROJECTION = {
             Instances._ID, Instances.EVENT_ID, Instances.TITLE, Instances.EVENT_LOCATION,
             Instances.ALL_DAY, Instances.DISPLAY_COLOR, Instances.BEGIN, Instances.END,
@@ -92,11 +89,8 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
     private Future<?> future;
     private CancellationSignal cancellation;
     private int generation;
-    private boolean loading, active, binding, expandedThisGesture;
+    private boolean loading, active, binding;
     private int scrollState = AbsListView.OnScrollListener.SCROLL_STATE_IDLE;
-    private int lastFirst;
-    private float downY;
-    private boolean touchStarted;
     private long calendarId = -1;
     private ZoneId zone;
     private LocalDate firstDay, lastDay, targetDay, publishedDay;
@@ -201,6 +195,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         hasLoaded = false;
         loadedFirstDay = loadedLastDay = null;
         publishedDay = null;
+        scrollState = AbsListView.OnScrollListener.SCROLL_STATE_IDLE;
 
         LinearLayout root = new LinearLayout(context);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -218,6 +213,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         list.setClipToPadding(false);
         adapter = new AgendaRows();
         list.setAdapter(adapter);
+        list.setItemsCanFocus(true);
         root.addView(list, new LinearLayout.LayoutParams(-1, 0, 1));
         reloadCalendars();
         filter.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
@@ -238,46 +234,18 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
             if (event != null) EditEventActivity.openEvent(requireContext(), event.id,
                     event.begin, event.end, Attendees.ATTENDEE_STATUS_NONE);
         });
-        list.setOnTouchListener((view, event) -> {
-            switch (event.getActionMasked()) {
-                case MotionEvent.ACTION_DOWN:
-                    touchStarted = true;
-                    expandedThisGesture = false;
-                    downY = event.getY();
-                    break;
-                case MotionEvent.ACTION_UP:
-                    if (touchStarted && !expandedThisGesture) {
-                        float delta = downY - event.getY();
-                        if (Math.abs(delta) > dp(24)) {
-                            int direction = delta > 0 ? 1 : -1;
-                            if (!list.canScrollVertically(direction)) expand(direction);
-                        }
-                    }
-                    touchStarted = false;
-                    break;
-                case MotionEvent.ACTION_CANCEL:
-                    touchStarted = false;
-                    break;
-            }
-            return false;
-        });
+        // Match the reminders view: native ListView scrolling only updates the
+        // visible date; reaching either edge never starts a provider query.
         list.setOnScrollListener(new AbsListView.OnScrollListener() {
             @Override public void onScrollStateChanged(AbsListView view, int state) {
-                scrollState = state;
-                if (state == SCROLL_STATE_TOUCH_SCROLL) {
-                    expandedThisGesture = false;
-                    lastFirst = view.getFirstVisiblePosition();
+                if (scrollState != SCROLL_STATE_IDLE && state == SCROLL_STATE_IDLE) {
+                    updateScrolledTitle(view.getFirstVisiblePosition());
                 }
-                if (state == SCROLL_STATE_IDLE && !binding) publishVisibleDay();
+                scrollState = state;
             }
 
             @Override public void onScroll(AbsListView view, int first, int visible, int total) {
-                if (binding || scrollState == SCROLL_STATE_IDLE || rows.isEmpty()) return;
-                int direction = Integer.compare(first, lastFirst);
-                lastFirst = first;
-                publishVisibleDay();
-                if (direction < 0 && first <= PREFETCH_ROWS) expand(-1);
-                else if (direction > 0 && first + visible >= total - PREFETCH_ROWS) expand(1);
+                if (scrollState != SCROLL_STATE_IDLE) updateScrolledTitle(first);
             }
         });
         return root;
@@ -396,23 +364,6 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
     @Override public void onSaveInstanceState(Bundle state) {
         super.onSaveInstanceState(state);
         state.putAll(saveViewState());
-    }
-
-    private void expand(int direction) {
-        if (!active || loading || expandedThisGesture || !hasLoaded) return;
-        expandedThisGesture = true;
-        LocalDate first = firstDay;
-        LocalDate last = lastDay;
-        if (direction < 0) {
-            first = first.minusDays(BLOCK_DAYS);
-            LocalDate cap = first.plusDays(MAX_WINDOW_DAYS - 1);
-            if (last.isAfter(cap)) last = cap;
-        } else {
-            last = last.plusDays(BLOCK_DAYS);
-            LocalDate cap = last.minusDays(MAX_WINDOW_DAYS - 1);
-            if (first.isBefore(cap)) first = cap;
-        }
-        request(first, last, currentAnchor(), false);
     }
 
     private void goTo(LocalDate day) {
@@ -603,10 +554,9 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         publishDay(targetDay);
     }
 
-    private void publishVisibleDay() {
-        if (list == null || rows.isEmpty()) return;
-        int first = list.getFirstVisiblePosition();
-        if (first < rows.size()) publishDay(rows.get(first).day);
+    private void updateScrolledTitle(int first) {
+        if (binding || first < 0 || first >= rows.size() || !isAdded()) return;
+        publishDay(rows.get(first).day);
     }
 
     private void publishDay(LocalDate day) {
