@@ -2,6 +2,7 @@ package com.android.calendar;
 
 import android.content.Context;
 import android.text.TextUtils;
+import android.util.TypedValue;
 import android.text.format.DateUtils;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -28,10 +29,33 @@ public final class DatedListUi {
     public static int dp(Context context, int n) {
         return Math.round(n * context.getResources().getDisplayMetrics().density);
     }
+    public static int dimension(Context context, int resource) {
+        return context.getResources().getDimensionPixelSize(resource);
+    }
+
+    public static void setTextSize(TextView view, int resource) {
+        view.setTextSize(TypedValue.COMPLEX_UNIT_PX,
+                view.getResources().getDimension(resource));
+    }
+
+    /** Shared neutral status/empty row and optional section heading. */
+    public static TextView statusView(Context context, View recycled, boolean section) {
+        TextView view = recycled instanceof TextView ? (TextView) recycled : new TextView(context);
+        int horizontal = dimension(context, R.dimen.item_list_end_padding);
+        int vertical = dimension(context, section ? R.dimen.item_list_section_vertical_padding
+                : R.dimen.item_list_status_vertical_padding);
+        view.setPadding(horizontal, vertical, horizontal, vertical);
+        view.setTextColor(DynamicThemeKt.getColor(context,
+                section ? "agenda_item_standard_color" : "agenda_item_where_text_color"));
+        view.setBackgroundResource(DynamicThemeKt.getDrawableId(context,
+                section ? "agenda_item_bg_secondary" : "agenda_item_bg_primary"));
+        return view;
+    }
+
     public static ListView createList(Context context, BaseAdapter adapter) {
         ListView list = new ListView(context);
         list.setDivider(null);
-        list.setPadding(0, 0, 0, dp(context, 80));
+        list.setPadding(0, 0, 0, dimension(context, R.dimen.item_list_bottom_padding));
         list.setClipToPadding(false);
         list.setAdapter(adapter);
         list.setItemsCanFocus(true);
@@ -114,24 +138,69 @@ public final class DatedListUi {
         public RowLayout(Context context) {
             root = new LinearLayout(context);
             root.setOrientation(LinearLayout.VERTICAL);
-            root.setMinimumHeight(dp(context, 64));
+            root.setMinimumHeight(dimension(context, R.dimen.item_list_min_height));
             View divider = new View(context);
             divider.setBackgroundResource(R.color.agenda_list_separator_color);
             root.addView(divider, new LinearLayout.LayoutParams(-1, 1));
             item = new LinearLayout(context);
             item.setGravity(Gravity.CENTER_VERTICAL);
-            item.setMinimumHeight(dp(context, 64) - 1);
-            item.setPadding(0, 0, dp(context, 16), 0);
+            item.setMinimumHeight(dimension(context, R.dimen.item_list_min_height) - 1);
+            item.setPadding(0, 0, dimension(context, R.dimen.item_list_end_padding), 0);
             root.addView(item, new LinearLayout.LayoutParams(-1, -2));
             details = new LinearLayout(context);
             details.setOrientation(LinearLayout.VERTICAL);
-            details.setPadding(0, dp(context, 8), 0, dp(context, 8));
+            int padding = dimension(context, R.dimen.item_list_detail_padding);
+            details.setPadding(0, padding, 0, padding);
         }
         public void addLeading(View view) {
-            int size = dp(root.getContext(), 48);
+            int size = dimension(root.getContext(), R.dimen.item_list_leading_size);
             item.addView(view, new LinearLayout.LayoutParams(size, size));
             item.addView(details, new LinearLayout.LayoutParams(0, -2, 1));
         }
+        public TextView addTitle() {
+            return addStyledText(R.dimen.item_list_title_size);
+        }
+
+        public TextView addDetail() {
+            return addStyledText(R.dimen.item_list_detail_size);
+        }
+
+        private TextView addStyledText(int resource) {
+            TextView view = styledText(root.getContext(), resource);
+            details.addView(view);
+            return view;
+        }
+
+        public TextView addCountdown() {
+            TextView view = styledText(root.getContext(), R.dimen.item_list_countdown_size);
+            addAccessory(view, -2);
+            return view;
+        }
+
+        public void addIcon(View view) {
+            addAccessory(view, dimension(root.getContext(), R.dimen.item_list_accessory_size));
+        }
+
+        private void addAccessory(View view, int size) {
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(size, size);
+            params.setMarginStart(dimension(root.getContext(), R.dimen.item_list_accessory_gap));
+            item.addView(view, params);
+        }
+
+        public static TextView marker(Context context) {
+            TextView view = styledText(context, R.dimen.item_list_marker_size);
+            view.setGravity(Gravity.CENTER);
+            return view;
+        }
+
+        private static TextView styledText(Context context, int resource) {
+            TextView view = new TextView(context);
+            setTextSize(view, resource);
+            view.setSingleLine(true);
+            view.setEllipsize(TextUtils.TruncateAt.END);
+            return view;
+        }
+
         public TextView addText(int size) {
             TextView view = textView(root.getContext(), size);
             details.addView(view);

@@ -48,7 +48,6 @@ import androidx.core.content.ContextCompat;
 
 import com.android.calendar.Event;
 import com.android.calendar.LocalizedDay;
-import com.android.calendar.LunarUtils;
 import java.time.LocalDate;
 import com.android.calendar.Utils;
 import com.android.calendar.settings.ViewDetailsPreferences;
@@ -661,46 +660,12 @@ public class MonthWeekEventsView extends SimpleWeekView {
                 LocalDate date = LocalizedDay.fromJulian(mFirstJulianDay + i - (mShowWeekNum ? 1 : 0));
                 String label = LocalizedDay.label(getContext(), date);
                 String marker = LocalizedDay.marker(getContext(), date);
-                float oldSize = mMonthNumPaint.getTextSize();
-                int oldColor = mMonthNumPaint.getColor();
-                mMonthNumPaint.setTextSize(mTextSizeLunar);
-                if (!marker.isEmpty()) {
-                    // Reserve only the right-hand space; the day number remains centered.
-                    float available = right - mSidePaddingMonthNumber - center - dateWidth / 2f - 1f;
-                    float markerWidth = mMonthNumPaint.measureText(marker);
-                    if (available > 0 && markerWidth > 0) {
-                        mMonthNumPaint.setTextSize(mTextSizeLunar * Math.min(1f, available / markerWidth));
-                        mMonthNumPaint.setTextAlign(Align.RIGHT);
-                        mMonthNumPaint.setColor("休".equals(marker) ? 0xffd84343 : 0xff39865a);
-                        canvas.drawText(marker, right - mSidePaddingMonthNumber, y, mMonthNumPaint);
-                    }
-                }
-                mMonthNumPaint.setColor(oldColor);
-                mMonthNumPaint.setTextSize(mTextSizeLunar);
-                mMonthNumPaint.setTextAlign(Align.CENTER);
-                if (!label.isEmpty()) {
-                    String lunar = LunarUtils.get(getContext(), date.getYear(),
-                            date.getMonthValue() - 1, date.getDayOfMonth(),
-                            LunarUtils.FORMAT_LUNAR_SHORT, false, null);
-                    boolean dark = androidx.core.graphics.ColorUtils.calculateLuminance(
-                            mMonthBGColor) < 0.5;
-                    if (label.equals(lunar)) {
-                        mMonthNumPaint.setColor(androidx.core.graphics.ColorUtils.blendARGB(
-                                oldColor, mMonthBGColor, 0.28f));
-                    } else if (LunarUtils.isFestivalLabel(getContext(), date)) {
-                        mMonthNumPaint.setColor(dark ? 0xffffb78b : 0xffa04419);
-                    } else {
-                        mMonthNumPaint.setColor(com.google.android.material.color.MaterialColors.getColor(
-                                getContext(), androidx.appcompat.R.attr.colorPrimary, oldColor));
-                    }
-                    CharSequence fitted = TextUtils.ellipsize(label, new TextPaint(mMonthNumPaint),
-                            Math.max(0, right - left - 2 * mSidePaddingMonthNumber),
-                            TextUtils.TruncateAt.END);
-                    canvas.drawText(fitted.toString(), center, y + mTextSizeLunar + mLunarPaddingLunar,
-                            mMonthNumPaint);
-                }
-                mMonthNumPaint.setTextSize(oldSize);
-                mMonthNumPaint.setColor(oldColor);
+                int dateColor = mMonthNumPaint.getColor();
+                LocalizedDay.drawMarker(canvas, mMonthNumPaint, marker, right, center,
+                        dateWidth, mSidePaddingMonthNumber, y, mTextSizeLunar);
+                LocalizedDay.drawLabel(getContext(), canvas, mMonthNumPaint, date, label,
+                        left, right, mSidePaddingMonthNumber, y + mTextSizeLunar + mLunarPaddingLunar,
+                        mTextSizeLunar, dateColor, mMonthBGColor);
             }
             mMonthNumPaint.setTextAlign(Align.RIGHT);
         }

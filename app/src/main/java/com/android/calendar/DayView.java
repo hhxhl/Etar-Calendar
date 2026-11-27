@@ -2539,26 +2539,11 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
                 java.time.LocalDate date = LocalizedDay.fromJulian(cell);
                 String label = LocalizedDay.label(mContext, date);
                 String marker = LocalizedDay.marker(mContext, date);
-                if (!marker.isEmpty()) {
-                    float available = right - DAY_HEADER_RIGHT_MARGIN - center - dateWidth / 2f - 1f;
-                    float markerWidth = p.measureText(marker);
-                    if (available > 0 && markerWidth > 0) {
-                        p.setTextSize(DAY_HEADER_FONT_SIZE * Math.min(1f, available / markerWidth));
-                        p.setTextAlign(Align.RIGHT);
-                        p.setColor("休".equals(marker) ? 0xffd84343 : 0xff39865a);
-                        canvas.drawText(marker, right - DAY_HEADER_RIGHT_MARGIN, dateY, p);
-                    }
-                }
-                p.setTextSize(DAY_HEADER_FONT_SIZE);
-                p.setTextAlign(Align.CENTER);
-                p.setColor(dateColor);
-                if (!label.isEmpty()) {
-                    CharSequence fitted = TextUtils.ellipsize(label, new TextPaint(p),
-                            Math.max(0, right - left - 2 * DAY_HEADER_RIGHT_MARGIN),
-                            TextUtils.TruncateAt.END);
-                    canvas.drawText(fitted.toString(), center,
-                            DAY_HEADER_HEIGHT - DAY_HEADER_BOTTOM_MARGIN, p);
-                }
+                LocalizedDay.drawMarker(canvas, p, marker, right, center, dateWidth,
+                        DAY_HEADER_RIGHT_MARGIN, dateY, DAY_HEADER_FONT_SIZE);
+                LocalizedDay.drawLabel(mContext, canvas, p, date, label, left, right,
+                        DAY_HEADER_RIGHT_MARGIN, DAY_HEADER_HEIGHT - DAY_HEADER_BOTTOM_MARGIN,
+                        DAY_HEADER_FONT_SIZE, dateColor, mBgColor);
             }
             p.setTextAlign(Align.LEFT);
         } else {

@@ -15,7 +15,6 @@ import android.widget.TextView;
 import androidx.fragment.app.Fragment;
 import com.android.calendar.CalendarController;
 import com.android.calendar.DatedListUi;
-import com.android.calendar.theme.DynamicThemeKt;
 import java.util.ArrayList;
 import java.util.List;
 import ws.xsoh.etar.R;
@@ -120,9 +119,9 @@ public final class UndatedTasksFragment extends Fragment implements CalendarCont
         final TextView title;
         TaskRow(Context context) {
             layout = new DatedListUi.RowLayout(context);
-            done = TaskListUi.completion(context, false);
+            done = TaskListUi.completion(context);
             layout.addLeading(done);
-            title = layout.addText(18);
+            title = layout.addTitle();
             layout.root.setTag(this);
         }
 
@@ -143,11 +142,7 @@ public final class UndatedTasksFragment extends Fragment implements CalendarCont
         @Override public View getView(int position, View recycled, ViewGroup parent) {
             Context context = parent.getContext();
             if (rows.isEmpty()) {
-                TextView empty = recycled instanceof TextView ? (TextView) recycled : new TextView(context);
-                int p = DatedListUi.dp(context, 16);
-                empty.setPadding(p, DatedListUi.dp(context, 20), p, DatedListUi.dp(context, 20));
-                empty.setTextColor(DynamicThemeKt.getColor(context, "agenda_item_where_text_color"));
-                empty.setBackgroundResource(DynamicThemeKt.getDrawableId(context, "agenda_item_bg_primary"));
+                TextView empty = DatedListUi.statusView(context, recycled, false);
                 empty.setText(R.string.tasks_empty);
                 return empty;
             }

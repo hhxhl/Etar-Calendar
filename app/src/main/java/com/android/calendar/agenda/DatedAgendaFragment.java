@@ -41,7 +41,6 @@ import com.android.calendar.EventCountdown;
 import com.android.calendar.Utils;
 import com.android.calendar.event.EditEventActivity;
 import com.android.calendar.settings.GeneralPreferences;
-import com.android.calendar.theme.DynamicThemeKt;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -215,10 +214,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
             root.addView(navigation, new LinearLayout.LayoutParams(-1, -2));
             updateSearchRange();
         }
-        status = new TextView(context);
-        status.setPadding(dp(16), dp(20), dp(16), dp(20));
-        status.setTextColor(DynamicThemeKt.getColor(context, "agenda_item_where_text_color"));
-        status.setBackgroundResource(DynamicThemeKt.getDrawableId(context, "agenda_item_bg_primary"));
+        status = DatedListUi.statusView(context, null, false);
         status.setVisibility(View.GONE);
         root.addView(status, new LinearLayout.LayoutParams(-1, -2));
         adapter = new AgendaRows();
@@ -587,16 +583,12 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
             DatedListUi.RowLayout layout = new DatedListUi.RowLayout(context);
             root = layout.root;
 
-            chip = DatedListUi.RowLayout.textView(context, 18);
-            chip.setGravity(Gravity.CENTER);
+            chip = DatedListUi.RowLayout.marker(context);
             layout.addLeading(chip);
-            title = layout.addText(18);
-            when = layout.addText(14);
-            where = layout.addText(14);
-            countdown = DatedListUi.RowLayout.textView(context, 12);
-            LinearLayout.LayoutParams countdownParams = new LinearLayout.LayoutParams(-2, -2);
-            countdownParams.setMarginStart(dp(8));
-            layout.item.addView(countdown, countdownParams);
+            title = layout.addTitle();
+            when = layout.addDetail();
+            where = layout.addDetail();
+            countdown = layout.addCountdown();
             root.setTag(this);
         }
 

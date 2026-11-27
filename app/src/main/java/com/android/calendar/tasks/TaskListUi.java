@@ -11,6 +11,7 @@ import android.widget.CheckBox;
 import android.widget.Spinner;
 import android.widget.TextView;
 import com.android.calendar.ItemStateSymbols;
+import com.android.calendar.DatedListUi;
 import com.android.calendar.Utils;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -64,12 +65,12 @@ final class TaskListUi {
         return position == 0 ? 0 : lists.get(position - 1).id;
     }
 
-    static CheckBox completion(Context context, boolean reminder) {
+    static CheckBox completion(Context context) {
         CheckBox box = new CheckBox(context);
         box.setButtonDrawable((android.graphics.drawable.Drawable) null);
         box.setPadding(0, 0, 0, 0);
         box.setGravity(Gravity.CENTER);
-        box.setTextSize(18);
+        DatedListUi.setTextSize(box, R.dimen.item_list_marker_size);
         box.setSingleLine(true);
         return box;
     }

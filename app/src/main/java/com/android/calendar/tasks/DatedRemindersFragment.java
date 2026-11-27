@@ -18,7 +18,6 @@ import com.android.calendar.CalendarController;
 import com.android.calendar.DatedItemsRepository;
 import com.android.calendar.DatedListUi;
 import com.android.calendar.Utils;
-import com.android.calendar.theme.DynamicThemeKt;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -60,7 +59,6 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
     }
 
     public long getListId() { return listId; }
-    private int dp(int n) { return Math.round(n * getResources().getDisplayMetrics().density); }
     private ZoneId zone() { return ZoneId.of(Utils.getTimeZone(requireContext(), null)); }
     @Override public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle state) {
         Context context = requireContext();
@@ -245,23 +243,16 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
             DatedListUi.RowLayout layout = new DatedListUi.RowLayout(context);
             root = layout.root;
 
-            // The agenda's color chip occupies 16 + 24 + 8 = 48dp.
-            // Match its text start while retaining a 48dp checkbox touch target.
-            done = TaskListUi.completion(context, true);
+            done = TaskListUi.completion(context);
             layout.addLeading(done);
-            title = layout.addText(18);
-            subtitle = layout.addText(14);
-            countdown = DatedListUi.RowLayout.textView(context, 12);
-            LinearLayout.LayoutParams countdownParams = new LinearLayout.LayoutParams(-2, -2);
-            countdownParams.setMarginStart(dp(8));
-            layout.item.addView(countdown, countdownParams);
+            title = layout.addTitle();
+            subtitle = layout.addDetail();
+            countdown = layout.addCountdown();
 
             bell = new ImageView(context);
             bell.setImageResource(R.drawable.ic_reminder_outline);
             bell.setContentDescription(getString(R.string.tasks_notify));
-            LinearLayout.LayoutParams bellParams = new LinearLayout.LayoutParams(dp(24), dp(24));
-            bellParams.setMarginStart(dp(8));
-            layout.item.addView(bell, bellParams);
+            layout.addIcon(bell);
             root.setTag(this);
         }
 
@@ -301,18 +292,12 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
             Row row=rows.get(position);
             Context context=parent.getContext();
             if(row.completedCount==-2){
-                TextView empty=convertView instanceof TextView ? (TextView)convertView : new TextView(context);
-                empty.setPadding(dp(16),dp(20),dp(16),dp(20));
-                empty.setTextColor(DynamicThemeKt.getColor(context,"agenda_item_where_text_color"));
-                empty.setBackgroundResource(DynamicThemeKt.getDrawableId(context,"agenda_item_bg_primary"));
+                TextView empty = DatedListUi.statusView(context, convertView, false);
                 empty.setText(R.string.reminders_empty);
                 return empty;
             }
             if(row.completedCount>=0){
-                TextView heading=convertView instanceof TextView ? (TextView)convertView : new TextView(context);
-                heading.setPadding(dp(16),dp(14),dp(16),dp(14));
-                heading.setTextColor(DynamicThemeKt.getColor(context,"agenda_item_standard_color"));
-                heading.setBackgroundResource(DynamicThemeKt.getDrawableId(context,"agenda_item_bg_secondary"));
+                TextView heading = DatedListUi.statusView(context, convertView, true);
                 heading.setText((showCompleted?"▾ ":"▸ ")+getString(R.string.reminders_completed,row.completedCount));
                 heading.setOnClickListener(v->{showCompleted=!showCompleted;render(loadedItems, true);});
                 return heading;
