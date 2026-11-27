@@ -31,6 +31,32 @@ import ws.xsoh.etar.R;
 /** Common layout, date grouping, scroll and date positioning for dated lists. */
 public final class DatedListUi {
     private DatedListUi() {}
+    /** Refresh visible time-dependent labels without issuing another database query. */
+    public static final class MinuteRefresh implements Runnable {
+        private ListView list;
+
+        public void start(ListView view) {
+            stop();
+            list = view;
+            schedule();
+        }
+
+        private void schedule() {
+            if (list != null) list.postDelayed(this, 60_000 - System.currentTimeMillis() % 60_000);
+        }
+
+        public void stop() {
+            if (list != null) list.removeCallbacks(this);
+            list = null;
+        }
+
+        @Override public void run() {
+            if (list == null) return;
+            list.invalidateViews();
+            schedule();
+        }
+    }
+
     public static int dp(Context context, int n) {
         return Math.round(n * context.getResources().getDisplayMetrics().density);
     }

@@ -68,13 +68,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
     private CalendarController controller;
     private Spinner filter;
     private ListView list;
-    private final Runnable refreshStateSymbols = new Runnable() {
-        @Override public void run() {
-            if (!isResumed() || list == null) return;
-            list.invalidateViews();
-            list.postDelayed(this, 60_000 - System.currentTimeMillis() % 60_000);
-        }
-    };
+    private final DatedListUi.MinuteRefresh refreshStateSymbols = new DatedListUi.MinuteRefresh();
     private TextView status, searchRange;
     // Null means ordinary agenda; an empty string means search is waiting for a query.
     private String searchQuery;
@@ -311,10 +305,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
 
     @Override public void onResume() {
         super.onResume();
-        if (list != null) {
-            list.removeCallbacks(refreshStateSymbols);
-            list.postDelayed(refreshStateSymbols, 60_000 - System.currentTimeMillis() % 60_000);
-        }
+        refreshStateSymbols.start(list);
         active = true;
         ZoneId latestZone = ZoneId.of(Utils.getTimeZone(requireContext(), null));
         if (!latestZone.equals(zone)) zone = latestZone;
@@ -324,7 +315,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
     }
 
     @Override public void onPause() {
-        if (list != null) list.removeCallbacks(refreshStateSymbols);
+        refreshStateSymbols.stop();
         if (pendingAnchor == null) pendingAnchor = currentAnchor();
         active = false;
         main.removeCallbacks(reload);
@@ -333,6 +324,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
     }
 
     @Override public void onDestroyView() {
+        refreshStateSymbols.stop();
         active = false;
         main.removeCallbacksAndMessages(null);
         cancelQuery();

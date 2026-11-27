@@ -25,8 +25,6 @@ import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.graphics.Paint;
 import android.net.Uri;
-import android.provider.CalendarContract.Attendees;
-import android.provider.CalendarContract.Calendars;
 import android.provider.CalendarContract.Events;
 import android.provider.CalendarContract.Instances;
 import android.text.format.DateUtils;
@@ -77,9 +75,6 @@ public class CalendarAppWidgetService extends RemoteViewsService {
     private static final String EVENT_SORT_ORDER = Instances.START_DAY + " ASC, "
             + Instances.START_MINUTE + " ASC, " + Instances.END_DAY + " ASC, "
             + Instances.END_MINUTE + " ASC LIMIT " + EVENT_MAX_COUNT;
-    private static final String EVENT_SELECTION = Calendars.VISIBLE + "=1";
-    private static final String EVENT_SELECTION_HIDE_DECLINED = Calendars.VISIBLE + "=1 AND "
-            + Instances.SELF_ATTENDEE_STATUS + "!=" + Attendees.ATTENDEE_STATUS_DECLINED;
     private static final long SEARCH_DURATION = MAX_DAYS * DateUtils.DAY_IN_MILLIS;
     /**
      * Update interval used when no next-update calculated, or bad trigger time in past.

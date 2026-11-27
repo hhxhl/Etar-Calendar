@@ -30,13 +30,7 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
     private boolean showCompleted;
     private Spinner filter;
     private ListView list;
-    private final Runnable refreshStateSymbols = new Runnable() {
-        @Override public void run() {
-            if (!isResumed() || list == null) return;
-            list.invalidateViews();
-            list.postDelayed(this, 60_000 - System.currentTimeMillis() % 60_000);
-        }
-    };
+    private final DatedListUi.MinuteRefresh refreshStateSymbols = new DatedListUi.MinuteRefresh();
     private TaskStore store;
     private final ArrayList<Row> rows = new ArrayList<>();
     private ReminderAdapter adapter;
@@ -94,10 +88,7 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
 
     @Override public void onResume() {
         super.onResume();
-        if (list != null) {
-            list.removeCallbacks(refreshStateSymbols);
-            list.postDelayed(refreshStateSymbols, 60_000 - System.currentTimeMillis() % 60_000);
-        }
+        refreshStateSymbols.start(list);
         loader.start();
         TaskAlarmReceiver.schedule(requireContext());
         if (firstResume) {
@@ -114,12 +105,13 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
     }
 
     @Override public void onPause() {
-        if (list != null) list.removeCallbacks(refreshStateSymbols);
+        refreshStateSymbols.stop();
         if (loader != null) loader.stop();
         super.onPause();
     }
 
     @Override public void onDestroyView() {
+        refreshStateSymbols.stop();
         if (loader != null) loader.close();
         loader = null;
         loadedItems = new ArrayList<>();
