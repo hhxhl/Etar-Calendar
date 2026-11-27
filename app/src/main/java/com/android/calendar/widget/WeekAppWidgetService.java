@@ -67,6 +67,7 @@ public class WeekAppWidgetService extends RemoteViewsService {
                 Instances.START_DAY,
                 Instances.END_DAY,
                 Instances.SELF_ATTENDEE_STATUS,
+                Instances.EVENT_ID,
         };
         private static final int INDEX_TITLE = 0;
         private static final int INDEX_DISPLAY_COLOR = 1;
@@ -210,6 +211,8 @@ public class WeekAppWidgetService extends RemoteViewsService {
                 if (i < visibleCount) {
                     WeekAppWidgetModel.EventInfo event = day.events.get(i);
                     views.setViewVisibility(rowIds[i], View.VISIBLE);
+                    views.setOnClickFillInIntent(rowIds[i],
+                            WidgetClickActivity.itemIntent(event.taskId, day.timeMillis));
 
                     if (event.isAllDay) {
                         // All-day event: colored background, no bar, no time
@@ -378,6 +381,8 @@ public class WeekAppWidgetService extends RemoteViewsService {
                         int color = cursor.getInt(INDEX_DISPLAY_COLOR);
                         int displayColor = Utils.getDisplayColorFromColor(mContext, color);
                         int allDay = cursor.getInt(INDEX_ALL_DAY);
+                        long displayId = cursor.getLong(cursor.getColumnIndexOrThrow(Instances.EVENT_ID));
+                        long taskId = displayId < -1 ? -displayId - 1 : 0;
                         int startMinute = cursor.getInt(INDEX_START_MINUTE);
                         int eventStartDay = cursor.getInt(INDEX_START_DAY);
                         int eventEndDay = cursor.getInt(INDEX_END_DAY);
@@ -397,7 +402,7 @@ public class WeekAppWidgetService extends RemoteViewsService {
                             // Show time label only on the start day
                             String label = (dayIdx == fromDayIndex) ? timeLabel : "";
                             eventsByDay[dayIdx].add(new WeekAppWidgetModel.EventInfo(
-                                    title, displayColor, isAllDay, startMinute, label));
+                                    title, displayColor, isAllDay, startMinute, label, taskId));
                         }
                     }
                 }

@@ -66,6 +66,7 @@ public class MonthAppWidgetService extends RemoteViewsService {
                 Instances.END_DAY,
                 Instances.ALL_DAY,
                 Instances.START_MINUTE,
+                Instances.EVENT_ID,
         };
         private static final int INDEX_START_DAY = 0;
         private static final int INDEX_DISPLAY_COLOR = 1;
@@ -213,6 +214,8 @@ public class MonthAppWidgetService extends RemoteViewsService {
                 if (i < visibleCount) {
                     MonthAppWidgetModel.EventChip chip = cell.eventChips.get(i);
                     views.setViewVisibility(rowIds[i], View.VISIBLE);
+                    views.setOnClickFillInIntent(rowIds[i],
+                            WidgetClickActivity.itemIntent(chip.taskId, cell.timeMillis));
 
                     if (chip.isAllDay) {
                         // Spanning event: hide color bar, color the row background
@@ -406,6 +409,8 @@ public class MonthAppWidgetService extends RemoteViewsService {
                         int color = cursor.getInt(INDEX_DISPLAY_COLOR);
                         int displayColor = Utils.getDisplayColorFromColor(mContext, color);
                         int allDay = cursor.getInt(INDEX_ALL_DAY);
+                        long displayId = cursor.getLong(cursor.getColumnIndexOrThrow(Instances.EVENT_ID));
+                        long taskId = displayId < -1 ? -displayId - 1 : 0;
 
                         // Determine if this is a spanning event
                         boolean isSpanning = allDay == 1 || eventEndDay > eventStartDay;
@@ -446,7 +451,7 @@ public class MonthAppWidgetService extends RemoteViewsService {
                                 eventsByDay.put(dayOfMonth, chips);
                             }
                             chips.add(new MonthAppWidgetModel.EventChip(
-                                    title, displayColor, isSpanning, spanType));
+                                    title, displayColor, isSpanning, spanType, taskId));
                         }
                     }
                 }

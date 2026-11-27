@@ -106,13 +106,9 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
     protected abstract String computeTitle(Context context, long nowMillis);
 
     static PendingIntent getLaunchPendingIntentTemplate(Context context) {
-        Intent launchIntent = new Intent();
-        launchIntent.setAction(Intent.ACTION_VIEW);
-        launchIntent.setPackage(context.getPackageName());
-        launchIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
-                | Intent.FLAG_ACTIVITY_CLEAR_TASK
-                | Intent.FLAG_ACTIVITY_TASK_ON_HOME
-                | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        Intent launchIntent = new Intent(context, WidgetClickActivity.class)
+                .setAction(Intent.ACTION_VIEW)
+                .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         return PendingIntent.getActivity(context, 0, launchIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE);
     }

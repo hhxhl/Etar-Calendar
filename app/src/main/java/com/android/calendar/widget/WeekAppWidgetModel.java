@@ -80,8 +80,14 @@ class WeekAppWidgetModel {
         final boolean isAllDay;
         final int startMinute;
         final String timeLabel;
+        final long taskId;
 
         EventInfo(String title, int color, boolean isAllDay, int startMinute, String timeLabel) {
+            this(title, color, isAllDay, startMinute, timeLabel, 0);
+        }
+
+        EventInfo(String title, int color, boolean isAllDay, int startMinute, String timeLabel, long taskId) {
+            this.taskId = taskId;
             this.title = title;
             this.color = color;
             this.isAllDay = isAllDay;

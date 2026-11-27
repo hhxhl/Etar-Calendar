@@ -33,8 +33,6 @@ import android.provider.CalendarContract;
 import android.util.Log;
 import android.widget.RemoteViews;
 
-import com.android.calendar.AllInOneActivity;
-import com.android.calendar.EventInfoActivity;
 import com.android.calendar.Utils;
 import com.android.calendar.calendarcommon2.Time;
 
@@ -82,13 +80,9 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
      * in combination with {@link RemoteViews#setPendingIntentTemplate(int, PendingIntent)}.
      */
     static PendingIntent getLaunchPendingIntentTemplate(Context context) {
-        Intent launchIntent = new Intent();
-        launchIntent.setAction(Intent.ACTION_VIEW);
-        launchIntent.setPackage(context.getPackageName());
-        launchIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK |
-                Intent.FLAG_ACTIVITY_CLEAR_TASK |
-                Intent.FLAG_ACTIVITY_TASK_ON_HOME |
-                Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        Intent launchIntent = new Intent(context, WidgetClickActivity.class)
+                .setAction(Intent.ACTION_VIEW)
+                .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
         return PendingIntent.getActivity(context, 0 /* no requestCode */, launchIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE);
@@ -107,10 +101,7 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
                                         boolean allDay) {
         final Intent fillInIntent = new Intent();
         if (id < -1) {
-            fillInIntent.setClass(context, com.android.calendar.tasks.TaskListActivity.class);
-            fillInIntent.setData(Uri.parse("etar-task:" + (-id - 1)));
-            fillInIntent.putExtra("task_id", -id - 1);
-            return fillInIntent;
+            return WidgetClickActivity.itemIntent(-id - 1, start);
         }
         String dataString = "content://com.android.calendar/events";
         if (id != 0) {
@@ -119,11 +110,6 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
                     Intent.FLAG_ACTIVITY_TASK_ON_HOME);
 
             dataString += "/" + id;
-            // If we have an event id - start the event info activity
-            fillInIntent.setClass(context, EventInfoActivity.class);
-        } else {
-            // If we do not have an event id - start AllInOne
-            fillInIntent.setClass(context, AllInOneActivity.class);
         }
         Uri data = Uri.parse(dataString);
         fillInIntent.setData(data);

@@ -137,8 +137,14 @@ class MonthAppWidgetModel {
         final int color;
         final boolean isAllDay;
         final int spanType;
+        final long taskId;
 
         EventChip(String title, int color, boolean isAllDay, int spanType) {
+            this(title, color, isAllDay, spanType, 0);
+        }
+
+        EventChip(String title, int color, boolean isAllDay, int spanType, long taskId) {
+            this.taskId = taskId;
             this.title = title;
             this.color = color;
             this.isAllDay = isAllDay;

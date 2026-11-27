@@ -1,22 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="tasks_title">Reminders</string>
-    <string name="tasks_add">New reminder</string>
-    <string name="tasks_edit">Edit reminder</string>
-    <string name="tasks_manage">Manage reminders</string>
+    <string name="tasks_title">Tasks</string>
+    <string name="tasks_add">New task</string>
+    <string name="tasks_edit">Edit task</string>
+    <string name="tasks_manage">Manage tasks</string>
     <string name="tasks_new_event">New event</string>
     <string name="tasks_back">Back</string>
     <string name="tasks_complete">Complete</string>
     <string name="tasks_lists">Lists</string>
     <string name="tasks_default_list">Personal</string>
-    <string name="tasks_all">All reminders</string>
-    <string name="tasks_empty">No reminders</string>
+    <string name="tasks_all">All tasks</string>
+    <string name="tasks_empty">No tasks</string>
     <string name="tasks_no_date">No date</string>
     <string name="tasks_new_list">New list</string>
     <string name="tasks_rename">Rename</string>
     <string name="tasks_delete">Delete</string>
-    <string name="tasks_delete_list_confirm">Delete this list and all its reminders?</string>
-    <string name="tasks_delete_confirm">Delete this reminder?</string>
+    <string name="tasks_delete_list_confirm">Delete this list and all its tasks?</string>
+    <string name="tasks_delete_confirm">Delete this task?</string>
     <string name="tasks_required">Required</string>
     <string name="tasks_task_name">Title</string>
     <string name="tasks_notes">Notes</string>
@@ -41,8 +41,8 @@
         <item>Low</item>
     </string-array>
     <string name="tasks_create_event_type">Event</string>
-    <string name="tasks_show_scheduled">Show dated reminders</string>
-    <string name="tasks_manage_lists">Reminder lists</string>
+    <string name="tasks_show_scheduled">Show dated tasks</string>
+    <string name="tasks_manage_lists">Task lists</string>
     <string name="tasks_new_item">New item</string>
-    <string name="tasks_choose_item">Choose event or reminder</string>
+    <string name="tasks_choose_item">Choose event or task</string>
 </resources>
