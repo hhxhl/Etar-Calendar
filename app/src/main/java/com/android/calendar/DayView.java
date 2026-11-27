@@ -3943,7 +3943,14 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         }
         boolean allDay = !valid || mSelectionAllday;
         long time = getSelectedTimeInMillis();
-        if (!items.isEmpty() && mNumDays > 1) {
+        // A reminder is directly editable in either day or week view.
+        // Do this before the week-view routing for ordinary calendar events.
+        if (selected != null && selected.taskId > 0) {
+            if (mIsAccessibilityEnabled) mAccessibilityMgr.interrupt();
+            mSelectionMode = SELECTION_HIDDEN;
+            mPopup.dismiss();
+            com.android.calendar.tasks.TaskCalendarUi.openTask(mContext, selected.taskId);
+        } else if (!items.isEmpty() && mNumDays > 1) {
             Time day = getSelectedTime();
             mController.sendEvent(this, EventType.GO_TO, day, day, -1, ViewType.DAY,
                     CalendarController.EXTRA_GOTO_DATE
@@ -4679,53 +4686,42 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
 
         mSelectedEvents.clear();
         if (mSelectionAllday) {
-            float yDistance;
-            float minYdistance = 10000.0f; // any large number
             Event closestEvent = null;
-            float drawHeight = mAlldayHeight;
+            float minYdistance = Float.MAX_VALUE;
+            // Use the same row height and clipping as drawAllDayEvents,
+            // rather than dividing by the maximum number of allowed rows.
+            boolean collapsed = mMaxAlldayEvents > mMaxUnexpandedAlldayEventCount
+                    && !mShowAllAllDayEvents && mAnimateDayHeight == 0;
+            int rows = collapsed ? mMaxUnexpandedAlldayEventCount - 1 : mMaxAlldayEvents;
+            if (rows <= 0) return;
+            float height = mMaxAlldayEvents > mMaxUnexpandedAlldayEventCount
+                    ? mAnimateDayEventHeight : (float) mAlldayHeight / rows;
+            height = Math.min(height, MAX_HEIGHT_OF_ONE_ALLDAY_EVENT);
+            if (height <= 0) return;
             int yOffset = DAY_HEADER_HEIGHT + ALLDAY_TOP_MARGIN;
-            int maxUnexpandedColumn = mMaxUnexpandedAlldayEventCount;
-            if (mMaxAlldayEvents > mMaxUnexpandedAlldayEventCount) {
-                // Leave a gap for the 'box +n' text
-                maxUnexpandedColumn--;
-            }
-            events = mAllDayEvents;
-            numEvents = events.size();
-            for (int i = 0; i < numEvents; i++) {
-                Event event = events.get(i);
-                if (!event.drawAsAllday() ||
-                        (!mShowAllAllDayEvents && event.getColumn() >= maxUnexpandedColumn)) {
-                    // Don't check non-allday events or events that aren't shown
+            int clip = yOffset + mAlldayHeight;
+            if (collapsed) clip -= MIN_UNEXPANDED_ALLDAY_EVENT_HEIGHT;
+            else if (mAnimateDayHeight != 0) clip = yOffset + mAnimateDayHeight;
+            for (Event event : mAllDayEvents) {
+                if (!event.drawAsAllday() || event.startDay > date || event.endDay < date) {
                     continue;
                 }
-
-                if (event.startDay <= mSelectionDay && event.endDay >= mSelectionDay) {
-                    float numRectangles = mShowAllAllDayEvents ? mMaxAlldayEvents
-                            : mMaxUnexpandedAlldayEventCount;
-                    float height = drawHeight / numRectangles;
-                    if (height > MAX_HEIGHT_OF_ONE_ALLDAY_EVENT) {
-                        height = MAX_HEIGHT_OF_ONE_ALLDAY_EVENT;
-                    }
-                    float eventTop = yOffset + height * event.getColumn();
-                    float eventBottom = eventTop + height;
-                    if (eventTop < y && eventBottom > y) {
-                        // If the touch is inside the event rectangle, then
-                        // add the event.
-                        mSelectedEvents.add(event);
-                        closestEvent = event;
-                        break;
-                    } else {
-                        // Find the closest event
-                        if (eventTop >= y) {
-                            yDistance = eventTop - y;
-                        } else {
-                            yDistance = y - eventBottom;
-                        }
-                        if (yDistance < minYdistance) {
-                            minYdistance = yDistance;
-                            closestEvent = event;
-                        }
-                    }
+                float eventTop = yOffset + height * event.getColumn();
+                float eventBottom = eventTop + height - ALL_DAY_EVENT_RECT_BOTTOM_MARGIN;
+                if (eventTop >= clip || (collapsed && eventBottom > clip)) continue;
+                eventBottom = Math.min(eventBottom, clip);
+                if (y >= eventTop && y <= eventBottom
+                        && x >= event.left && x <= event.right) {
+                    mSelectedEvents.add(event);
+                    closestEvent = event;
+                    break;
+                }
+                // Keep the existing nearest-row behavior for keyboard/accessibility;
+                // a tap only opens an item actually present in mSelectedEvents.
+                float distance = y < eventTop ? eventTop - y : Math.max(0, y - eventBottom);
+                if (distance < minYdistance) {
+                    minYdistance = distance;
+                    closestEvent = event;
                 }
             }
             setSelectedEvent(closestEvent);
