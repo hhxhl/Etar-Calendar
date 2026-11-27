@@ -17,6 +17,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 
 /** Read-only access to dated items; existing stores remain authoritative. */
 public final class DatedItemsRepository {
@@ -104,6 +105,38 @@ public final class DatedItemsRepository {
                 .thenComparing(row -> row.value.title == null ? "" : row.value.title)
                 .thenComparingLong(row -> row.value.instanceId));
         return items;
+    }
+
+    /** Search visible local items, including completed items. Undated tasks ignore the date range. */
+    public static List<Item<TaskStore.Task>> searchTasks(Context context, LocalDate first,
+            LocalDate last, long listId, String query, CancellationSignal signal) {
+        ArrayList<Item<TaskStore.Task>> result = new ArrayList<>();
+        if (query == null || query.trim().isEmpty()) return result;
+        String keyword = query.trim().toLowerCase(Locale.ROOT);
+        ZoneId zone = ZoneId.of(Utils.getTimeZone(context, null));
+        LocalDate until = last.plusDays(1);
+        TaskStore store = TaskStore.get(context);
+        List<TaskStore.Task> candidates = store.datedTasks(
+                first.atStartOfDay(zone).toInstant().toEpochMilli(),
+                until.atStartOfDay(zone).toInstant().toEpochMilli(),
+                first.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
+                until.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli());
+        signal.throwIfCanceled();
+        candidates.addAll(store.visibleUndatedTasks(listId));
+        for (TaskStore.Task task : candidates) {
+            signal.throwIfCanceled();
+            if (listId != 0 && task.listId != listId) continue;
+            if (!matches(task.title, keyword) && !matches(task.notes, keyword)
+                    && !matches(task.url, keyword)) continue;
+            LocalDate date = task.due == null ? null : Instant.ofEpochMilli(task.due)
+                    .atZone(task.allDay ? ZoneOffset.UTC : zone).toLocalDate();
+            result.add(new Item<>(date, task));
+        }
+        return result;
+    }
+
+    private static boolean matches(String value, String keyword) {
+        return value != null && value.toLowerCase(Locale.ROOT).contains(keyword);
     }
 
     public static List<Item<TaskStore.Task>> reminders(TaskStore store, long listId, ZoneId zone) {

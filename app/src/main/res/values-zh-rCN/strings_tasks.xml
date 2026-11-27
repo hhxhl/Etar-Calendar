@@ -81,6 +81,9 @@
     <string name="agenda_search_previous_range">搜索更早的日期</string>
     <string name="agenda_search_next_range">搜索更晚的日期</string>
     <string name="agenda_search_enter_query">请输入搜索关键词</string>
-    <string name="agenda_search_no_results">此日期范围内没有匹配的日程</string>
+    <string name="agenda_search_no_results">所选范围内没有匹配的条目</string>
     <string name="tasks_load_failed">无法加载提醒和任务</string>
+    <string name="search_all_items">全部条目</string>
+    <string name="search_calendar_source">日历：%1$s</string>
+    <string name="search_list_source">列表：%1$s</string>
 </resources>

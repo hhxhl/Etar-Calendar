@@ -17,6 +17,10 @@ package com.android.calendar;
 
 import android.app.SearchManager;
 import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.IntentFilter;
+import androidx.core.content.ContextCompat;
+import com.android.calendar.tasks.TaskStore;
 import android.content.Intent;
 import android.database.ContentObserver;
 import android.graphics.drawable.LayerDrawable;
@@ -39,7 +43,7 @@ import com.android.calendar.theme.DynamicThemeKt;
 import ws.xsoh.etar.R;
 import ws.xsoh.etar.databinding.SimpleFrameLayoutMaterialBinding;
 
-/** Search hosts the same dated list as the agenda; result clicks open the event editor. */
+/** Global item search; results reuse the agenda list and open the corresponding editor. */
 public class SearchActivity extends AppCompatActivity implements SearchView.OnQueryTextListener {
     private static final String BUNDLE_KEY_RESTORE_SEARCH_QUERY = "key_restore_search_query";
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -47,6 +51,10 @@ public class SearchActivity extends AppCompatActivity implements SearchView.OnQu
     private SearchView searchView;
     private boolean observing;
     private BroadcastReceiver timeChangesReceiver;
+    private boolean observingTasks;
+    private final BroadcastReceiver taskChanges = new BroadcastReceiver() {
+        @Override public void onReceive(Context context, Intent intent) { refreshResults(); }
+    };
 
     private final ContentObserver observer = new ContentObserver(handler) {
         @Override public void onChange(boolean selfChange) { refreshResults(); }
@@ -173,13 +181,20 @@ public class SearchActivity extends AppCompatActivity implements SearchView.OnQu
         Utils.setMidnightUpdater(handler, timeChangesUpdater, Utils.getTimeZone(this, timeChangesUpdater));
         timeChangesReceiver = Utils.setTimeChangesReceiver(this, timeChangesUpdater);
         invalidateOptionsMenu();
-        if (Utils.isCalendarPermissionGranted(this, true)) {
+        ContextCompat.registerReceiver(this, taskChanges,
+                new IntentFilter(TaskStore.ACTION_TASKS_CHANGED), ContextCompat.RECEIVER_NOT_EXPORTED);
+        observingTasks = true;
+        if (Utils.isCalendarPermissionGranted(this, false)) {
             getContentResolver().registerContentObserver(Events.CONTENT_URI, true, observer);
             observing = true;
         }
     }
 
     @Override protected void onPause() {
+        if (observingTasks) {
+            unregisterReceiver(taskChanges);
+            observingTasks = false;
+        }
         if (observing) {
             getContentResolver().unregisterContentObserver(observer);
             observing = false;

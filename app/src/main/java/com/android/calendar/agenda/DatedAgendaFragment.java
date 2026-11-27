@@ -41,6 +41,9 @@ import com.android.calendar.EventCountdown;
 import com.android.calendar.Utils;
 import com.android.calendar.event.EditEventActivity;
 import com.android.calendar.settings.GeneralPreferences;
+import com.android.calendar.tasks.TaskStore;
+import com.android.calendar.tasks.TaskCalendarUi;
+import java.time.ZoneOffset;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -130,7 +133,16 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
     private static final class Row {
         final LocalDate day;
         final AgendaEntry event;
-        Row(LocalDate day, AgendaEntry event) { this.day = day; this.event = event; }
+        final TaskStore.Task task;
+        Row(LocalDate day, AgendaEntry event) { this(day, event, null); }
+        Row(LocalDate day, AgendaEntry event, TaskStore.Task task) {
+            this.day = day;
+            this.event = event;
+            this.task = task;
+        }
+        boolean isItem() { return event != null || task != null; }
+        boolean allDay() { return event != null ? event.allDay : task.allDay; }
+        long sortTime() { return event != null ? event.begin : task.due; }
     }
 
     private static final class Anchor {
@@ -235,9 +247,10 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         });
         list.setOnItemClickListener((parent, view, position, id) -> {
             if (position >= rows.size()) return;
-            AgendaEntry event = rows.get(position).event;
-            if (event != null) EditEventActivity.openEvent(requireContext(), event.id,
-                    event.begin, event.end, Attendees.ATTENDEE_STATUS_NONE);
+            Row row = rows.get(position);
+            if (row.task != null) TaskCalendarUi.openTask(requireContext(), row.task.id);
+            else if (row.event != null) EditEventActivity.openEvent(requireContext(), row.event.id,
+                    row.event.begin, row.event.end, Attendees.ATTENDEE_STATUS_NONE);
         });
         DatedListUi.listenToScroll(list, this::updateScrolledTitle);
         return root;
@@ -261,7 +274,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         binding = true;
         try {
             ArrayList<String> names = new ArrayList<>();
-            names.add(getString(R.string.agenda_all_calendars));
+            names.add(getString(searchQuery == null ? R.string.agenda_all_calendars : R.string.search_all_items));
             calendarIds.clear();
             writableIds.clear();
             calendarIds.add(-1L);
@@ -273,15 +286,23 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
                         while (cursor.moveToNext()) {
                             long id = cursor.getLong(0);
                             calendarIds.add(id);
-                            names.add(cursor.isNull(1) ? Long.toString(id) : cursor.getString(1));
+                            String name = cursor.isNull(1) ? Long.toString(id) : cursor.getString(1);
+                            names.add(searchQuery == null ? name : getString(R.string.search_calendar_source, name));
                             if (cursor.getInt(2) >= Calendars.CAL_ACCESS_CONTRIBUTOR) writableIds.add(id);
                         }
-                        if (!calendarIds.contains(calendarId)) calendarId = -1;
                     }
                 } catch (SecurityException error) {
                     Log.w(TAG, "Calendar filter unavailable", error);
                 }
             }
+            if (searchQuery != null) {
+                for (TaskStore.TaskList taskList : TaskStore.get(requireContext()).visibleLists()) {
+                    calendarIds.add(-taskList.id - 1);
+                    String name = taskList.name.isEmpty() ? getString(R.string.tasks_default_list) : taskList.name;
+                    names.add(getString(R.string.search_list_source, name));
+                }
+            }
+            if (!calendarIds.contains(calendarId)) calendarId = -1;
             ArrayAdapter<String> labels = new ArrayAdapter<>(requireContext(),
                     android.R.layout.simple_spinner_item, names);
             labels.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -348,9 +369,10 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
             int index = Math.min(list.getFirstVisiblePosition(), rows.size() - 1);
             Row row = rows.get(index);
             AgendaEntry event = row.event;
-            return new Anchor(row.day, event == null ? -1 : event.instanceId,
-                    event == null ? -1 : event.id, event == null ? -1 : event.begin,
-                    DatedListUi.topOffset(list));
+            LocalDate day = row.day == null ? (targetDay == null ? firstDay : targetDay) : row.day;
+            long instance = row.task != null ? -row.task.id - 1 : event == null ? -1 : event.instanceId;
+            return new Anchor(day, instance, event == null ? -1 : event.id,
+                    event == null ? -1 : event.begin, DatedListUi.topOffset(list));
         }
         if (pendingAnchor != null) return pendingAnchor;
         LocalDate anchor = targetDay == null ? LocalDate.now(zone == null ? ZoneId.systemDefault() : zone) : targetDay;
@@ -456,7 +478,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
                     rows.clear();
                     rows.addAll(result);
                     adapter.notifyDataSetChanged();
-                    if (result.stream().noneMatch(row -> row.event != null)) {
+                    if (result.stream().noneMatch(Row::isItem)) {
                         status.setText(queryText == null ? R.string.agenda_no_events_in_range
                                 : queryText.isEmpty() ? R.string.agenda_search_enter_query
                                 : R.string.agenda_search_no_results);
@@ -489,12 +511,43 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
 
     private static List<Row> query(Context context, LocalDate first, LocalDate last,
             long selected, boolean hideDeclined, LocalDate today, String searchQuery, CancellationSignal signal) {
-        List<DatedItemsRepository.Item<AgendaEntry>> items =
-                DatedItemsRepository.agenda(context, first, last, selected, hideDeclined, searchQuery, signal);
         ArrayList<Row> result = new ArrayList<>();
-        DatedListUi.appendDays(result, items,
-                searchQuery != null || today.isBefore(first) || today.isAfter(last) ? null : today,
-                date -> new Row(date, null), item -> new Row(item.day, item.value));
+        if (searchQuery == null) {
+            List<DatedItemsRepository.Item<AgendaEntry>> items =
+                    DatedItemsRepository.agenda(context, first, last, selected, hideDeclined, signal);
+            DatedListUi.appendDays(result, items,
+                    today.isBefore(first) || today.isAfter(last) ? null : today,
+                    date -> new Row(date, null), item -> new Row(item.day, item.value));
+            return result;
+        }
+        if (searchQuery.trim().isEmpty()) return result;
+
+        List<DatedItemsRepository.Item<Row>> dated = new ArrayList<>();
+        List<Row> undated = new ArrayList<>();
+        if (selected >= -1 && Utils.isCalendarPermissionGranted(context, false)) {
+            for (DatedItemsRepository.Item<AgendaEntry> item :
+                    DatedItemsRepository.agenda(context, first, last, selected, hideDeclined, searchQuery, signal)) {
+                dated.add(new DatedItemsRepository.Item<>(item.day, new Row(item.day, item.value)));
+            }
+        }
+        if (selected < 0) {
+            long listId = selected == -1 ? 0 : -selected - 1;
+            for (DatedItemsRepository.Item<TaskStore.Task> item :
+                    DatedItemsRepository.searchTasks(context, first, last, listId, searchQuery, signal)) {
+                Row row = new Row(item.day, null, item.value);
+                if (item.day == null) undated.add(row);
+                else dated.add(new DatedItemsRepository.Item<>(item.day, row));
+            }
+        }
+        dated.sort(Comparator.comparing((DatedItemsRepository.Item<Row> item) -> item.day)
+                .thenComparing(item -> !item.value.allDay())
+                .thenComparingLong(item -> item.value.sortTime()));
+        DatedListUi.appendDays(result, dated, null,
+                day -> new Row(day, null), item -> item.value);
+        if (!undated.isEmpty()) {
+            result.add(new Row(null, null));
+            result.addAll(undated);
+        }
         return result;
     }
 
@@ -502,8 +555,12 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         int index = -1;
         for (int i = 0; i < rows.size(); i++) {
             Row row = rows.get(i);
-            if (!row.day.equals(anchor.day)) continue;
-            if (row.event == null && anchor.instance < 0 && anchor.eventId < 0) {
+            if (row.task != null && anchor.instance == -row.task.id - 1) {
+                index = i;
+                break;
+            }
+            if (row.day == null || !row.day.equals(anchor.day)) continue;
+            if (!row.isItem() && anchor.instance == -1 && anchor.eventId < 0) {
                 index = i;
                 break;
             }
@@ -526,15 +583,16 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
             binding = false;
         }
         if (index < 0) index = DatedListUi.findHeader(rows, anchor.day,
-                row -> row.event == null ? row.day : null, row -> false);
+                row -> !row.isItem() ? row.day : null, row -> row.day == null);
+        if (index < 0 && searchQuery != null && !rows.isEmpty()) index = 0;
         if (index >= 0) list.setSelectionFromTop(index, exact ? anchor.offset : 0);
-        targetDay = index >= 0 ? rows.get(index).day : anchor.day;
+        targetDay = index >= 0 && rows.get(index).day != null ? rows.get(index).day : anchor.day;
         publishDay(targetDay);
     }
 
     private void updateScrolledTitle(int first) {
         if (binding || first < 0 || first >= rows.size() || !isAdded()) return;
-        publishDay(rows.get(first).day);
+        if (rows.get(first).day != null) publishDay(rows.get(first).day);
     }
 
     private void publishDay(LocalDate day) {
@@ -593,7 +651,12 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         }
 
         void bind(Row row, Context context, LocalDate today) {
+            if (row.task != null) {
+                bindTask(row.task, context);
+                return;
+            }
             AgendaEntry entry = row.event;
+            when.setVisibility(View.VISIBLE);
             boolean past = entry.allDay ? !row.day.isAfter(today)
                     : Math.max(entry.begin, millis(row.day)) <= System.currentTimeMillis();
             com.android.calendar.ItemAppearance.bindRow(root,
@@ -625,23 +688,57 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
             countdown.setText(label);
             countdown.setVisibility(label.isEmpty() ? View.GONE : View.VISIBLE);
         }
+
+        private void bindTask(TaskStore.Task task, Context context) {
+            com.android.calendar.ItemAppearance.bindRow(root,
+                    TaskCalendarUi.displayColor(context, task, false),
+                    title, countdown, when, where, chip);
+            title.setText(task.title);
+            title.setTypeface(task.done ? Typeface.DEFAULT : Typeface.DEFAULT_BOLD);
+            title.setPaintFlags(task.done ? title.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG
+                    : title.getPaintFlags() & ~Paint.STRIKE_THRU_TEXT_FLAG);
+            long now = System.currentTimeMillis();
+            chip.setText(task.due == null ? ItemStateSymbols.task(task.done)
+                    : ItemStateSymbols.reminder(task.done, task.due, task.allDay, zone, now));
+            when.setVisibility(task.due == null ? View.GONE : View.VISIBLE);
+            if (task.due != null) {
+                String time = task.allDay ? context.getString(R.string.reminders_all_day)
+                        : Utils.formatDateRange(context, task.due, task.due, DateUtils.FORMAT_SHOW_TIME);
+                boolean overdue = !task.done && (task.allDay
+                        ? Instant.ofEpochMilli(task.due).atZone(ZoneOffset.UTC).toLocalDate().isBefore(LocalDate.now(zone))
+                        : task.due < now);
+                when.setText(overdue ? time + " · " + context.getString(R.string.reminders_overdue) : time);
+            }
+            where.setText(task.notes);
+            where.setVisibility(TextUtils.isEmpty(task.notes) ? View.GONE : View.VISIBLE);
+            String label = task.due != null && task.countdown && !task.done
+                    ? EventCountdown.dateLabel(context, task.due, task.allDay) : "";
+            countdown.setText(label);
+            countdown.setVisibility(label.isEmpty() ? View.GONE : View.VISIBLE);
+        }
     }
 
     private final class AgendaRows extends BaseAdapter {
         @Override public int getCount() { return rows.size(); }
         @Override public Object getItem(int position) { return rows.get(position); }
         @Override public long getItemId(int position) { return position; }
-        @Override public int getViewTypeCount() { return 2; }
-        @Override public int getItemViewType(int position) { return rows.get(position).event == null ? 0 : 1; }
+        @Override public int getViewTypeCount() { return 3; }
+        @Override public int getItemViewType(int position) {
+            Row row = rows.get(position);
+            return row.isItem() ? 1 : row.day == null ? 2 : 0;
+        }
         @Override public boolean areAllItemsEnabled() { return false; }
-        @Override public boolean isEnabled(int position) { return rows.get(position).event != null; }
+        @Override public boolean isEnabled(int position) { return rows.get(position).isItem(); }
 
         @Override public View getView(int position, View convertView, ViewGroup parent) {
             Row row = rows.get(position);
             Context context = parent.getContext();
             LocalDate today = LocalDate.now(zone);
-            if (row.event == null) {
-                return DatedListUi.dateHeader(convertView, parent, row.day, zone);
+            if (!row.isItem()) {
+                if (row.day != null) return DatedListUi.dateHeader(convertView, parent, row.day, zone);
+                TextView heading = DatedListUi.statusView(context, convertView, true);
+                heading.setText(R.string.tasks_title);
+                return heading;
             }
 
             AgendaRowView holder = convertView != null && convertView.getTag() instanceof AgendaRowView
