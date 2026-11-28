@@ -118,12 +118,14 @@ public class AlertWorker extends ListenableWorker {
             return "startWork for AlertWorker";
         });
 
-        // Add a listener to handle WorkManager cancellation
+        // Each Worker owns its executor. Release it on every terminal outcome,
+        // not just cancellation, otherwise successful alerts leave idle threads behind.
         workFuture.addListener(() -> {
-            if (isStopped()) {
-                Log.i(TAG, "Work future cancelled. Shutting down executor and cleaning up.");
-                // Ensure any ongoing work in mBackgroundExecutor is stopped if possible.
+            mWorkCompleter.set(null);
+            if (workFuture.isCancelled() || isStopped()) {
                 mBackgroundExecutor.shutdownNow();
+            } else {
+                mBackgroundExecutor.shutdown();
             }
         }, Runnable::run);
 
