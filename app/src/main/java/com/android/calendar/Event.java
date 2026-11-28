@@ -67,8 +67,6 @@ public class Event implements Cloneable {
      */
     private static final String SORT_EVENTS_BY =
             "begin ASC, end DESC, title ASC";
-    private static final String SORT_ALLDAY_BY =
-            "startDay ASC, endDay DESC, title ASC";
     private static final String DISPLAY_AS_ALLDAY = "dispAllday";
     // The projection to use when querying instances to build a list of events
     public static final String[] EVENT_PROJECTION = new String[] {
@@ -95,8 +93,6 @@ public class Event implements Cloneable {
             Instances.ALL_DAY + "=1 OR (" + Instances.END + "-" + Instances.BEGIN + ")>="
                     + DateUtils.DAY_IN_MILLIS + " AS " + DISPLAY_AS_ALLDAY, // 20
     };
-    private static final String EVENTS_WHERE = DISPLAY_AS_ALLDAY + "=0";
-    private static final String ALLDAY_WHERE = DISPLAY_AS_ALLDAY + "=1";
     // The indices for the projection array above.
     private static final int PROJECTION_TITLE_INDEX = 0;
     private static final int PROJECTION_LOCATION_INDEX = 1;

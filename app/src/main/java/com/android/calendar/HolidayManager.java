@@ -22,6 +22,7 @@ public final class HolidayManager {
     private static HolidayManager instance;
     private final Context context;
     private final LruCache<Integer, YearData> cache = new LruCache<>(8);
+    private final LruCache<Integer, Boolean> missingYears = new LruCache<>(8);
 
     private HolidayManager(Context context) {
         this.context = context.getApplicationContext();
@@ -66,6 +67,7 @@ public final class HolidayManager {
             file.failWrite(output);
             throw e;
         }
+        missingYears.remove(data.year);
         cache.put(data.year, data);
     }
 
@@ -76,6 +78,7 @@ public final class HolidayManager {
     private YearData load(int year) {
         YearData cached = cache.get(year);
         if (cached != null) return cached;
+        if (missingYears.get(year) != null) return null;
         YearData bundled = null, local = null;
         try (InputStream in = context.getAssets().open("holidays/" + year + ".json")) {
             bundled = parse(read(in));
@@ -88,6 +91,7 @@ public final class HolidayManager {
         YearData data = local != null && (bundled == null || local.version >= bundled.version)
                 ? local : bundled;
         if (data != null) cache.put(year, data);
+        else missingYears.put(year, Boolean.TRUE);
         return data;
     }
 

@@ -6,12 +6,8 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalTime;
 import java.util.Objects;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -186,7 +182,7 @@ public final class TaskStore extends SQLiteOpenHelper {
     static final String ALARM_MIME = "vnd.android.cursor.item/alarm";
     // data0 = minutes before, data1 = DUE (1) or DTSTART (2), data2 = message,
     // data3 = action, data4 = absolute UTC trigger (Etar extension).
-    private static final String SELECT = "SELECT t._id,t.list_id,COALESCE(t.title,''),COALESCE(t.description,''),t.due,t.recurrence_anchor,t.is_allday,t.tz,t.status,t.priority,t.rrule,a.property_id,t.repeat_minute,t.task_color,COALESCE(t.url,''),t.show_countdown,l.list_color,t.dtstart,a.data0,a.data1,a.data4,l.account_type,l.list_access_level,t.rdate,t.exdate,EXISTS(SELECT 1 FROM tasks x WHERE x.original_instance_id=t._id OR (x.list_id=t.list_id AND x.original_instance_sync_id=t._sync_id)),t.last_modified,t.sync1,t._dirty,t.status,t.completed,t.percent_complete FROM tasks t JOIN tasklists l ON l._id=t.list_id LEFT JOIN properties a ON a.property_id=(SELECT MIN(p.property_id) FROM properties p WHERE p.task_id=t._id AND p.mimetype='vnd.android.cursor.item/alarm') WHERE t._deleted=0 AND t.original_instance_id IS NULL";
+    private static final String SELECT = "SELECT t._id,t.list_id,COALESCE(t.title,''),COALESCE(t.description,''),t.due,t.recurrence_anchor,t.is_allday,t.tz,t.status,t.priority,t.rrule,a.property_id,t.repeat_minute,t.task_color,COALESCE(t.url,''),t.show_countdown,l.list_color,t.dtstart,a.data0,a.data1,a.data4,l.account_type,l.list_access_level,t.rdate,t.exdate,0,t.last_modified,t.sync1,t._dirty,t.status,t.completed,t.percent_complete FROM tasks t JOIN tasklists l ON l._id=t.list_id LEFT JOIN properties a ON a.property_id=(SELECT MIN(p.property_id) FROM properties p WHERE p.task_id=t._id AND p.mimetype='vnd.android.cursor.item/alarm') WHERE t._deleted=0 AND t.original_instance_id IS NULL";
     private static Task read(Cursor c) {
         Task t = new Task(); t.id=c.getLong(0); t.listId=c.getLong(1); t.title=c.getString(2); t.notes=c.getString(3);
         t.due=c.isNull(4)?null:c.getLong(4); t.anchor=c.isNull(5)?null:c.getLong(5); t.allDay=c.getInt(6)!=0;
@@ -200,7 +196,6 @@ public final class TaskStore extends SQLiteOpenHelper {
         t.local=TaskContract.LOCAL_ACCOUNT.equals(c.getString(21));
         t.writable=t.local || c.getInt(22)>200;
         t.hasRecurrenceDates = !android.text.TextUtils.isEmpty(c.getString(23)) || !android.text.TextUtils.isEmpty(c.getString(24));
-        t.hasRecurrenceExceptions = c.getInt(25) != 0;
         // Include visible fields and server ETag; do not include derived alarm_fired.
         t.revision = revision(c);
         return t;
@@ -375,9 +370,14 @@ public final class TaskStore extends SQLiteOpenHelper {
             if (syncChanged) {
                 v.put("last_modified", System.currentTimeMillis());
                 v.put("_dirty", target.isLocal() ? 0 : 1);
+            } else {
+                // Pure presentation edits must never rewrite standard or derived fields.
+                v.clear();
+                if (t.color == 0) v.putNull("task_color"); else v.put("task_color", t.color);
+                v.put("show_countdown", t.due != null && t.countdown ? 1 : 0);
             }
             if (resetNotification) v.putNull("alarm_fired");
-            if (completionChanged) applyCompletion(v, t, completed);
+            if (completionChanged) applyCompletion(db, v, t, completed);
             if (t.id == 0) {
                 v.put("_uid", UUID.randomUUID().toString());
                 v.put("created", System.currentTimeMillis());
@@ -385,7 +385,7 @@ public final class TaskStore extends SQLiteOpenHelper {
             } else {
                 db.update("tasks", v, "_id=?", new String[]{Long.toString(t.id)});
             }
-            if (old == null || !sameAlarm(old, t)) writeAlarm(db, t);
+            if (syncChanged && (old == null || !sameAlarm(old, t))) writeAlarm(db, t);
             db.setTransactionSuccessful();
         } finally {
             db.endTransaction();
@@ -420,7 +420,15 @@ public final class TaskStore extends SQLiteOpenHelper {
 
     static Long nextDue(Task t) { return TaskRecurrence.nextLocal(t); }
 
-    private static void applyCompletion(ContentValues v, Task t, boolean complete) {
+    private static void applyCompletion(SQLiteDatabase db, ContentValues v, Task t, boolean complete) {
+        if (complete && !t.local && t.id != 0 && t.rule != null) {
+            try (Cursor cursor = db.rawQuery("SELECT 1 FROM tasks x JOIN tasks master ON master._id=?"
+                    + " WHERE x._deleted=0 AND (x.original_instance_id=master._id"
+                    + " OR (x.list_id=master.list_id AND x.original_instance_sync_id=master._sync_id)) LIMIT 1",
+                    new String[]{Long.toString(t.id)})) {
+                t.hasRecurrenceExceptions = cursor.moveToFirst();
+            }
+        }
         TaskRecurrence.Advance next = complete ? TaskRecurrence.next(t) : null;
         if (next != null) {
             boolean dateOnly = t.displayAllDay();
@@ -468,7 +476,7 @@ public final class TaskStore extends SQLiteOpenHelper {
             if (t == null || !t.writable || t.done == complete || (checkDue && !Objects.equals(checkAlarm ? t.alarmTime() : t.displayTime(), expectedDue))) return;
             ContentValues v = new ContentValues();
             Long previousAbsolute = t.alarmAbsolute;
-            applyCompletion(v, t, complete);
+            applyCompletion(db, v, t, complete);
             v.put("last_modified", System.currentTimeMillis());
             TaskList list = findList(t.listId);
             v.put("_dirty", list != null && !list.isLocal() ? 1 : 0);

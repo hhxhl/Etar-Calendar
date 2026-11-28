@@ -11,7 +11,6 @@ import android.provider.CalendarContract.Calendars;
 import android.provider.CalendarContract.Instances;
 import com.android.calendar.tasks.TaskStore;
 import com.android.calendar.tasks.TaskTimes;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;

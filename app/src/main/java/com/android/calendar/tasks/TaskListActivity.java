@@ -550,7 +550,7 @@ public final class TaskListActivity extends AppCompatActivity {
             task.start = newStart;
             task.due = newDue;
             task.allDay = (newStart != null || newDue != null) && allDay.isChecked();
-            if (initialDraft == null || !java.util.Objects.equals(initialDraft.getString("zone"), zone[0].getId()))
+            if (task.id == 0 || initialDraft == null || !java.util.Objects.equals(initialDraft.getString("zone"), zone[0].getId()))
                 task.tz = zone[0].getId();
             task.alarm = alarm.isChecked();
             task.alarmMode = mode[0];

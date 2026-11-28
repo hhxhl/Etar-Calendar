@@ -368,7 +368,7 @@ public class EventRecurrence {
 
         appendNumbers(s, ";BYSECOND=", this.bysecondCount, this.bysecond);
         appendNumbers(s, ";BYMINUTE=", this.byminuteCount, this.byminute);
-        appendNumbers(s, ";BYSECOND=", this.byhourCount, this.byhour);
+        appendNumbers(s, ";BYHOUR=", this.byhourCount, this.byhour);
 
         // day
         int count = this.bydayCount;

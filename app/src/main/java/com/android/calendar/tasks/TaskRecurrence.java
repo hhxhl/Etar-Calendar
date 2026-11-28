@@ -78,8 +78,10 @@ final class TaskRecurrence {
                 long[] dates = new RecurrenceProcessor().expand(start, set, base, end);
                 for (long date : dates) {
                     if (date <= base) continue;
-                    if (rule.count > 0) rule.count--;
-                    return new Advance(base, date, rule.toString());
+                    String nextRule = rule.count > 0
+                            ? task.rule.replaceFirst("(?i)(^|;)COUNT=[0-9]+", "$1COUNT=" + (rule.count - 1))
+                            : task.rule;
+                    return new Advance(base, date, nextRule);
                 }
                 if (rule.until != null) {
                     Time until = new Time(zone.getId());
