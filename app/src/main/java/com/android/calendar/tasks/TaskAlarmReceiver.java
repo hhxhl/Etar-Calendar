@@ -23,7 +23,7 @@ public final class TaskAlarmReceiver extends BroadcastReceiver {
     private static final String FIRE="com.android.calendar.tasks.FIRE";
     private static final String COMPLETE="com.android.calendar.tasks.COMPLETE";
     public static final String CHANNEL="task_notifications";
-    // Only system rescheduling broadcasts use this worker. It has no resident thread.
+    // All receiver work runs off the main thread; the idle worker is released.
     private static final ThreadPoolExecutor RESCHEDULE_EXECUTOR = new ThreadPoolExecutor(
             0, 1, 10, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
     public static void ensureChannel(Context context) {
@@ -56,47 +56,58 @@ public final class TaskAlarmReceiver extends BroadcastReceiver {
     public static void dismiss(Context c,long id) {
         ((NotificationManager)c.getSystemService(Context.NOTIFICATION_SERVICE)).cancel("task:"+id,1);
     }
-    @Override public void onReceive(Context context,Intent intent) {
+    @Override public void onReceive(Context context, Intent intent) {
+        Context app = context.getApplicationContext();
+        PendingResult pending = goAsync();
+        RESCHEDULE_EXECUTOR.execute(() -> {
+            try {
+                handle(app, intent);
+            } catch (RuntimeException error) {
+                Log.e("TaskAlarmReceiver", "Could not process task alarm", error);
+            } finally {
+                pending.finish();
+            }
+        });
+    }
+
+    private static void handle(Context context, Intent intent) {
         String action = intent.getAction();
-        if (!FIRE.equals(action) && !COMPLETE.equals(action)) {
-            Context app = context.getApplicationContext();
-            PendingResult pending = goAsync();
-            RESCHEDULE_EXECUTOR.execute(() -> {
-                try {
-                    schedule(app);
-                } catch (RuntimeException error) {
-                    Log.e("TaskAlarmReceiver", "Could not reschedule task alarm", error);
-                } finally {
-                    pending.finish();
-                }
-            });
+        TaskStore store = TaskStore.get(context);
+        if (COMPLETE.equals(action)) {
+            store.completeAlarm(intent.getLongExtra("id",0), intent.getLongExtra("due", Long.MIN_VALUE));
             return;
         }
-        TaskStore store=TaskStore.get(context);
-        if(COMPLETE.equals(intent.getAction())){
-            long id=intent.getLongExtra("id",0);
-            store.completeAlarm(id, intent.getLongExtra("due", Long.MIN_VALUE));
-            return; // Successful completion already reschedules the alarm.
-        } else if(FIRE.equals(intent.getAction())){
-            if(Build.VERSION.SDK_INT<33 || context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)==PackageManager.PERMISSION_GRANTED){
-                NotificationManager nm=(NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
-                ensureChannel(context);
-                for(TaskStore.Task t:store.dueAlarms(System.currentTimeMillis())){
-                    Long alarmTime = t.alarmTime();
-                    if (alarmTime == null) continue;
-                    Intent open=new Intent(context,TaskListActivity.class).setData(Uri.parse("etar-task:"+t.id)).putExtra("task_id",t.id);
-                    PendingIntent view=PendingIntent.getActivity(context,0,open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
-                    Intent done=new Intent(context,TaskAlarmReceiver.class).setAction(COMPLETE).setData(Uri.parse("etar-task:"+t.id+":"+alarmTime)).putExtra("id",t.id).putExtra("due",alarmTime.longValue());
-                    PendingIntent complete=PendingIntent.getBroadcast(context,0,done,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
-                    NotificationCompat.Builder notification = new NotificationCompat.Builder(context,CHANNEL)
-                        .setSmallIcon(android.R.drawable.ic_dialog_info).setContentTitle(t.title).setContentText(t.notes)
-                        .setContentIntent(view).setAutoCancel(true).setVisibility(NotificationCompat.VISIBILITY_PRIVATE);
-                    if (t.writable) notification.addAction(0,context.getString(R.string.tasks_complete),complete);
-                    nm.notify("task:"+t.id,1,notification.build());
-                    store.markFired(t.id,alarmTime);
-                }
-            }
+        if (!FIRE.equals(action)) {
+            if (Intent.ACTION_TIMEZONE_CHANGED.equals(action) || Intent.ACTION_BOOT_COMPLETED.equals(action)
+                    || Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)) store.refreshRelativeDateAlarms();
+            schedule(context);
+            return;
         }
-        schedule(context);
+        try {
+            if (Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED) return;
+            NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            ensureChannel(context);
+            for (TaskStore.Task candidate : store.dueAlarms(System.currentTimeMillis())) {
+                Long expected = candidate.alarmTime();
+                if (expected == null) continue;
+                store.dispatchAlarm(candidate.id, expected, t -> {
+                    Intent open = new Intent(context, TaskListActivity.class).setData(Uri.parse("etar-task:" + t.id)).putExtra("task_id", t.id);
+                    PendingIntent view = PendingIntent.getActivity(context,0,open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+                    Intent done = new Intent(context, TaskAlarmReceiver.class).setAction(COMPLETE)
+                            .setData(Uri.parse("etar-task:" + t.id + ":" + expected))
+                            .putExtra("id", t.id).putExtra("due", expected.longValue());
+                    PendingIntent complete = PendingIntent.getBroadcast(context,0,done,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+                    NotificationCompat.Builder notification = new NotificationCompat.Builder(context,CHANNEL)
+                            .setSmallIcon(android.R.drawable.ic_dialog_info).setContentTitle(t.title).setContentText(t.notes)
+                            .setContentIntent(view).setAutoCancel(true).setVisibility(NotificationCompat.VISIBILITY_PRIVATE);
+                    if (t.writable) notification.addAction(0,context.getString(R.string.tasks_complete),complete);
+                    nm.notify("task:" + t.id,1,notification.build());
+                });
+            }
+        } finally {
+            schedule(context);
+        }
     }
+
 }

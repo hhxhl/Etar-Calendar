@@ -499,6 +499,57 @@ public final class TaskStore extends SQLiteOpenHelper {
         }
         return result;
     }
+    /** Recompute cached relative alarms after a change in system time zone.
+     * No standard task field, dirty flag or recurrence rule is changed.
+     */
+    void refreshRelativeDateAlarms() {
+        SQLiteDatabase db = getWritableDatabase();
+        java.util.List<Long> changed = new ArrayList<>();
+        db.beginTransaction();
+        try {
+            try (Cursor cursor = db.rawQuery(SELECT + " AND t.is_allday=1 AND t.status IN (0,1)"
+                    + " AND a.property_id IS NOT NULL AND a.data4 IS NULL", null)) {
+                while (cursor.moveToNext()) {
+                    Task task = read(cursor);
+                    Long expected = task.alarmTime();
+                    ContentValues values = new ContentValues();
+                    values.put("alarm_at", expected);
+                    values.putNull("alarm_fired");
+                    String condition = expected == null ? "_id=? AND alarm_at IS NOT NULL"
+                            : "_id=? AND (alarm_at IS NULL OR alarm_at!=?)";
+                    String[] args = expected == null ? new String[]{Long.toString(task.id)}
+                            : new String[]{Long.toString(task.id), Long.toString(expected)};
+                    if (db.update("tasks", values, condition, args) > 0) changed.add(task.id);
+                }
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+        for (long id : changed) TaskAlarmReceiver.dismiss(appContext, id);
+        if (!changed.isEmpty()) notifyChanged(false);
+    }
+
+    /** Verify the alarm immediately before publishing, under the same write transaction. */
+    void dispatchAlarm(long id, long expected, java.util.function.Consumer<Task> publish) {
+        SQLiteDatabase db = getWritableDatabase();
+        db.beginTransaction();
+        try {
+            Task task = null;
+            try (Cursor cursor = db.rawQuery(SELECT + ALARM_FILTER
+                    + " AND t._id=? AND t.alarm_at=?", new String[]{Long.toString(id), Long.toString(expected)})) {
+                if (cursor.moveToFirst()) task = read(cursor);
+            }
+            if (task != null && Objects.equals(task.alarmTime(), expected)) {
+                publish.accept(task);
+                markFired(id, expected);
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
     public void markFired(long id,long due) {
         ContentValues v=new ContentValues();v.put("alarm_fired",due);
         getWritableDatabase().update("tasks",v,"_id=? AND alarm_at=? AND status IN (0,1)",new String[]{Long.toString(id),Long.toString(due)});
