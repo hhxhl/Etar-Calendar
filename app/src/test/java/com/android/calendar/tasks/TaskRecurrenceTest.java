@@ -26,4 +26,60 @@ public class TaskRecurrenceTest {
         assertEquals(Long.valueOf(Instant.parse("2028-02-29T00:00:00Z").toEpochMilli()),
             TaskStore.nextDue(task("2027-02-28T00:00:00Z","2024-02-29T00:00:00Z","FREQ=YEARLY")));
     }
+    private static long ms(String iso) { return Instant.parse(iso).toEpochMilli(); }
+
+    @Test public void absoluteAlarmDoesNotRequireStartOrDeadline() {
+        TaskStore.Task t = new TaskStore.Task();
+        t.alarm = true;
+        t.alarmMode = TaskStore.Task.ALARM_ABSOLUTE;
+        t.alarmAbsolute = ms("2027-01-04T09:00:00Z");
+        assertEquals(t.alarmAbsolute, t.alarmTime());
+        assertEquals(t.alarmAbsolute, t.displayTime());
+        t.due = ms("2027-01-05T09:00:00Z");
+        assertEquals(t.alarmAbsolute, t.alarmTime());
+        assertEquals(t.due, t.displayTime());
+        t.alarm = false;
+        org.junit.Assert.assertNull(t.alarmTime());
+    }
+
+    @Test public void relativeAlarmFollowsItsSelectedBase() {
+        TaskStore.Task t = new TaskStore.Task();
+        t.start = ms("2027-01-01T09:00:00Z");
+        t.due = ms("2027-01-05T18:00:00Z");
+        t.alarm = true;
+        t.alarmMode = TaskStore.Task.ALARM_START;
+        t.alarmOffset = 30;
+        assertEquals(Long.valueOf(ms("2027-01-01T08:30:00Z")), t.alarmTime());
+        t.start = ms("2027-01-02T09:00:00Z");
+        assertEquals(Long.valueOf(ms("2027-01-02T08:30:00Z")), t.alarmTime());
+        t.alarmMode = TaskStore.Task.ALARM_DUE;
+        t.alarmOffset = 1440;
+        assertEquals(Long.valueOf(ms("2027-01-04T18:00:00Z")), t.alarmTime());
+        t.due = null;
+        org.junit.Assert.assertNull(t.alarmTime());
+    }
+
+    @Test public void dateOnlyAlarmUsesItemTimeZone() {
+        TaskStore.Task t = new TaskStore.Task();
+        t.due = ms("2027-01-05T00:00:00Z");
+        t.allDay = true;
+        t.tz = "Asia/Tokyo";
+        t.alarm = true;
+        t.alarmMode = TaskStore.Task.ALARM_DUE;
+        assertEquals(Long.valueOf(ms("2027-01-04T15:00:00Z")), t.alarmTime());
+        org.junit.Assert.assertTrue(t.displayAllDay());
+    }
+
+    @Test public void startOnlyAndAlarmOnlyCanRepeat() {
+        TaskStore.Task t = new TaskStore.Task();
+        t.start = ms("2027-01-01T09:00:00Z");
+        t.rule = "FREQ=DAILY";
+        t.tz = "UTC";
+        assertEquals(Long.valueOf(ms("2027-01-02T09:00:00Z")), TaskStore.nextDue(t));
+        t.start = null;
+        t.alarm = true;
+        t.alarmMode = TaskStore.Task.ALARM_ABSOLUTE;
+        t.alarmAbsolute = ms("2027-01-04T09:00:00Z");
+        assertEquals(Long.valueOf(ms("2027-01-05T09:00:00Z")), TaskStore.nextDue(t));
+    }
 }
