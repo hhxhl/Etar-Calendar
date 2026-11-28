@@ -3,6 +3,7 @@ package com.android.calendar;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.RectF;
 import android.text.Layout;
 import java.util.ArrayList;
@@ -13,6 +14,7 @@ import ws.xsoh.etar.R;
 public final class TodayIndicator {
     public static final long REFRESH_INTERVAL_MS = 300_000L;
     private final Paint paint = new Paint();
+    private final Path textClip = new Path();
     private final int color;
     private final float height, textGap;
     private final ArrayList<RectF> protectedText = new ArrayList<>();
@@ -36,7 +38,7 @@ public final class TodayIndicator {
                 right + textGap, bottom + textGap));
     }
 
-    /** Exclude displayed line extents, including replacement-span state icons. */
+    /** Protect displayed line extents, including replacement-span state icons. */
     public void protectLayout(Layout layout, float x, float y, float clipWidth, int clipHeight) {
         if (!collecting) return;
         for (int i = 0; i < layout.getLineCount(); i++) {
@@ -70,19 +72,39 @@ public final class TodayIndicator {
 
     public void draw(Canvas canvas, float left, float right, float top, int animationAlpha) {
         if (right <= left) return;
-        canvas.save();
+        // Partition the stroke into text and non-text regions. Union overlapping
+        // text rectangles so the faint pass is never drawn more than once.
+        textClip.rewind();
+        textClip.setFillType(Path.FillType.WINDING);
         for (RectF bounds : protectedText) {
             if (bounds.bottom > top && bounds.top < top + height * 2
-                    && bounds.right > left && bounds.left < right) canvas.clipOutRect(bounds);
+                    && bounds.right > left && bounds.left < right)
+                textClip.addRect(bounds, Path.Direction.CW);
         }
+        if (textClip.isEmpty()) {
+            drawStroke(canvas, left, right, top, animationAlpha, 1f);
+            return;
+        }
+        canvas.save();
+        canvas.clipPath(textClip);
+        drawStroke(canvas, left, right, top, animationAlpha, 0.25f);
+        canvas.restore();
+        canvas.save();
+        canvas.clipOutPath(textClip);
+        drawStroke(canvas, left, right, top, animationAlpha, 1f);
+        canvas.restore();
+    }
+
+    private void drawStroke(Canvas canvas, float left, float right, float top,
+            int animationAlpha, float opacity) {
         paint.setColor(color);
         if (animationAlpha > 0) {
-            // Keep the red marker visible while the Go to Today feedback pulses.
-            paint.setAlpha(Math.round(animationAlpha * 0.25f));
-            canvas.drawRect(left, top, right, top + height * 2, paint);
-            paint.setAlpha(255);
+            // Apply the same opacity rule to the pulse, without obscuring text.
+            // Draw the halo only below the main stroke to avoid stacking alpha.
+            paint.setAlpha(Math.round(animationAlpha * 0.25f * opacity));
+            canvas.drawRect(left, top + height, right, top + height * 2, paint);
         }
+        paint.setAlpha(Math.round(255 * opacity));
         canvas.drawRect(left, top, right, top + height, paint);
-        canvas.restore();
     }
 }
