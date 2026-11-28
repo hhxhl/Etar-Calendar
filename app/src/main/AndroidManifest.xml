@@ -333,12 +333,6 @@
         <receiver android:name="com.android.calendar.widget.CalendarAppWidgetService$CalendarFactory"
             android:exported="true">
             <intent-filter>
-                <action android:name="android.intent.action.TIMEZONE_CHANGED"/>
-                <action android:name="android.intent.action.DATE_CHANGED"/>
-                <action android:name="android.intent.action.TIME_SET"/>
-                <action android:name="android.intent.action.LOCALE_CHANGED"/>
-            </intent-filter>
-            <intent-filter>
                 <action android:name="android.intent.action.PROVIDER_CHANGED"/>
                 <data android:scheme="content"/>
                 <data android:host="com.android.calendar"/>

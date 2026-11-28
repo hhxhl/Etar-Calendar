@@ -246,7 +246,8 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
 
     private void performUpdate(Context context, AppWidgetManager appWidgetManager,
             int[] appWidgetIds) {
-        if (!CalendarAppWidgetProvider.isWidgetSupported(context)) {
+        if (!CalendarAppWidgetProvider.isWidgetSupported(context)
+                || appWidgetIds == null || appWidgetIds.length == 0) {
             return;
         }
 
@@ -272,7 +273,8 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
             Intent serviceIntent = new Intent(context, getServiceClass());
             serviceIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId);
             serviceIntent.putExtra(EXTRA_GRID_AVAILABLE_HEIGHT_PX, gridHeightPx);
-            serviceIntent.setData(Uri.parse(serviceIntent.toUri(Intent.URI_INTENT_SCHEME) + "/" + now));
+            // Keep the adapter identity stable for the same widget and dimensions.
+            serviceIntent.setData(Uri.parse(serviceIntent.toUri(Intent.URI_INTENT_SCHEME)));
 
             RemoteViews views = new RemoteViews(context.getPackageName(), getWidgetLayoutId());
 
