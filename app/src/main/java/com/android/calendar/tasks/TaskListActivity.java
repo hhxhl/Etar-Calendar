@@ -261,12 +261,12 @@ public final class TaskListActivity extends AppCompatActivity {
         LinearLayout times = new LinearLayout(this);
         times.setId(View.generateViewId());
         times.setOrientation(LinearLayout.VERTICAL);
-        ConstraintLayout.LayoutParams params = new ConstraintLayout.LayoutParams(0, -2);
-        params.startToStart = ConstraintLayout.LayoutParams.PARENT_ID;
-        params.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID;
-        params.topToBottom = R.id.view3;
-        params.setMargins(dp(48), dp(8), dp(24), 0);
-        editor.addView(times, params);
+        ConstraintLayout.LayoutParams timesParams = new ConstraintLayout.LayoutParams(0, -2);
+        timesParams.startToStart = ConstraintLayout.LayoutParams.PARENT_ID;
+        timesParams.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID;
+        timesParams.topToBottom = R.id.view3;
+        timesParams.setMargins(dp(48), dp(8), dp(24), 0);
+        editor.addView(times, timesParams);
         View repeatIcon = form.findViewById(R.id.rrule_icon);
         ConstraintLayout.LayoutParams repeatParams =
                 (ConstraintLayout.LayoutParams) repeatIcon.getLayoutParams();

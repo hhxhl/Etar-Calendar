@@ -128,8 +128,8 @@ public final class DatedItemsRepository {
             if (listId != 0 && task.listId != listId) continue;
             if (!matches(task.title, keyword) && !matches(task.notes, keyword)
                     && !matches(task.url, keyword)) continue;
-            LocalDate date = task.due == null ? null : Instant.ofEpochMilli(task.due)
-                    .atZone(task.allDay ? ZoneOffset.UTC : zone).toLocalDate();
+            LocalDate date = task.displayTime() == null ? null : Instant.ofEpochMilli(task.displayTime())
+                    .atZone(task.displayAllDay() ? ZoneOffset.UTC : zone).toLocalDate();
             result.add(new Item<>(date, task));
         }
         return result;
@@ -142,13 +142,13 @@ public final class DatedItemsRepository {
     public static List<Item<TaskStore.Task>> reminders(TaskStore store, long listId, ZoneId zone) {
         ArrayList<Item<TaskStore.Task>> items = new ArrayList<>();
         for (TaskStore.Task task : store.visibleTasks(listId)) {
-            LocalDate date = task.due == null ? null : Instant.ofEpochMilli(task.due)
-                    .atZone(task.allDay ? ZoneOffset.UTC : zone).toLocalDate();
+            LocalDate date = task.displayTime() == null ? null : Instant.ofEpochMilli(task.displayTime())
+                    .atZone(task.displayAllDay() ? ZoneOffset.UTC : zone).toLocalDate();
             items.add(new Item<>(date, task));
         }
         items.sort(Comparator.comparing((Item<TaskStore.Task> item) -> item.day, Comparator.nullsLast(Comparator.naturalOrder()))
-                .thenComparing(item -> !item.value.allDay)
-                .thenComparing(item -> item.value.due, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(item -> !item.value.displayAllDay())
+                .thenComparing(item -> item.value.displayTime(), Comparator.nullsLast(Comparator.naturalOrder()))
                 .thenComparingLong(item -> item.value.id));
         return items;
     }

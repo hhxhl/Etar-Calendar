@@ -127,21 +127,23 @@ public final class TaskCalendarUi {
             Event item = Event.newInstance();
             item.taskId = task.id;
             item.taskCompleted = task.done;
+            item.taskNoDeadline = task.due == null;
             // Negative identity is reserved for tasks in the display model only.
             item.id = -task.id - 1;
             item.title = task.title;
-            item.allDay = task.allDay;
+            item.allDay = task.displayAllDay();
             item.hasAlarm = task.alarm;
             item.isRepeating = task.rule != null;
             item.color = displayColor(context, task);
-            item.taskCountdown = task.countdown && !task.done;
-            ZonedDateTime date = Instant.ofEpochMilli(task.due).atZone(task.allDay ? ZoneOffset.UTC : zone);
+            item.taskCountdown = task.due != null && task.countdown && !task.done;
+            long displayTime = task.displayTime();
+            ZonedDateTime date = Instant.ofEpochMilli(displayTime).atZone(item.allDay ? ZoneOffset.UTC : zone);
             item.startDay = item.endDay = (int) (date.toLocalDate().toEpochDay() + JULIAN_EPOCH);
-            item.startMillis = task.due;
-            item.startTime = task.allDay ? 0 : date.getHour() * 60 + date.getMinute();
+            item.startMillis = displayTime;
+            item.startTime = item.allDay ? 0 : date.getHour() * 60 + date.getMinute();
             // A task is a point in time. Minimum drawing height is supplied by DayView.
-            item.endMillis = task.allDay ? task.due + DateUtils.DAY_IN_MILLIS : task.due + 60000;
-            item.endTime = task.allDay ? 1440 : Math.min(1440, item.startTime + 1);
+            item.endMillis = item.allDay ? displayTime + DateUtils.DAY_IN_MILLIS : displayTime + 60000;
+            item.endTime = item.allDay ? 1440 : Math.min(1440, item.startTime + 1);
             events.add(item);
         }
         events.sort(Comparator.comparingInt((Event item) -> item.startDay)

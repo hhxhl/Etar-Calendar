@@ -63,7 +63,13 @@ public final class TaskListUi {
     }
 
     public static String dueLabel(Context context, TaskStore.Task task, ZoneId zone, long now) {
-        if (task.due == null) return "";
+        if (task.due == null) {
+            Long display = task.displayTime();
+            if (display == null) return "";
+            String label = context.getString(task.start != null ? R.string.reminders_start_time : R.string.reminders_alarm_time);
+            return label + " · " + (task.displayAllDay() ? context.getString(R.string.reminders_all_day)
+                    : Utils.formatDateRange(context, display, display, DateUtils.FORMAT_SHOW_TIME));
+        }
         String time = task.allDay ? context.getString(R.string.reminders_all_day)
                 : Utils.formatDateRange(context, task.due, task.due, DateUtils.FORMAT_SHOW_TIME);
         boolean overdue = ItemStateSymbols.isReminderOverdue(task.done, task.due, task.allDay, zone, now);
@@ -84,7 +90,7 @@ public final class TaskListUi {
         done.setContentDescription(context.getString(R.string.tasks_complete) + " " + task.title);
         done.setOnCheckedChangeListener((button, checked) -> {
             done.setText(stateSymbol(task, checked, zone, System.currentTimeMillis()));
-            store.complete(task.id, checked, task.due);
+            store.complete(task.id, checked, task.displayTime());
             if (afterComplete != null) afterComplete.run();
         });
         root.setOnClickListener(v -> TaskCalendarUi.openTask(context, task.id));

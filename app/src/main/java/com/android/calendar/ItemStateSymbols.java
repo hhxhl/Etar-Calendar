@@ -61,7 +61,8 @@ public final class ItemStateSymbols {
     public static String forEvent(Context context, Event event, long now) {
         ZoneId zone = ZoneId.of(Utils.getTimeZone(context, null));
         return event.taskId > 0
-                ? reminder(event.taskCompleted, event.startMillis, event.allDay, zone, now)
+                ? (event.taskNoDeadline ? (event.taskCompleted ? REMINDER_DONE : REMINDER_PENDING)
+                        : reminder(event.taskCompleted, event.startMillis, event.allDay, zone, now))
                 : event(event.startMillis, event.endMillis, event.allDay, zone, now);
     }
 }

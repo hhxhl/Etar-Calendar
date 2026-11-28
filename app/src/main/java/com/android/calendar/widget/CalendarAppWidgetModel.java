@@ -73,6 +73,7 @@ class CalendarAppWidgetModel {
         cursor.moveToPosition(-1);
         int taskCompletedColumn = cursor.getColumnIndex(WidgetTaskRows.TASK_COMPLETED);
         int taskCountdownColumn = cursor.getColumnIndex(WidgetTaskRows.TASK_COUNTDOWN);
+        int noDeadlineColumn = cursor.getColumnIndex(WidgetTaskRows.TASK_NO_DEADLINE);
         String tz = Utils.getTimeZone(mContext, null);
         while (cursor.moveToNext()) {
             final int rowId = cursor.getPosition();
@@ -111,7 +112,8 @@ class CalendarAppWidgetModel {
             if (end < mNow && !pendingTask) {
                 continue;
             }
-            boolean overdue = pendingTask && com.android.calendar.ItemStateSymbols.isReminderOverdue(
+            boolean overdue = pendingTask && (noDeadlineColumn < 0 || cursor.getInt(noDeadlineColumn) == 0)
+                    && com.android.calendar.ItemStateSymbols.isReminderOverdue(
                     false, rawStart, allDay, java.time.ZoneId.of(tz), mNow);
             String displayTitle = title;
             if (overdue && startDay < mTodayJulianDay && allDay) {

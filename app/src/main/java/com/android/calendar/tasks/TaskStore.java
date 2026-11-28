@@ -219,6 +219,8 @@ public final class TaskStore extends SQLiteOpenHelper {
     public List<Task> visibleTasks(long listId) {
         return queryTasks(listId, true, null);
     }
+    private static final String DISPLAY_TIME = "COALESCE(t.due,t.dtstart,t.alarm_at)";
+    private static final String DISPLAY_ALL_DAY = "CASE WHEN t.due IS NOT NULL THEN t.is_allday WHEN t.dtstart IS NOT NULL THEN t.start_all_day ELSE 0 END";
     public List<Task> visibleReminders(long listId) {
         return queryTasks(listId, true, true);
     }
@@ -229,16 +231,16 @@ public final class TaskStore extends SQLiteOpenHelper {
         ArrayList<Task> result=new ArrayList<>();
         String filter=listId==0?"":" AND t.list_id=?";
         if (visibleOnly) filter += " AND EXISTS(SELECT 1 FROM tasklists l WHERE l._id=t.list_id AND l.visible=1)";
-        if (dated != null) filter += dated ? " AND t.due IS NOT NULL" : " AND t.due IS NULL";
-        try(Cursor c=getReadableDatabase().rawQuery(SELECT+filter+" ORDER BY t.status=2,t.due IS NULL,t.due,t._id",listId==0?null:new String[]{Long.toString(listId)})) {
+        if (dated != null) filter += dated ? " AND "+DISPLAY_TIME+" IS NOT NULL" : " AND "+DISPLAY_TIME+" IS NULL";
+        try(Cursor c=getReadableDatabase().rawQuery(SELECT+filter+" ORDER BY t.status=2,"+DISPLAY_TIME+" IS NULL,"+DISPLAY_TIME+",t._id",listId==0?null:new String[]{Long.toString(listId)})) {
             while(c.moveToNext()) result.add(read(c));
         }
         return result;
     }
     public List<Task> datedTasks(long from,long until,long utcFrom,long utcUntil) {
         ArrayList<Task> result=new ArrayList<>();
-        String where=" AND ((t.is_allday=0 AND t.due>=? AND t.due<?) OR (t.is_allday=1 AND t.due>=? AND t.due<?)) AND EXISTS(SELECT 1 FROM tasklists l WHERE l._id=t.list_id AND l.visible=1)";
-        try(Cursor c=getReadableDatabase().rawQuery(SELECT+where+" ORDER BY t.due,t._id",
+        String where=" AND (("+DISPLAY_ALL_DAY+"=0 AND "+DISPLAY_TIME+">=? AND "+DISPLAY_TIME+"<?) OR ("+DISPLAY_ALL_DAY+"=1 AND "+DISPLAY_TIME+">=? AND "+DISPLAY_TIME+"<?)) AND EXISTS(SELECT 1 FROM tasklists l WHERE l._id=t.list_id AND l.visible=1)";
+        try(Cursor c=getReadableDatabase().rawQuery(SELECT+where+" ORDER BY "+DISPLAY_TIME+",t._id",
                 new String[]{Long.toString(from),Long.toString(until),Long.toString(utcFrom),Long.toString(utcUntil)})){
             while(c.moveToNext())result.add(read(c));
         }
