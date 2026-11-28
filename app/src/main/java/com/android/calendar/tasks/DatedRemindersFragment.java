@@ -266,7 +266,7 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
             TaskStore.Task task = row.task;
             int secondaryColor = TaskListUi.bindRow(root, done, title, task, store, null);
             com.android.calendar.ItemAppearance.setTextColor(secondaryColor, subtitle, countdown);
-            subtitle.setText(TaskListUi.dueLabel(context, task, zone(), System.currentTimeMillis()));
+            DatedListUi.bindOptionalText(subtitle, TaskListUi.dueLabel(context, task, zone(), System.currentTimeMillis()));
             DatedListUi.bindOptionalText(countdown, TaskListUi.countdownLabel(context, task));
             bell.setVisibility(task.alarm ? View.VISIBLE : View.GONE);
             bell.setColorFilter(secondaryColor);

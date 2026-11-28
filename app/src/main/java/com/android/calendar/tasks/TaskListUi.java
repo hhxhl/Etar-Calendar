@@ -47,7 +47,7 @@ public final class TaskListUi {
     }
 
     private static String stateSymbol(TaskStore.Task task, boolean checked, ZoneId zone, long now) {
-        return task.due == null ? ItemStateSymbols.task(checked)
+        return task.due == null ? (checked ? ItemStateSymbols.REMINDER_DONE : ItemStateSymbols.REMINDER_PENDING)
                 : ItemStateSymbols.reminder(checked, task.due, task.allDay, zone, now);
     }
 

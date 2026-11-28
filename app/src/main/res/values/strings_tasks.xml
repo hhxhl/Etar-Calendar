@@ -9,7 +9,7 @@
     <string name="tasks_all">All tasks</string>
     <string name="tasks_empty">No tasks</string>
     <string name="tasks_delete">Delete</string>
-    <string name="tasks_delete_list_confirm">Delete this list and all its reminders and tasks?</string>
+    <string name="tasks_delete_list_confirm">Delete this list and all its reminders?</string>
     <string name="tasks_delete_confirm">Delete this task?</string>
     <string name="tasks_required">Required</string>
     <string name="tasks_notify">Notify at scheduled time</string>
@@ -70,7 +70,7 @@
     <string name="agenda_search_next_range">Search later dates</string>
     <string name="agenda_search_enter_query">Enter a search term</string>
     <string name="agenda_search_no_results">No matching items in the selected scope</string>
-    <string name="tasks_load_failed">Unable to load reminders and tasks</string>
+    <string name="tasks_load_failed">Unable to load reminders</string>
     <string name="search_all_items">All items</string>
     <string name="search_calendar_source">Calendar: %1$s</string>
     <string name="search_list_source">List: %1$s</string>
