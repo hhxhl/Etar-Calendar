@@ -57,6 +57,8 @@
     <string name="search_calendar_source">Calendar: %1$s</string>
     <string name="search_list_source">List: %1$s</string>
     <string name="tasks_no_date">No date</string>
+    <string name="tasks_no_date_count">No date (%1$d)</string>
+    <string name="widget_show_undated_tasks">Show undated tasks</string>
     <string name="tasks_due_time">Due date</string>
     <string name="tasks_start_time">Start time</string>
     <string name="tasks_alarm_time">Reminder time</string>

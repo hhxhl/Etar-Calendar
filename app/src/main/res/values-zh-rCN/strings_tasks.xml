@@ -56,6 +56,8 @@
     <string name="search_calendar_source">日历：%1$s</string>
     <string name="search_list_source">列表：%1$s</string>
     <string name="tasks_no_date">无日期</string>
+    <string name="tasks_no_date_count">无日期（%1$d）</string>
+    <string name="widget_show_undated_tasks">显示无日期任务</string>
     <string name="tasks_due_time">截止时间</string>
     <string name="tasks_start_time">开始时间</string>
     <string name="tasks_alarm_time">提醒时间</string>

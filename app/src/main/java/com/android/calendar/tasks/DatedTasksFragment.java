@@ -28,6 +28,8 @@ import ws.xsoh.etar.R;
 public final class DatedTasksFragment extends Fragment implements CalendarController.EventHandler {
     private long listId;
     private boolean showCompleted;
+    private boolean showUndated;
+    private static final String PREF_SHOW_UNDATED = "tasks_show_undated";
     private Spinner filter;
     private ListView list;
     private final DatedListUi.MinuteRefresh refreshStateSymbols = new DatedListUi.MinuteRefresh();
@@ -45,9 +47,13 @@ public final class DatedTasksFragment extends Fragment implements CalendarContro
     private static final class Row {
         final LocalDate day;
         final TaskStore.Task task;
-        final int completedCount;
+        final int completedCount, undatedCount;
         Row(LocalDate day, TaskStore.Task task, int completedCount) {
+            this(day, task, completedCount, -1);
+        }
+        Row(LocalDate day, TaskStore.Task task, int completedCount, int undatedCount) {
             this.day=day; this.task=task; this.completedCount=completedCount;
+            this.undatedCount=undatedCount;
         }
     }
 
@@ -56,6 +62,8 @@ public final class DatedTasksFragment extends Fragment implements CalendarContro
     @Override public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle state) {
         Context context = requireContext();
         store = TaskStore.get(context);
+        showUndated = com.android.calendar.CalendarUtils.getSharedPreferences(context, Utils.SHARED_PREFS_NAME)
+                .getBoolean(PREF_SHOW_UNDATED, true);
         loader = new TaskListLoader<>(store);
         controller = CalendarController.getInstance(requireActivity());
         firstResume = true;
@@ -74,7 +82,9 @@ public final class DatedTasksFragment extends Fragment implements CalendarContro
         list.setOnItemClickListener((parent, view, position, id) -> {
             if (position < 0 || position >= rows.size()) return;
             Row row = rows.get(position);
-            if (row.completedCount >= 0) {
+            if (row.undatedCount >= 0) {
+                toggleUndated();
+            } else if (row.completedCount >= 0) {
                 showCompleted = !showCompleted;
                 render(loadedItems, true);
             } else if (row.task != null) {
@@ -143,7 +153,10 @@ public final class DatedTasksFragment extends Fragment implements CalendarContro
             if (pendingScroll != null) {
                 LocalDate target = pendingScroll;
                 pendingScroll = null;
-                scrollTo(target);
+                if (target.equals(LocalDate.now(zone())) && !rows.isEmpty() && rows.get(0).undatedCount >= 0) {
+                    list.setSelectionFromTop(0, 0);
+                    publishTitle(target);
+                } else scrollTo(target);
             }
         }, () -> android.widget.Toast.makeText(requireContext(),
                 R.string.tasks_load_failed, android.widget.Toast.LENGTH_SHORT).show());
@@ -153,13 +166,25 @@ public final class DatedTasksFragment extends Fragment implements CalendarContro
         List<DatedItemsRepository.Item<TaskStore.Task>> dated = new ArrayList<>(), undated = new ArrayList<>();
         for (DatedItemsRepository.Item<TaskStore.Task> item : tasks)
             (item.day == null ? undated : dated).add(item);
+        if (includeToday && !undated.isEmpty()) {
+            rows.add(new Row(null, null, -3, undated.size()));
+            if (showUndated) for (DatedItemsRepository.Item<TaskStore.Task> item : undated)
+                rows.add(new Row(null, item.value, -1));
+        }
         DatedListUi.appendDays(rows, dated, includeToday ? LocalDate.now(zone()) : null,
                 date -> new Row(date, null, -1), item -> new Row(item.day, item.value, -1));
-        if (!undated.isEmpty()) {
+        if (!includeToday && !undated.isEmpty()) {
             rows.add(new Row(null, null, -3));
             for (DatedItemsRepository.Item<TaskStore.Task> item : undated)
                 rows.add(new Row(null, item.value, -1));
         }
+    }
+
+    private void toggleUndated() {
+        showUndated = !showUndated;
+        com.android.calendar.CalendarUtils.getSharedPreferences(requireContext(), Utils.SHARED_PREFS_NAME)
+                .edit().putBoolean(PREF_SHOW_UNDATED, showUndated).apply();
+        render(loadedItems, true);
     }
 
     private void render(List<DatedItemsRepository.Item<TaskStore.Task>> items, boolean preservePosition) {
@@ -187,6 +212,7 @@ public final class DatedTasksFragment extends Fragment implements CalendarContro
                 Row row=rows.get(i);
                 if(previousRow.task!=null && row.task!=null && previousRow.task.id==row.task.id
                         && previousRow.task.done==row.task.done){index=i;break;}
+                if(previousRow.undatedCount>=0 && row.undatedCount>=0){index=i;break;}
                 if(previousRow.completedCount>=0 && row.completedCount>=0){index=i;break;}
             }
             if(index<0 && previous!=null)index=findDay(previous);
@@ -280,16 +306,22 @@ public final class DatedTasksFragment extends Fragment implements CalendarContro
         @Override public boolean areAllItemsEnabled(){return false;}
         @Override public boolean isEnabled(int position){
             Row row=rows.get(position);
-            return row.completedCount>=0||row.task!=null;
+            return row.undatedCount>=0||row.completedCount>=0||row.task!=null;
         }
-        @Override public int getViewTypeCount(){return 4;}
+        @Override public int getViewTypeCount(){return 5;}
         @Override public int getItemViewType(int position){
             Row row=rows.get(position);
-            return row.completedCount<=-2?3:row.completedCount>=0?2:row.task==null?0:1;
+            return row.undatedCount>=0?4:row.completedCount<=-2?3:row.completedCount>=0?2:row.task==null?0:1;
         }
         @Override public View getView(int position,View convertView,ViewGroup parent){
             Row row=rows.get(position);
             Context context=parent.getContext();
+            if(row.undatedCount>=0){
+                TextView heading = DatedListUi.statusView(context, convertView, true);
+                heading.setText((showUndated?"▾ ":"▸ ")+getString(R.string.tasks_no_date_count,row.undatedCount));
+                heading.setOnClickListener(v -> toggleUndated());
+                return heading;
+            }
             if(row.completedCount==-3){
                 TextView heading = DatedListUi.statusView(context, convertView, false);
                 heading.setText(R.string.tasks_no_date);

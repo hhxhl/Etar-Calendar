@@ -187,6 +187,35 @@ class CalendarAppWidgetModel {
         }
     }
 
+    /** Independent section: no fabricated start, due or all-day date. */
+    void prependUndatedTasks(java.util.List<com.android.calendar.tasks.TaskStore.Task> tasks,
+            java.util.Set<String> selectedLists, String timeZone) {
+        java.util.ArrayList<RowInfo> undated = new java.util.ArrayList<>();
+        java.time.ZoneId zone = java.time.ZoneId.of(timeZone);
+        for (com.android.calendar.tasks.TaskStore.Task task : tasks) {
+            if (task.done || task.displayTime() != null
+                    || (selectedLists != null && !selectedLists.contains(Long.toString(task.listId)))) continue;
+            EventInfo info = new EventInfo();
+            info.id = -task.id - 1;
+            info.undated = true;
+            info.title = TextUtils.isEmpty(task.title) ? mContext.getString(R.string.no_title_label) : task.title;
+            info.visibTitle = View.VISIBLE;
+            info.color = com.android.calendar.tasks.TaskCalendarUi.displayColor(mContext, task);
+            info.itemState = com.android.calendar.ItemStateSymbols.task(false, task.inProgress, null,
+                    false, zone, mNow);
+            undated.add(new RowInfo(RowInfo.TYPE_MEETING, mEventInfos.size()));
+            mEventInfos.add(info);
+        }
+        if (undated.isEmpty()) return;
+        if (!mRowInfos.isEmpty() && mRowInfos.get(0).mType == RowInfo.TYPE_MEETING) {
+            int index = mDayInfos.size();
+            mDayInfos.add(populateDayInfo(mTodayJulianDay, new Time(timeZone)));
+            mRowInfos.add(0, new RowInfo(RowInfo.TYPE_DAY, index));
+        }
+        undated.add(0, new RowInfo(RowInfo.TYPE_UNDATED, undated.size()));
+        mRowInfos.addAll(0, undated);
+    }
+
     private EventInfo populateEventInfo(long eventId, boolean allDay, long start, long end,
                                         int startDay, int endDay, String title, String location, int color, int selfStatus, boolean taskRange) {
         EventInfo eventInfo = new EventInfo();
@@ -276,6 +305,7 @@ class CalendarAppWidgetModel {
     static class RowInfo {
         static final int TYPE_DAY = 0;
         static final int TYPE_MEETING = 1;
+        static final int TYPE_UNDATED = 2;
 
         /**
          * mType is either a day header (TYPE_DAY) or an event (TYPE_MEETING)
@@ -313,7 +343,7 @@ class CalendarAppWidgetModel {
         long id;
         long start;
         long end;
-        boolean allDay;
+        boolean allDay, undated;
         boolean taskCompleted, taskHasDeadline, taskDeadlineAllDay;
         long taskDeadline;
         int color;

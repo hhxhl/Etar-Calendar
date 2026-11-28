@@ -116,6 +116,10 @@ public class CalendarAppWidgetService extends RemoteViewsService {
                     EVENT_PROJECTION, model.mTodayJulianDay, model.mMaxJulianDay, false, true)) {
                 model.buildFromCursor(merged, timeZone);
             }
+            if (WidgetUtils.showUndatedTasks(mContext, mAppWidgetId)) {
+                model.prependUndatedTasks(com.android.calendar.tasks.TaskStore.get(mContext).visibleUndatedTasks(0),
+                        WidgetUtils.getWidgetTaskListIds(mContext, mAppWidgetId), timeZone);
+            }
             return model;
         }
 
@@ -224,24 +228,26 @@ public class CalendarAppWidgetService extends RemoteViewsService {
             }
 
             RowInfo rowInfo = mModel.mRowInfos.get(position);
-            if (rowInfo.mType == RowInfo.TYPE_DAY) {
+            if (rowInfo.mType == RowInfo.TYPE_DAY || rowInfo.mType == RowInfo.TYPE_UNDATED) {
                 RemoteViews views = new RemoteViews(mContext.getPackageName(),
                         R.layout.appwidget_day);
-                DayInfo dayInfo = mModel.mDayInfos.get(rowInfo.mIndex);
-                updateTextView(views, R.id.date, View.VISIBLE, dayInfo.mDayLabel);
+                String label = rowInfo.mType == RowInfo.TYPE_UNDATED
+                        ? mContext.getString(R.string.tasks_no_date_count, rowInfo.mIndex)
+                        : mModel.mDayInfos.get(rowInfo.mIndex).mDayLabel;
+                updateTextView(views, R.id.date, View.VISIBLE, label);
                 views.setColorStateList(R.id.date, "setTextColor", R.color.widget_live_text);
                 return views;
             } else {
                 RemoteViews views;
                 final EventInfo eventInfo = mModel.mEventInfos.get(rowInfo.mIndex);
-                if (eventInfo.allDay) {
+                if (eventInfo.allDay || eventInfo.undated) {
                     views = new RemoteViews(mContext.getPackageName(),
                             R.layout.widget_all_day_item);
                 } else {
                     views = new RemoteViews(mContext.getPackageName(), R.layout.widget_item);
                 }
                 int displayColor = eventInfo.color;
-                if (eventInfo.allDay) {
+                if (eventInfo.allDay || eventInfo.undated) {
                     com.android.calendar.ItemAppearance.bindWidget(mContext, views, displayColor,
                             R.id.widget_item_surface, R.id.agenda_item_color, R.id.title);
                 } else {
@@ -298,6 +304,7 @@ public class CalendarAppWidgetService extends RemoteViewsService {
                 return 0;
             }
             RowInfo rowInfo = mModel.mRowInfos.get(position);
+            if (rowInfo.mType == RowInfo.TYPE_UNDATED) return Long.MIN_VALUE;
             if (rowInfo.mType == RowInfo.TYPE_DAY) {
                 return rowInfo.mIndex;
             }
@@ -321,6 +328,7 @@ public class CalendarAppWidgetService extends RemoteViewsService {
             // Make sure an update happens at midnight or earlier
             long minUpdateTime = getNextMidnightTimeMillis(timeZone);
             for (EventInfo event : model.mEventInfos) {
+                if (event.undated) continue;
                 if (event.id < -1) {
                     if (event.taskHasDeadline && !event.taskDeadlineAllDay)
                         minUpdateTime = Math.min(minUpdateTime,

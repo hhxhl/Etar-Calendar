@@ -73,6 +73,13 @@
         android:paddingEnd="16dp"
         android:paddingTop="12dp">
 
+        <CheckBox
+            android:id="@+id/widget_show_undated"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/widget_show_undated_tasks"
+            android:visibility="gone" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

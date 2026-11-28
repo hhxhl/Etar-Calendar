@@ -79,6 +79,12 @@ class CalendarWidgetConfigureActivity : AppCompatActivity() {
             return
         }
 
+        val undated = findViewById<CheckBox>(R.id.widget_show_undated)
+        undated.visibility = if (AppWidgetManager.getInstance(this).getAppWidgetInfo(appWidgetId)
+                ?.provider?.className == CalendarAppWidgetProvider::class.java.name) View.VISIBLE else View.GONE
+        undated.isChecked = savedInstanceState?.getBoolean("widget_undated")
+            ?: WidgetUtils.showUndatedTasks(this, appWidgetId)
+
         val opacitySlider = findViewById<SeekBar>(R.id.widget_opacity_slider)
         val opacityValue = findViewById<TextView>(R.id.widget_opacity_value)
         opacitySlider.progress = savedInstanceState?.getInt("widget_opacity")
@@ -112,6 +118,7 @@ class CalendarWidgetConfigureActivity : AppCompatActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putInt("widget_opacity", findViewById<SeekBar>(R.id.widget_opacity_slider).progress)
+        outState.putBoolean("widget_undated", findViewById<CheckBox>(R.id.widget_show_undated).isChecked)
         super.onSaveInstanceState(outState)
     }
 
@@ -189,6 +196,11 @@ class CalendarWidgetConfigureActivity : AppCompatActivity() {
         // Update the selected widget before returning to the launcher.
         val appWidgetManager = AppWidgetManager.getInstance(this)
         val providerName = appWidgetManager.getAppWidgetInfo(appWidgetId)?.provider?.className
+        val previousUndated = WidgetUtils.showUndatedTasks(this, appWidgetId)
+        val showUndated = providerName == CalendarAppWidgetProvider::class.java.name &&
+            findViewById<CheckBox>(R.id.widget_show_undated).isChecked
+        if (providerName == CalendarAppWidgetProvider::class.java.name)
+            WidgetUtils.saveShowUndatedTasks(this, appWidgetId, showUndated)
         val provider = when (providerName) {
             CalendarAppWidgetProvider::class.java.name -> CalendarAppWidgetProvider()
             MonthAppWidgetProvider::class.java.name -> MonthAppWidgetProvider()
@@ -201,7 +213,7 @@ class CalendarWidgetConfigureActivity : AppCompatActivity() {
             WeekAppWidgetProvider::class.java.name -> R.layout.week_appwidget
             else -> 0
         }
-        if (provider != null && previousIds == selectedIds && previousTasks == selectedTasks && layoutId != 0) {
+        if (provider != null && previousIds == selectedIds && previousTasks == selectedTasks && previousUndated == showUndated && layoutId != 0) {
             // Only opacity changed: leave the collection adapter and current layout intact.
             WidgetUtils.updateBackgroundOpacity(this, appWidgetId, layoutId)
         } else if (provider != null) {

@@ -40,6 +40,21 @@ object WidgetUtils {
     private const val PREF_KEY_PREFIX = "widget_calendars_"
     private const val OPACITY_KEY_PREFIX = "widget_background_opacity_"
     private const val TASK_LIST_KEY_PREFIX = "widget_task_lists_"
+    private const val UNDATED_KEY_PREFIX = "widget_show_undated_"
+
+    @JvmStatic
+    fun showUndatedTasks(context: Context, appWidgetId: Int): Boolean {
+        if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return false
+        return CalendarUtils.getSharedPreferences(context, Utils.SHARED_PREFS_NAME)
+            .getBoolean(UNDATED_KEY_PREFIX + appWidgetId, false)
+    }
+
+    fun saveShowUndatedTasks(context: Context, appWidgetId: Int, show: Boolean) {
+        if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return
+        CalendarUtils.getSharedPreferences(context, Utils.SHARED_PREFS_NAME).edit {
+            putBoolean(UNDATED_KEY_PREFIX + appWidgetId, show)
+        }
+    }
 
     @JvmStatic
     fun getWidgetTaskListIds(context: Context, appWidgetId: Int): Set<String>? {
@@ -80,6 +95,7 @@ object WidgetUtils {
             remove(PREF_KEY_PREFIX + appWidgetId)
             remove(OPACITY_KEY_PREFIX + appWidgetId)
             remove(TASK_LIST_KEY_PREFIX + appWidgetId)
+            remove(UNDATED_KEY_PREFIX + appWidgetId)
         }
     }
 
