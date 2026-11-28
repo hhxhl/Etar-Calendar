@@ -41,7 +41,6 @@ import android.os.Handler;
 import android.provider.CalendarContract.Attendees;
 import android.provider.CalendarContract.Calendars;
 import android.provider.CalendarContract.Events;
-import android.text.Layout.Alignment;
 import android.text.SpannableStringBuilder;
 import android.text.StaticLayout;
 import android.text.TextPaint;
@@ -2779,7 +2778,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
             textPaint.setColor(paint.getColor());
             textPaint.setStrikeThruText(paint.isStrikeThruText());
             layout = StaticLayout.Builder.obtain(bob, 0, bob.length(), textPaint, Math.max(1, r.width()))
-                    .setAlignment(mNumDays > 1 ? Alignment.ALIGN_CENTER : Alignment.ALIGN_NORMAL)
+                    .setAlignment(ItemAppearance.ITEM_ALIGNMENT)
                     .setIncludePad(false).setMaxLines(2).setEllipsize(TextUtils.TruncateAt.END).build();
 
             layouts[i] = layout;

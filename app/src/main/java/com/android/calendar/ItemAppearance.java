@@ -27,6 +27,8 @@ public final class ItemAppearance {
 
     private ItemAppearance() {}
 
+    public static final Layout.Alignment ITEM_ALIGNMENT = Layout.Alignment.ALIGN_NORMAL;
+
     private static final float HAN_TEXT_SCALE = 0.90f;
 
     /** Normalize only item text, not headers or the source data. One field, one line. */
@@ -58,6 +60,7 @@ public final class ItemAppearance {
     }
 
     public static void bindText(TextView view, CharSequence text) {
+        view.setGravity(android.view.Gravity.START | android.view.Gravity.CENTER_VERTICAL);
         view.setSingleLine(true);
         view.setEllipsize(TextUtils.TruncateAt.END);
         view.setTypeface(Typeface.DEFAULT);
@@ -82,6 +85,20 @@ public final class ItemAppearance {
     public static void drawCenteredLine(Canvas canvas, CharSequence value, Paint paint,
             float left, float right, float baseline, Context context, String state,
             TodayIndicator indicator) {
+        drawLine(canvas, value, paint, left, right, baseline, context, state, indicator,
+                Layout.Alignment.ALIGN_CENTER);
+    }
+
+    public static void drawStartAlignedLine(Canvas canvas, CharSequence value, Paint paint,
+            float left, float right, float baseline, Context context, String state,
+            TodayIndicator indicator) {
+        drawLine(canvas, value, paint, left, right, baseline, context, state, indicator,
+                ITEM_ALIGNMENT);
+    }
+
+    private static void drawLine(Canvas canvas, CharSequence value, Paint paint,
+            float left, float right, float baseline, Context context, String state,
+            TodayIndicator indicator, Layout.Alignment alignment) {
         int width = (int) (right - left);
         if (width <= 0) return;
         TextPaint textPaint = new TextPaint(paint);
@@ -90,7 +107,7 @@ public final class ItemAppearance {
         if (state != null) styled = ItemStateIcons.prefix(context, state, styled);
         StaticLayout layout = StaticLayout.Builder.obtain(styled, 0,
                 styled.length(), textPaint, width)
-                .setAlignment(Layout.Alignment.ALIGN_CENTER)
+                .setAlignment(alignment)
                 .setIncludePad(false).setMaxLines(1)
                 .setEllipsize(TextUtils.TruncateAt.END).build();
         canvas.save();

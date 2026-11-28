@@ -1236,15 +1236,13 @@ public class MonthWeekEventsView extends SimpleWeekView {
     protected abstract class BoundariesSetter {
         protected DayBoxBoundaries mBoxBoundaries;
         protected int mBorderThickness;
-        protected int mXPadding;
-        public BoundariesSetter(DayBoxBoundaries boxBoundaries, int borderSpace, int xPadding) {
+        public BoundariesSetter(DayBoxBoundaries boxBoundaries, int borderSpace) {
             mBoxBoundaries = boxBoundaries;
             mBorderThickness = borderSpace;
-            mXPadding = xPadding;
         }
         public int getY() { return mBoxBoundaries.getY(); }
         public abstract void setRectangle(int spanningDays, int numberOfLines);
-        public int getTextX() { return mBoxBoundaries.getX() + mBorderThickness + mXPadding; }
+        public int getTextX() { return mBoxBoundaries.getX() + mEventSquareWidth + mEventRightPadding; }
         public int getTextY() {
             return mBoxBoundaries.getY() + mEventAscentHeight;
         }
@@ -1273,7 +1271,7 @@ public class MonthWeekEventsView extends SimpleWeekView {
 
     protected class AllDayBoundariesSetter extends BoundariesSetter {
         public AllDayBoundariesSetter(DayBoxBoundaries boxBoundaries) {
-            super(boxBoundaries, mBorderSpace, 0);
+            super(boxBoundaries, mBorderSpace);
         }
         @Override
         public void setRectangle(int spanningDays, int numberOfLines) {
@@ -1289,10 +1287,10 @@ public class MonthWeekEventsView extends SimpleWeekView {
 
     protected class RegularBoundariesSetter extends BoundariesSetter {
         public RegularBoundariesSetter(DayBoxBoundaries boxBoundaries) {
-            super(boxBoundaries, 0, mEventSquareWidth + mEventRightPadding);
+            super(boxBoundaries, 0);
         }
         protected RegularBoundariesSetter(DayBoxBoundaries boxBoundaries, int border) {
-            super(boxBoundaries, border, mEventSquareWidth + mEventRightPadding - border);
+            super(boxBoundaries, border);
         }
         @Override
         public void setRectangle(int spanningDays, int numberOfLines) {
@@ -1549,7 +1547,7 @@ public class MonthWeekEventsView extends SimpleWeekView {
                 preFormatText(preferences, span);
             }
             for (int i = 0; i < Math.min(linesNo, mTextLines.length); i++) {
-                com.android.calendar.ItemAppearance.drawCenteredLine(canvas, mTextLines[i], getTextPaint(),
+                com.android.calendar.ItemAppearance.drawStartAlignedLine(canvas, mTextLines[i], getTextPaint(),
                         mBoundaries.getTextX(), mBoundaries.getTextRightEdge(span), mBoundaries.getTextY(),
                         getContext(), i == 0 ? com.android.calendar.ItemStateSymbols.forEvent(
                                 getContext(), mEvent, System.currentTimeMillis()) : null, mTodayIndicator);
@@ -1603,7 +1601,7 @@ public class MonthWeekEventsView extends SimpleWeekView {
 
         protected void drawTimes(Canvas canvas, ViewDetailsPreferences.Preferences preferences) {
             CharSequence text = getFormattedTime(preferences);
-            com.android.calendar.ItemAppearance.drawCenteredLine(canvas, text, getTimesPaint(),
+            com.android.calendar.ItemAppearance.drawStartAlignedLine(canvas, text, getTimesPaint(),
                     mBoundaries.getTextX(), mBoundaries.getTextRightEdge(1), mBoundaries.getTextY(),
                      null, null, mTodayIndicator);
             mBoundaries.moveAfterDrawingTimes();

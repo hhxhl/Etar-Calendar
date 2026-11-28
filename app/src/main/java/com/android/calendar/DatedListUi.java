@@ -267,6 +267,7 @@ public final class DatedListUi {
         private static TextView styledText(Context context, int resource) {
             TextView view = new TextView(context);
             setTextSize(view, resource);
+            view.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
             view.setSingleLine(true);
             view.setEllipsize(TextUtils.TruncateAt.END);
             return view;
@@ -280,6 +281,7 @@ public final class DatedListUi {
         public static TextView textView(Context context, int size) {
             TextView view = new TextView(context);
             view.setTextSize(size);
+            view.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
             view.setSingleLine(true);
             view.setEllipsize(TextUtils.TruncateAt.END);
             return view;
