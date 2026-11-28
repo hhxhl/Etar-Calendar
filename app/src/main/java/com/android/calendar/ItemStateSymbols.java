@@ -13,9 +13,6 @@ public final class ItemStateSymbols {
     public static final String REMINDER_PENDING = "\u25CB";
     public static final String REMINDER_DONE = "\u2713\u20DD";
     public static final String REMINDER_OVERDUE = "\u25CB\u0338";
-    public static final String TASK_PLAIN = "\u25A1";
-    public static final String TASK_DONE = "\u2611\uFE0E";
-    public static final String TASK_PENDING = "\u25A1\u0338";
 
     private ItemStateSymbols() {}
 
@@ -48,10 +45,6 @@ public final class ItemStateSymbols {
                 ? start + 1 : Long.MAX_VALUE;
         if (start > now) return start;
         return end > now ? end : Long.MAX_VALUE;
-    }
-
-    public static String task(boolean done) {
-        return done ? TASK_DONE : TASK_PENDING;
     }
 
     public static String prefix(String symbol, CharSequence title) {

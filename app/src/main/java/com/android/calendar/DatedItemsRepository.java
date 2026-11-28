@@ -107,7 +107,7 @@ public final class DatedItemsRepository {
         return items;
     }
 
-    /** Search visible local items, including completed items. Undated tasks ignore the date range. */
+    /** Search visible local items, including completed items. Undated reminders ignore the date range. */
     public static List<Item<TaskStore.Task>> searchTasks(Context context, LocalDate first,
             LocalDate last, long listId, String query, CancellationSignal signal) {
         ArrayList<Item<TaskStore.Task>> result = new ArrayList<>();
@@ -122,7 +122,7 @@ public final class DatedItemsRepository {
                 first.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
                 until.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli());
         signal.throwIfCanceled();
-        candidates.addAll(store.visibleUndatedTasks(listId));
+        candidates.addAll(store.visibleUndatedReminders(listId));
         for (TaskStore.Task task : candidates) {
             signal.throwIfCanceled();
             if (listId != 0 && task.listId != listId) continue;

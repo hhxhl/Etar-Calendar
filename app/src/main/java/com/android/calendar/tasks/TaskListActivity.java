@@ -44,7 +44,7 @@ import java.util.ArrayList;
 import java.util.List;
 import ws.xsoh.etar.R;
 
-/** Local task and reminder editor. List management lives in Settings. */
+/** Local reminder editor. List management lives in Settings. */
 public final class TaskListActivity extends AppCompatActivity {
     private TaskStore store;
     private long listId=0;
@@ -200,7 +200,7 @@ public final class TaskListActivity extends AppCompatActivity {
         list.setAdapter(adapter(names));
         list.setSelection(listPos);
         list.setContentDescription(getString(R.string.tasks_lists));
-        ((ImageView) form.findViewById(R.id.calendar_selector_group_icon)).setImageResource(R.drawable.ic_task_outline);
+        ((ImageView) form.findViewById(R.id.calendar_selector_group_icon)).setImageResource(R.drawable.ic_reminder_outline);
         View listColor = form.findViewById(R.id.calendar_selector_group_background);
         Runnable updateColor = () -> {
             int pos = list.getSelectedItemPosition();

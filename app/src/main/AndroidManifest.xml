@@ -69,7 +69,7 @@
             android:theme="@android:style/Theme.NoDisplay" />
 
         <activity android:name="com.android.calendar.tasks.TaskListActivity"
-            android:exported="false" android:label="@string/tasks_title" />
+            android:exported="false" android:label="@string/reminders_title" />
 
         <receiver android:name="com.android.calendar.tasks.TaskAlarmReceiver"
             android:exported="false">

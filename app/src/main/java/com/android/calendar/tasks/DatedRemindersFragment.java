@@ -257,7 +257,7 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
 
             bell = new ImageView(context);
             bell.setImageResource(R.drawable.ic_reminder_outline);
-            bell.setContentDescription(getString(R.string.tasks_notify));
+            bell.setContentDescription(getString(R.string.reminders_alarm_time));
             layout.addIcon(bell);
             root.setTag(this);
         }

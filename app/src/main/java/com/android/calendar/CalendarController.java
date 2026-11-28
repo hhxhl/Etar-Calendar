@@ -761,8 +761,7 @@ public class CalendarController {
         final int MONTH = 4;
         final int EDIT = 5;
         final int REMINDERS = 6;
-        final int TASKS = 7;
-        final int MAX_VALUE = 7;
+        final int MAX_VALUE = REMINDERS;
     }
 
     public interface EventHandler {

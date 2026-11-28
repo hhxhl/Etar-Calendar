@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.function.LongConsumer;
 import ws.xsoh.etar.R;
 
-/** Common list filter and row binding for tasks and reminders. */
+/** Common list filter and row binding for reminders. */
 public final class TaskListUi {
     private TaskListUi() {}
 
@@ -51,7 +51,7 @@ public final class TaskListUi {
                 : ItemStateSymbols.reminder(checked, task.due, task.allDay, zone, now);
     }
 
-    /** Read-only task presentation, shared by the task lists and global search. */
+    /** Read-only task presentation, shared by the reminders list and global search. */
     public static int bindPresentation(View root, TextView marker, TextView title, TaskStore.Task task,
             ZoneId zone, long now, TextView... details) {
         int color = ItemAppearance.bindRow(root,

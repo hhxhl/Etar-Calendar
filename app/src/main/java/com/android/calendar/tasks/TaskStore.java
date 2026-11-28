@@ -229,24 +229,21 @@ public final class TaskStore extends SQLiteOpenHelper {
         return t;
     }
     public List<Task> tasks(long listId) {
-        return queryTasks(listId, false, null);
+        return queryTasks(listId, false, false);
     }
     public List<Task> visibleTasks(long listId) {
-        return queryTasks(listId, true, null);
+        return queryTasks(listId, true, false);
     }
     private static final String DISPLAY_TIME = "COALESCE(t.due,t.dtstart,t.alarm_at)";
     private static final String DISPLAY_ALL_DAY = "CASE WHEN t.due IS NOT NULL THEN t.is_allday WHEN t.dtstart IS NOT NULL THEN t.start_all_day ELSE 0 END";
-    public List<Task> visibleReminders(long listId) {
+    public List<Task> visibleUndatedReminders(long listId) {
         return queryTasks(listId, true, true);
     }
-    public List<Task> visibleUndatedTasks(long listId) {
-        return queryTasks(listId, true, false);
-    }
-    private List<Task> queryTasks(long listId, boolean visibleOnly, Boolean dated) {
+    private List<Task> queryTasks(long listId, boolean visibleOnly, boolean undatedOnly) {
         ArrayList<Task> result=new ArrayList<>();
         String filter=listId==0?"":" AND t.list_id=?";
         if (visibleOnly) filter += " AND EXISTS(SELECT 1 FROM tasklists l WHERE l._id=t.list_id AND l.visible=1)";
-        if (dated != null) filter += dated ? " AND "+DISPLAY_TIME+" IS NOT NULL" : " AND "+DISPLAY_TIME+" IS NULL";
+        if (undatedOnly) filter += " AND "+DISPLAY_TIME+" IS NULL";
         try(Cursor c=getReadableDatabase().rawQuery(SELECT+filter+" ORDER BY t.status=2,"+DISPLAY_TIME+" IS NULL,"+DISPLAY_TIME+",t._id",listId==0?null:new String[]{Long.toString(listId)})) {
             while(c.moveToNext()) result.add(read(c));
         }

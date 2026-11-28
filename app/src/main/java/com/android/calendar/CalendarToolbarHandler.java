@@ -94,7 +94,7 @@ public class CalendarToolbarHandler {
         updateTitle();
     }
 
-    /** Day, agenda and tasks place the short weekday next to the Gregorian date. */
+    /** Day, agenda and reminders place the short weekday next to the Gregorian date. */
     private void updateTitle() {
         String secondary;
         switch (mCurrentViewType) {

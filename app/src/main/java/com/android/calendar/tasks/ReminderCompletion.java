@@ -15,8 +15,4 @@ final class ReminderCompletion {
         return box;
     }
 
-    /** Text-only calendar and RemoteViews projections share the same completion marker. */
-    static String title(boolean completed, String title) {
-        return (completed ? "\u2713\u20DD " : "\u25CB ") + title;
-    }
 }

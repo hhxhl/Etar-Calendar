@@ -134,7 +134,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
         }
         boolean isItem() { return event != null || task != null; }
         boolean allDay() { return event != null ? event.allDay : task.allDay; }
-        long sortTime() { return event != null ? event.begin : task.due; }
+        long sortTime() { return event != null ? event.begin : task.displayTime(); }
     }
 
     private static final class Anchor {
@@ -683,7 +683,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
             if (!row.isItem()) {
                 if (row.day != null) return DatedListUi.dateHeader(convertView, parent, row.day, zone);
                 TextView heading = DatedListUi.statusView(context, convertView, true);
-                heading.setText(R.string.tasks_title);
+                heading.setText(R.string.reminders_no_date);
                 return heading;
             }
 
