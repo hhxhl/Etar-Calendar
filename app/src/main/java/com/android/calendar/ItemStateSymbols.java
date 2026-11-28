@@ -14,6 +14,8 @@ public final class ItemStateSymbols {
     public static final String TASK_ACTIVE = "task_active";
     public static final String TASK_DONE = "task_done";
     public static final String TASK_OVERDUE = "task_overdue";
+    public static final String TODO_PENDING = "todo_pending";
+    public static final String TODO_DONE = "todo_done";
 
     private ItemStateSymbols() {}
 
@@ -32,7 +34,12 @@ public final class ItemStateSymbols {
         return task(done, false, due, allDay, zone, now);
     }
 
-    /** A synchronized IN-PROCESS task remains active until completed or overdue. */
+    /** Undated tasks have only two presentation states, regardless of synchronized IN-PROCESS. */
+    public static String todo(boolean done) {
+        return done ? TODO_DONE : TODO_PENDING;
+    }
+
+    /** A synchronized IN-PROCESS dated task remains active until completed or overdue. */
     public static String task(boolean done, boolean inProgress, Long due, boolean allDay, ZoneId zone, long now) {
         if (done) return TASK_DONE;
         if (due != null && isTaskOverdue(false, due, allDay, zone, now)) return TASK_OVERDUE;

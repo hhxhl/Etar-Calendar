@@ -28,6 +28,8 @@ public final class ItemStateIcons {
             case ItemStateSymbols.TASK_ACTIVE: return R.drawable.ic_item_task_active;
             case ItemStateSymbols.TASK_OVERDUE: return R.drawable.ic_item_task_overdue;
             case ItemStateSymbols.TASK_DONE: return R.drawable.ic_item_task_done;
+            case ItemStateSymbols.TODO_PENDING: return R.drawable.ic_item_todo_pending;
+            case ItemStateSymbols.TODO_DONE: return R.drawable.ic_item_todo_done;
             default: return 0;
         }
     }

@@ -189,9 +189,8 @@ class CalendarAppWidgetModel {
 
     /** Prepend compact undated rows without adding section headers or fabricated dates. */
     void prependUndatedTasks(java.util.List<com.android.calendar.tasks.TaskStore.Task> tasks,
-            java.util.Set<String> selectedLists, String timeZone) {
+            java.util.Set<String> selectedLists) {
         java.util.ArrayList<RowInfo> undated = new java.util.ArrayList<>();
-        java.time.ZoneId zone = java.time.ZoneId.of(timeZone);
         for (com.android.calendar.tasks.TaskStore.Task task : tasks) {
             if (task.done || task.displayTime() != null
                     || (selectedLists != null && !selectedLists.contains(Long.toString(task.listId)))) continue;
@@ -201,8 +200,7 @@ class CalendarAppWidgetModel {
             info.title = TextUtils.isEmpty(task.title) ? mContext.getString(R.string.no_title_label) : task.title;
             info.visibTitle = View.VISIBLE;
             info.color = com.android.calendar.tasks.TaskCalendarUi.displayColor(mContext, task);
-            info.itemState = com.android.calendar.ItemStateSymbols.task(false, task.inProgress, null,
-                    false, zone, mNow);
+            info.itemState = com.android.calendar.ItemStateSymbols.todo(task.done);
             undated.add(new RowInfo(RowInfo.TYPE_MEETING, mEventInfos.size()));
             mEventInfos.add(info);
         }

@@ -118,7 +118,7 @@ public class CalendarAppWidgetService extends RemoteViewsService {
             }
             if (WidgetUtils.showUndatedTasks(mContext, mAppWidgetId)) {
                 model.prependUndatedTasks(com.android.calendar.tasks.TaskStore.get(mContext).visibleUndatedTasks(0),
-                        WidgetUtils.getWidgetTaskListIds(mContext, mAppWidgetId), timeZone);
+                        WidgetUtils.getWidgetTaskListIds(mContext, mAppWidgetId));
             }
             return model;
         }

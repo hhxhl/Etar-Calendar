@@ -41,7 +41,8 @@ public final class TaskListUi {
     }
 
     private static String stateSymbol(TaskStore.Task task, boolean checked, ZoneId zone, long now) {
-        return ItemStateSymbols.task(checked, task.inProgress, task.due, task.allDay, zone, now);
+        return task.displayTime() == null ? ItemStateSymbols.todo(checked)
+                : ItemStateSymbols.task(checked, task.inProgress, task.due, task.allDay, zone, now);
     }
 
     /** Read-only task presentation, shared by the reminders list and global search. */

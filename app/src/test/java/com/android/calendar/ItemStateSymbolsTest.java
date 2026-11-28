@@ -30,6 +30,13 @@ public class ItemStateSymbolsTest {
         assertEquals(ItemStateSymbols.TASK_DONE, ItemStateSymbols.task(true, true, due, false, zone, due + 1));
     }
 
+    @Test public void undatedTodoHasOnlyCompletionStates() {
+        assertEquals(ItemStateSymbols.TODO_PENDING, ItemStateSymbols.todo(false));
+        assertEquals(ItemStateSymbols.TODO_DONE, ItemStateSymbols.todo(true));
+        assertNotEquals(ItemStateSymbols.TASK_PENDING, ItemStateSymbols.todo(false));
+        assertNotEquals(ItemStateSymbols.TASK_DONE, ItemStateSymbols.todo(true));
+    }
+
     @Test public void allDayTaskUsesCalendarDateAcrossTimeZones() {
         long due = millis("2027-01-01T00:00:00Z");
         ZoneId tokyo = ZoneId.of("Asia/Tokyo");
