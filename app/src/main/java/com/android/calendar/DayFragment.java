@@ -157,8 +157,8 @@ public class DayFragment extends Fragment implements CalendarController.EventHan
         mEventLoader.stopBackgroundThread();
 
         // Stop events cross-fade animation
+        ((DayView) mViewSwitcher.getCurrentView()).stopEventsAnimation();
         view.stopEventsAnimation();
-        ((DayView) mViewSwitcher.getNextView()).stopEventsAnimation();
     }
 
     void startProgressSpinner() {

@@ -20,6 +20,7 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.database.Cursor;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Process;
 import android.provider.CalendarContract;
 import android.provider.CalendarContract.EventDays;
@@ -33,7 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class EventLoader {
 
     private Context mContext;
-    private Handler mHandler = new Handler();
+    private final Handler mHandler = new Handler(Looper.getMainLooper());
     private AtomicInteger mSequenceNumber = new AtomicInteger();
 
     private LinkedBlockingQueue<LoadRequest> mLoaderQueue;
@@ -50,6 +51,7 @@ public class EventLoader {
      * Call this from the activity's onResume()
      */
     public void startBackgroundThread() {
+        if (mLoaderThread != null) return;
         mLoaderThread = new LoaderThread(mLoaderQueue, this);
         mLoaderThread.start();
     }
@@ -58,7 +60,21 @@ public class EventLoader {
      * Call this from the activity's onPause()
      */
     public void stopBackgroundThread() {
-        mLoaderThread.shutdown();
+        if (mLoaderThread == null) return;
+        LoaderThread oldThread = mLoaderThread;
+        mLoaderThread = null;
+        mSequenceNumber.incrementAndGet();
+        // Never let a new session consume the old thread's shutdown request.
+        mLoaderQueue = new LinkedBlockingQueue<>();
+        mHandler.removeCallbacksAndMessages(null);
+        oldThread.shutdown();
+    }
+
+    private void postCallback(Runnable callback) {
+        Thread owner = Thread.currentThread();
+        mHandler.post(() -> {
+            if (mLoaderThread == owner) callback.run();
+        });
     }
 
     /**
@@ -160,7 +176,6 @@ public class EventLoader {
         @Override
         public void processRequest(EventLoader eventLoader)
         {
-            final Handler handler = eventLoader.mHandler;
             ContentResolver cr = eventLoader.mResolver;
 
             // Clear the event days
@@ -189,7 +204,7 @@ public class EventLoader {
                     cursor.close();
                 }
             }
-            handler.post(uiCallback);
+            eventLoader.postCallback(uiCallback);
         }
 
         @Override
@@ -220,22 +235,22 @@ public class EventLoader {
             Event.loadEvents(eventLoader.mContext, events, startDay,
                     numDays, id, eventLoader.mSequenceNumber);
 
-            // Check if we are still the most recent request.
-            if (id == eventLoader.mSequenceNumber.get()) {
-                eventLoader.mHandler.post(successCallback);
-            } else {
-                eventLoader.mHandler.post(cancelCallback);
-            }
+            // Check again on the main thread; another request may arrive before delivery.
+            eventLoader.postCallback(() -> {
+                if (id == eventLoader.mSequenceNumber.get()) successCallback.run();
+                else cancelCallback.run();
+            });
         }
 
         public void skipRequest(EventLoader eventLoader) {
-            eventLoader.mHandler.post(cancelCallback);
+            eventLoader.postCallback(cancelCallback);
         }
     }
 
     private static class LoaderThread extends Thread {
         LinkedBlockingQueue<LoadRequest> mQueue;
         EventLoader mEventLoader;
+        private volatile boolean stopped;
 
         public LoaderThread(LinkedBlockingQueue<LoadRequest> queue, EventLoader eventLoader) {
             mQueue = queue;
@@ -243,35 +258,28 @@ public class EventLoader {
         }
 
         public void shutdown() {
-            try {
-                mQueue.put(new ShutdownRequest());
-            } catch (InterruptedException ex) {
-                // The put() method fails with InterruptedException if the
-                // queue is full. This should never happen because the queue
-                // has no limit.
-                Log.e("Cal", "LoaderThread.shutdown() interrupted!");
-            }
+            stopped = true;
+            mQueue.clear();
+            mQueue.offer(new ShutdownRequest());
         }
 
         @Override
         public void run() {
             Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
-            while (true) {
+            while (!stopped) {
                 try {
                     // Wait for the next request
                     LoadRequest request = mQueue.take();
 
                     // If there are a bunch of requests already waiting, then
                     // skip all but the most recent request.
-                    while (!mQueue.isEmpty()) {
-                        // Let the request know that it was skipped
+                    LoadRequest next;
+                    while (!stopped && (next = mQueue.poll()) != null) {
                         request.skipRequest(mEventLoader);
-
-                        // Skip to the next request
-                        request = mQueue.take();
+                        request = next;
                     }
 
-                    if (request instanceof ShutdownRequest) {
+                    if (stopped || request instanceof ShutdownRequest) {
                         return;
                     }
                     request.processRequest(mEventLoader);
