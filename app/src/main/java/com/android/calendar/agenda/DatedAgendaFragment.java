@@ -649,7 +649,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
                 time += " (" + (displayZone.getID().equals("GMT") ? tz
                         : displayZone.getDisplayName(false, TimeZone.SHORT)) + ")";
             }
-            when.setText(time);
+            ItemAppearance.bindText(when, time);
             DatedListUi.bindOptionalText(where, entry.location);
             DatedListUi.bindOptionalText(countdown,
                     EventCountdown.label(context, entry.id, entry.begin, entry.allDay));

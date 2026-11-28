@@ -118,7 +118,7 @@ public final class DatedListUi {
     }
 
     public static void bindOptionalText(TextView view, CharSequence text) {
-        view.setText(text);
+        ItemAppearance.bindText(view, text);
         view.setVisibility(TextUtils.isEmpty(text) ? View.GONE : View.VISIBLE);
     }
 

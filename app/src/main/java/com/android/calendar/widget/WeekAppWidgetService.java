@@ -201,12 +201,13 @@ public class WeekAppWidgetService extends RemoteViewsService {
                     views.setViewVisibility(barIds[i], View.VISIBLE);
                     if (!event.isAllDay && event.timeLabel != null && !event.timeLabel.isEmpty()) {
                         views.setViewVisibility(timeIds[i], View.VISIBLE);
-                        views.setTextViewText(timeIds[i], event.timeLabel);
+                        views.setTextViewText(timeIds[i], com.android.calendar.ItemAppearance.itemText(event.timeLabel));
                     } else {
                         views.setViewVisibility(timeIds[i], View.GONE);
                     }
-                    views.setTextViewText(textIds[i], event.title);
-                    views.setViewPadding(rowIds[i], 1, 0, 1, 0);
+                    views.setTextViewText(textIds[i], com.android.calendar.ItemAppearance.itemText(event.title));
+                    int inset = com.android.calendar.ItemAppearance.widgetGridInset(mContext);
+                    views.setViewPadding(rowIds[i], inset, 0, inset, 0);
                 } else {
                     views.setViewVisibility(rowIds[i], View.GONE);
                 }

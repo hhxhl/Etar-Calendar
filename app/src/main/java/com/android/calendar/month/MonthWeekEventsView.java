@@ -32,7 +32,6 @@ import android.graphics.Paint.Style;
 import android.graphics.Typeface;
 import android.provider.CalendarContract.Attendees;
 import android.provider.CalendarContract.Events;
-import android.text.DynamicLayout;
 import android.text.Layout;
 import android.text.TextPaint;
 import android.text.TextUtils;
@@ -336,7 +335,7 @@ public class MonthWeekEventsView extends SimpleWeekView {
         mMonthNumHeight = (int) (mMonthNumPaint.descent() - mMonthNumPaint.ascent() + 0.5f);
 
         mEventPaint = new TextPaint();
-        mEventPaint.setFakeBoldText(true);
+        mEventPaint.setFakeBoldText(false);
         mEventPaint.setAntiAlias(true);
         mEventPaint.setTextSize(mTextSizeEventTitle);
         mEventPaint.setColor(mMonthEventColor);
@@ -346,7 +345,7 @@ public class MonthWeekEventsView extends SimpleWeekView {
         mFramedEventPaint = new TextPaint(mSolidBackgroundEventPaint);
 
         mDeclinedEventPaint = new TextPaint();
-        mDeclinedEventPaint.setFakeBoldText(true);
+        mDeclinedEventPaint.setFakeBoldText(false);
         mDeclinedEventPaint.setAntiAlias(true);
         mDeclinedEventPaint.setTextSize(mTextSizeEventTitle);
         mDeclinedEventPaint.setColor(mMonthDeclinedEventColor);
@@ -1437,8 +1436,7 @@ public class MonthWeekEventsView extends SimpleWeekView {
 
     protected class FormattedEvent extends FormattedEventBase {
         private Event mEvent;
-        private DynamicLayout mTextLayout;
-        private CharSequence mFormattedText;
+        private String[] mTextLines;
         public FormattedEvent(Event event, EventFormat format, BoundariesSetter boundaries) {
             super(format, boundaries);
             mEvent = event;
@@ -1488,13 +1486,13 @@ public class MonthWeekEventsView extends SimpleWeekView {
 
         @Override
         public void initialPreFormatText(ViewDetailsPreferences.Preferences preferences) {
-            if (mTextLayout == null) {
+            if (mTextLines == null) {
                 final int span = mFormat.getTotalSpan();
                 preFormatText(preferences, span);
                 if (span == 1) {
                     /* make events higher only if they are not spanning multiple days to avoid
                         tricky situations */
-                    mFormat.setEventLines(Math.min(mTextLayout.getLineCount(), preferences.MAX_LINES));
+                    mFormat.setEventLines(Math.min(mTextLines.length, preferences.MAX_LINES));
                 }
             }
         }
@@ -1511,10 +1509,10 @@ public class MonthWeekEventsView extends SimpleWeekView {
             }
             baseText.append(com.android.calendar.ItemStateSymbols.prefix(
                     com.android.calendar.ItemStateSymbols.forEvent(getContext(), mEvent,
-                            System.currentTimeMillis()), mEvent.title));
+                            System.currentTimeMillis()), com.android.calendar.ItemAppearance.singleLine(mEvent.title)));
             if (preferences.LOCATION_VISIBILITY && mEvent.location != null && mEvent.location.length() > 0) {
                 baseText.append("\n@ ");
-                baseText.append(mEvent.location);
+                baseText.append(com.android.calendar.ItemAppearance.singleLine(mEvent.location));
             }
             return baseText;
         }
@@ -1523,15 +1521,7 @@ public class MonthWeekEventsView extends SimpleWeekView {
             if (mEvent == null) {
                 return;
             }
-            mFormattedText = getBaseText(preferences);
-            mTextLayout = new DynamicLayout(mFormattedText, mEventPaint,
-                    Math.max(1, getAvailableSpaceForText(span)), Layout.Alignment.ALIGN_CENTER,
-                    0.0f, 0.0f, false);
-        }
-
-        protected CharSequence getFormattedText(CharSequence text, int span) {
-            float avail = getAvailableSpaceForText(span);
-            return TextUtils.ellipsize(text, mEventPaint, avail, TextUtils.TruncateAt.END);
+            mTextLines = getBaseText(preferences).toString().split("\\n", -1);
         }
 
         protected Paint getTextPaint() {
@@ -1547,18 +1537,9 @@ public class MonthWeekEventsView extends SimpleWeekView {
             if (mFormat.isPartiallyHidden()) {
                 preFormatText(preferences, span);
             }
-            CharSequence baseText = mFormattedText;
-            for (int i = 0; i < Math.min(linesNo, mTextLayout.getLineCount()); i++) {
-                CharSequence lineText;
-                if (i == linesNo - 1) {
-                    lineText = getFormattedText(baseText.subSequence(mTextLayout.getLineStart(i),
-                            baseText.length()), span);
-                } else {
-                    lineText = baseText.subSequence(mTextLayout.getLineStart(i),
-                            mTextLayout.getLineEnd(i));
-                }
-                drawCenteredText(canvas, lineText.toString(), mBoundaries.getTextX(),
-                        mBoundaries.getTextRightEdge(span), mBoundaries.getTextY(), getTextPaint());
+            for (int i = 0; i < Math.min(linesNo, mTextLines.length); i++) {
+                com.android.calendar.ItemAppearance.drawCenteredLine(canvas, mTextLines[i], getTextPaint(),
+                        mBoundaries.getTextX(), mBoundaries.getTextRightEdge(span), mBoundaries.getTextY());
                 mBoundaries.moveLinesDown(1);
             }
         }
@@ -1609,10 +1590,8 @@ public class MonthWeekEventsView extends SimpleWeekView {
 
         protected void drawTimes(Canvas canvas, ViewDetailsPreferences.Preferences preferences) {
             CharSequence text = getFormattedTime(preferences);
-            float avail = getAvailableSpaceForText(1);
-            text = TextUtils.ellipsize(text, mEventExtrasPaint, avail, TextUtils.TruncateAt.END);
-            drawCenteredText(canvas, text.toString(), mBoundaries.getTextX(),
-                    mBoundaries.getTextRightEdge(1), mBoundaries.getTextY(), getTimesPaint());
+            com.android.calendar.ItemAppearance.drawCenteredLine(canvas, text, getTimesPaint(),
+                    mBoundaries.getTextX(), mBoundaries.getTextRightEdge(1), mBoundaries.getTextY());
             mBoundaries.moveAfterDrawingTimes();
         }
 

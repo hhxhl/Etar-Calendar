@@ -87,7 +87,6 @@ public class MonthAppWidgetService extends RemoteViewsService {
         // Overflow indicator text view height
         private static final int OVERFLOW_HEIGHT_DP = 11;
         // Default padding for event rows in dp
-        private static final int EVENT_ROW_PADDING_DP = 1;
 
         private final Context mContext;
         private final int mAppWidgetId;
@@ -194,7 +193,7 @@ public class MonthAppWidgetService extends RemoteViewsService {
                     boolean showTitle = !chip.isAllDay || chip.spanType == MonthAppWidgetModel.EventChip.SPAN_START
                             || chip.spanType == MonthAppWidgetModel.EventChip.SPAN_SINGLE;
                     views.setViewVisibility(barIds[i], showTitle ? View.VISIBLE : View.GONE);
-                    views.setTextViewText(textIds[i], showTitle ? chip.title : "");
+                    views.setTextViewText(textIds[i], com.android.calendar.ItemAppearance.itemText(showTitle ? chip.title : ""));
                     views.setViewPadding(rowIds[i], pad, 0, pad, 0);
                 } else {
                     views.setViewVisibility(rowIds[i], View.GONE);
@@ -263,7 +262,7 @@ public class MonthAppWidgetService extends RemoteViewsService {
             mMaxEventsWithOverflow = limits[1];
 
             // Pre-compute event row padding in pixels
-            mEventRowPaddingPx = (int) (EVENT_ROW_PADDING_DP * density);
+            mEventRowPaddingPx = com.android.calendar.ItemAppearance.widgetGridInset(mContext);
         }
 
         private Map<Integer, List<MonthAppWidgetModel.EventChip>> queryEvents(

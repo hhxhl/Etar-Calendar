@@ -142,7 +142,8 @@ public class CalendarAppWidgetService extends RemoteViewsService {
         static void updateTextView(RemoteViews views, int id, int visibility, String string) {
             views.setViewVisibility(id, visibility);
             if (visibility == View.VISIBLE) {
-                views.setTextViewText(id, string);
+                views.setTextViewText(id, id == R.id.title || id == R.id.when || id == R.id.where
+                        ? com.android.calendar.ItemAppearance.itemText(string) : string);
             }
         }
 
@@ -253,9 +254,8 @@ public class CalendarAppWidgetService extends RemoteViewsService {
                 String displayTitle = countdown.isEmpty() ? eventInfo.title : eventInfo.title + " · " + countdown;
                 updateTextView(views, R.id.title, eventInfo.visibTitle, displayTitle);
 
-                if (eventInfo.status == Events.STATUS_CANCELED) {
-                    views.setInt(R.id.title, "setPaintFlags", Paint.STRIKE_THRU_TEXT_FLAG);
-                }
+                views.setInt(R.id.title, "setPaintFlags", Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG
+                        | (eventInfo.status == Events.STATUS_CANCELED ? Paint.STRIKE_THRU_TEXT_FLAG : 0));
 
                 long start = eventInfo.start;
                 long end = eventInfo.end;

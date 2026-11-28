@@ -6,6 +6,13 @@ import android.graphics.Color;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Typeface;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.TextPaint;
+import android.text.TextUtils;
+import android.text.style.RelativeSizeSpan;
+import android.text.Layout;
+import android.text.StaticLayout;
 import android.graphics.drawable.GradientDrawable;
 import ws.xsoh.etar.R;
 import android.view.View;
@@ -19,6 +26,70 @@ public final class ItemAppearance {
     private static final int BACKGROUND_ALPHA = 36;
 
     private ItemAppearance() {}
+
+    private static final float HAN_TEXT_SCALE = 0.90f;
+
+    /** Normalize only item text, not headers or the source data. One field, one line. */
+    public static String singleLine(CharSequence text) {
+        return text == null ? "" : text.toString().replaceAll("[\\r\\n\\t\\u2028\\u2029]+", " ");
+    }
+
+    /** Use a parcelable framework span so the same text works in RemoteViews. */
+    public static CharSequence itemText(CharSequence value) {
+        String text = singleLine(value);
+        SpannableString styled = null;
+        int begin = -1;
+        for (int i = 0; i < text.length();) {
+            int cp = text.codePointAt(i);
+            boolean han = Character.UnicodeScript.of(cp) == Character.UnicodeScript.HAN;
+            if (han && begin < 0) begin = i;
+            if (!han && begin >= 0) {
+                if (styled == null) styled = new SpannableString(text);
+                styled.setSpan(new RelativeSizeSpan(HAN_TEXT_SCALE), begin, i, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                begin = -1;
+            }
+            i += Character.charCount(cp);
+        }
+        if (begin >= 0) {
+            if (styled == null) styled = new SpannableString(text);
+            styled.setSpan(new RelativeSizeSpan(HAN_TEXT_SCALE), begin, text.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+        return styled == null ? text : styled;
+    }
+
+    public static void bindText(TextView view, CharSequence text) {
+        view.setSingleLine(true);
+        view.setEllipsize(TextUtils.TruncateAt.END);
+        view.setTypeface(Typeface.DEFAULT);
+        view.setText(itemText(text));
+    }
+
+    public static CharSequence fitLine(CharSequence text, TextPaint paint, int width) {
+        return TextUtils.ellipsize(itemText(text), paint, Math.max(0, width), TextUtils.TruncateAt.END);
+    }
+
+    /** Canvas text must keep spans during both measurement and drawing. */
+    public static void drawCenteredLine(Canvas canvas, CharSequence value, Paint paint,
+            float left, float right, float baseline) {
+        int width = (int) (right - left);
+        if (width <= 0) return;
+        TextPaint textPaint = new TextPaint(paint);
+        textPaint.setTextAlign(Paint.Align.LEFT);
+        StaticLayout layout = StaticLayout.Builder.obtain(itemText(value), 0,
+                singleLine(value).length(), textPaint, width)
+                .setAlignment(Layout.Alignment.ALIGN_CENTER)
+                .setIncludePad(false).setMaxLines(1)
+                .setEllipsize(TextUtils.TruncateAt.END).build();
+        canvas.save();
+        canvas.translate(left, baseline - layout.getLineBaseline(0));
+        canvas.clipRect(0, 0, width, layout.getHeight());
+        layout.draw(canvas);
+        canvas.restore();
+    }
+
+    public static int widgetGridInset(Context context) {
+        return context.getResources().getDimensionPixelSize(R.dimen.item_widget_grid_inset);
+    }
 
     public static int foreground(Context context, int displayColor) {
         return foreground(displayColor, ColorUtils.calculateLuminance(
@@ -90,8 +161,7 @@ public final class ItemAppearance {
     }
 
     public static void bindTitle(TextView title, CharSequence text, boolean bold, boolean strike) {
-        title.setText(text);
-        title.setTypeface(bold ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
+        bindText(title, text);
         title.setPaintFlags(strike ? title.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG
                 : title.getPaintFlags() & ~Paint.STRIKE_THRU_TEXT_FLAG);
     }

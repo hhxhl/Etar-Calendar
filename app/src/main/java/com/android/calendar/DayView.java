@@ -2752,17 +2752,15 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         String marker = ItemStateSymbols.forEvent(mContext, event, mCurrentTime.toMillis()) + " ";
         if (layout == null || r.width() != layout.getWidth()
                 || !layout.getText().toString().startsWith(marker)) {
-            SpannableStringBuilder bob = new SpannableStringBuilder(marker);
-            if (event.title != null) {
-                // MAX - 1 since we add a space
-                bob.append(drawTextSanitizer(event.title.toString(), MAX_EVENT_TEXT_LEN - bob.length() - 1));
-                bob.setSpan(new StyleSpan(android.graphics.Typeface.BOLD), 0,
-                            bob.length(), 0);
-                bob.append(' ');
-            }
-            if (event.location != null) {
-                bob.append(drawTextSanitizer(event.location.toString(),
-                        MAX_EVENT_TEXT_LEN - bob.length()));
+            TextPaint textPaint = new TextPaint(paint);
+            textPaint.setTypeface(android.graphics.Typeface.DEFAULT);
+            SpannableStringBuilder bob = new SpannableStringBuilder(ItemAppearance.fitLine(
+                    marker + (event.title == null ? "" : drawTextSanitizer(event.title.toString(),
+                            MAX_EVENT_TEXT_LEN - marker.length())), textPaint, r.width()));
+            if (event.location != null && event.location.length() > 0) {
+                bob.append('\n');
+                bob.append(ItemAppearance.fitLine(drawTextSanitizer(event.location.toString(),
+                        MAX_EVENT_TEXT_LEN), textPaint, r.width()));
             }
 
             paint.setColor(ItemAppearance.foreground(mContext, event.color));
@@ -2775,9 +2773,11 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
             }
 
             // Leave a one pixel boundary on the left and right of the rectangle for the event
-            layout = new StaticLayout(bob, 0, bob.length(), new TextPaint(paint), r.width(),
-                    mNumDays > 1 ? Alignment.ALIGN_CENTER : Alignment.ALIGN_NORMAL,
-                    1.0f, 0.0f, true, null, r.width());
+            textPaint.setColor(paint.getColor());
+            textPaint.setStrikeThruText(paint.isStrikeThruText());
+            layout = StaticLayout.Builder.obtain(bob, 0, bob.length(), textPaint, Math.max(1, r.width()))
+                    .setAlignment(mNumDays > 1 ? Alignment.ALIGN_CENTER : Alignment.ALIGN_NORMAL)
+                    .setIncludePad(false).setMaxLines(2).setEllipsize(TextUtils.TruncateAt.END).build();
 
             layouts[i] = layout;
         }
