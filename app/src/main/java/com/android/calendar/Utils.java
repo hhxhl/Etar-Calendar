@@ -263,11 +263,12 @@ public class Utils {
                 GeneralPreferences.DEFAULT_DEFAULT_START));
         if (defaultStart == -2) {
             // Return the last view used
-            return prefs.getInt(
+            int last = prefs.getInt(
                     GeneralPreferences.KEY_START_VIEW, GeneralPreferences.DEFAULT_START_VIEW);
+            return last == ViewType.TASKS ? ViewType.REMINDERS : last;
         } else {
             // Return the default view
-            return defaultStart;
+            return defaultStart == ViewType.TASKS ? ViewType.REMINDERS : defaultStart;
         }
     }
 

@@ -26,10 +26,6 @@
             android:checkable="true"
             android:icon="@drawable/ic_reminder_outline"
             android:title="@string/reminders_title" />
-        <item android:id="@+id/tasks_menu_item"
-            android:checkable="true"
-            android:icon="@drawable/ic_task_outline"
-            android:title="@string/tasks_title" />
     </group>
     <group android:id="@+id/navigation_subheader" android:checkableBehavior="none">
         <item

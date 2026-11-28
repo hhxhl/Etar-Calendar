@@ -16,7 +16,7 @@ import com.google.android.material.color.MaterialColors;
 import java.util.function.IntConsumer;
 import ws.xsoh.etar.R;
 
-/** One definition of the six view destinations for the drawer and toolbar. */
+/** One definition of the five view destinations for the drawer and toolbar. */
 public final class ViewNavigation {
     private ViewNavigation() {}
 
@@ -25,12 +25,11 @@ public final class ViewNavigation {
             {R.id.week_menu_item, ViewType.WEEK},
             {R.id.month_menu_item, ViewType.MONTH},
             {R.id.agenda_menu_item, ViewType.AGENDA},
-            {R.id.reminders_menu_item, ViewType.REMINDERS},
-            {R.id.tasks_menu_item, ViewType.TASKS}
+            {R.id.reminders_menu_item, ViewType.REMINDERS}
     };
 
     public static boolean isTaskView(int view) {
-        return view == ViewType.REMINDERS || view == ViewType.TASKS;
+        return view == ViewType.REMINDERS;
     }
 
     public static int viewForItem(int id) {
@@ -115,7 +114,7 @@ public final class ViewNavigation {
     public static void updateActions(Menu menu, int view) {
         if (menu == null) return;
         MenuItem goTo = menu.findItem(R.id.action_goto);
-        if (goTo != null) goTo.setVisible(view != ViewType.TASKS);
+        if (goTo != null) goTo.setVisible(true);
         MenuItem search = menu.findItem(R.id.action_search);
         if (search != null) search.setVisible(true);
         MenuItem importItem = menu.findItem(R.id.action_import);

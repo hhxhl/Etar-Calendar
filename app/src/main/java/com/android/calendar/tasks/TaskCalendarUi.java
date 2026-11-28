@@ -60,7 +60,7 @@ public final class TaskCalendarUi {
         }
     }
 
-    public static void createTask(Context context, long listId) {
+    public static void createReminder(Context context, long listId) {
         context.startActivity(new Intent(context, TaskListActivity.class)
                 .putExtra("new_task", true).putExtra("list_id", listId));
     }
@@ -77,11 +77,8 @@ public final class TaskCalendarUi {
         new MaterialAlertDialogBuilder(context)
                 .setTitle(R.string.tasks_new_item)
                 .setItems(new CharSequence[]{context.getString(R.string.tasks_create_event_type),
-                        context.getString(R.string.reminders_title), context.getString(R.string.tasks_title)},
-                        (dialog, which) -> {
-                            if (which == 2) createTask(context, 0);
-                            else create(context, controller, millis, allDay, timedReminder, which == 1);
-                        })
+                        context.getString(R.string.reminders_title)},
+                        (dialog, which) -> create(context, controller, millis, allDay, timedReminder, which == 1))
                 .show();
     }
 
