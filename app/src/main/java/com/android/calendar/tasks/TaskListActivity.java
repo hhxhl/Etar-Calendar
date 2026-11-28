@@ -106,7 +106,7 @@ public final class TaskListActivity extends AppCompatActivity {
                     task.tz=task.allDay?"UTC":selectedZone.getId();
                     task.due=task.allDay?Instant.ofEpochMilli(date).atZone(selectedZone).toLocalDate().atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli():date;
                     task.anchor=task.due;
-                    task.alarm=!task.allDay;
+                    task.alarm=false;
                 }
             }
             edit(task);
@@ -163,16 +163,14 @@ public final class TaskListActivity extends AppCompatActivity {
     /** Reuse the event editor's layout, toolbar, separators and Material date/time controls.
      * Only the task-specific binding and persistence are different. */
     private void edit(TaskStore.Task task) {
-        final boolean reminder = task.due != null;
+        final boolean initiallyDated = task.due != null;
         SimpleFrameLayoutMaterialBinding binding =
                 SimpleFrameLayoutMaterialBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         setSupportActionBar(binding.include.toolbar);
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle(reminder
-                    ? (task.id == 0 ? R.string.reminders_add : R.string.reminders_edit)
-                    : (task.id == 0 ? R.string.tasks_add : R.string.tasks_edit));
+            getSupportActionBar().setTitle(task.id == 0 ? R.string.reminders_add : R.string.reminders_edit);
         }
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
@@ -189,7 +187,7 @@ public final class TaskListActivity extends AppCompatActivity {
         EditText url = form.findViewById(R.id.url);
         url.setText(task.url);
         CompoundButton countdown = form.findViewById(R.id.event_countdown);
-        countdown.setChecked(reminder && task.countdown);
+        countdown.setChecked(initiallyDated && task.countdown);
         int[] itemColor = {task.color};
         Spinner list = form.findViewById(R.id.calendars_spinner);
         List<TaskStore.TaskList> available = store.lists();
@@ -247,10 +245,10 @@ public final class TaskListActivity extends AppCompatActivity {
                 R.id.add_attendees_group, R.id.attendees_icon, R.id.add_attendees_row,
                 R.id.where_icon, R.id.where_row,
                 R.id.reminder_add, R.id.view6,
-                R.id.visibility_icon, R.id.visibility);
+                R.id.visibility_icon, R.id.visibility, R.id.availability_icon, R.id.availability);
         ConstraintLayout.LayoutParams descriptionParams =
                 (ConstraintLayout.LayoutParams) form.findViewById(R.id.description_row).getLayoutParams();
-        descriptionParams.topToBottom = reminder ? R.id.view2 : R.id.view1;
+        descriptionParams.topToBottom = R.id.view2;
         descriptionParams.topMargin = dp(10);
         form.findViewById(R.id.description_row).setLayoutParams(descriptionParams);
         ConstraintLayout.LayoutParams afterAlarm =
@@ -258,8 +256,24 @@ public final class TaskListActivity extends AppCompatActivity {
         afterAlarm.topToBottom = R.id.reminder_items_container;
         form.findViewById(R.id.view5).setLayoutParams(afterAlarm);
 
+        ConstraintLayout editor = form.findViewById(R.id.edit_event_all);
+        CompoundButton dated = new com.google.android.material.materialswitch.MaterialSwitch(this);
+        dated.setId(View.generateViewId());
+        dated.setText(R.string.reminders_due_time);
+        dated.setChecked(initiallyDated);
+        ConstraintLayout.LayoutParams datedParams = new ConstraintLayout.LayoutParams(0, -2);
+        datedParams.startToStart = ConstraintLayout.LayoutParams.PARENT_ID;
+        datedParams.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID;
+        datedParams.topToBottom = R.id.view1;
+        datedParams.setMargins(dp(48), dp(8), dp(24), 0);
+        editor.addView(dated, datedParams);
+        View scheduleIcon = form.findViewById(R.id.imageView);
+        ConstraintLayout.LayoutParams scheduleParams =
+                (ConstraintLayout.LayoutParams) scheduleIcon.getLayoutParams();
+        scheduleParams.topToBottom = dated.getId();
+        scheduleIcon.setLayoutParams(scheduleParams);
         CompoundButton allDay = form.findViewById(R.id.is_all_day);
-        allDay.setChecked(reminder && task.allDay);
+        allDay.setChecked(initiallyDated && task.allDay);
         String defaultZone = getIntent().getStringExtra("calendar_zone");
         if (defaultZone == null) defaultZone = Utils.getTimeZone(this, null);
         ZoneId[] zone = {ZoneId.of(task.tz == null || task.allDay ? defaultZone : task.tz)};
@@ -298,17 +312,8 @@ public final class TaskListActivity extends AppCompatActivity {
                     dialog.dismiss();
                 }).setNegativeButton(android.R.string.cancel, null).show());
 
-        // Reuse the existing spinner slot, but bind the task priority rather than event availability.
-        Spinner priority = form.findViewById(R.id.availability);
-        ArrayList<String> priorityNames = new ArrayList<>();
-        for (String option : getResources().getStringArray(R.array.tasks_priority_options))
-            priorityNames.add(getString(R.string.tasks_priority) + " · " + option);
-        priority.setAdapter(adapter(priorityNames));
-        priority.setSelection(task.priority == 1 ? 1 : task.priority == 5 ? 2 : task.priority == 9 ? 3 : 0);
-        priority.setContentDescription(getString(R.string.tasks_priority));
-        ((ImageView) form.findViewById(R.id.availability_icon)).setImageResource(R.drawable.ic_task_outline);
-
-        CheckBox completed = reminder ? ReminderCompletion.create(this) : new com.google.android.material.checkbox.MaterialCheckBox(this);
+        // Preserve the stored priority; it is not part of the simplified editor.
+        CheckBox completed = ReminderCompletion.create(this);
         completed.setText(R.string.tasks_complete);
         completed.setChecked(task.done);
         if (task.id != 0) {
@@ -329,15 +334,23 @@ public final class TaskListActivity extends AppCompatActivity {
             timeButton.setText(time[0].format(DateTimeFormatter.ofPattern(pattern)));
             long localMillis = date[0].atTime(time[0]).atZone(zone[0]).toInstant().toEpochMilli();
             zoneButton.setText(zoneLabels.getGmtDisplayName(this, zone[0].getId(), localMillis, true));
-            timeButton.setVisibility(reminder && !allDay.isChecked() ? View.VISIBLE : View.GONE);
-            zoneRow.setVisibility(reminder && !allDay.isChecked() ? View.VISIBLE : View.GONE);
-            alarm.setEnabled(reminder && !allDay.isChecked());
+            boolean hasDate = dated.isChecked();
+            int visibility = hasDate ? View.VISIBLE : View.GONE;
+            scheduleIcon.setVisibility(visibility);
+            form.findViewById(R.id.is_all_day_label).setVisibility(visibility);
+            allDay.setVisibility(visibility);
+            dateButton.setVisibility(visibility);
+            timeButton.setVisibility(hasDate && !allDay.isChecked() ? View.VISIBLE : View.GONE);
+            zoneRow.setVisibility(hasDate && !allDay.isChecked() ? View.VISIBLE : View.GONE);
+            form.findViewById(R.id.rrule_icon).setVisibility(visibility);
+            repeat.setVisibility(visibility);
+            countdown.setVisibility(visibility);
+            alarm.setEnabled(hasDate && !allDay.isChecked());
+            form.findViewById(R.id.reminder_icon).setVisibility(visibility);
+            form.findViewById(R.id.reminder_items_container).setVisibility(visibility);
         };
         allDay.setOnCheckedChangeListener((v, checked) -> update.run());
-        if (!reminder) hide(form, R.id.imageView, R.id.is_all_day_label, R.id.is_all_day,
-                R.id.start_date, R.id.start_time, R.id.timezone_button_row, R.id.timezone_icon,
-                R.id.timezone_button, R.id.view2, R.id.rrule_icon, R.id.rrule,
-                R.id.event_countdown, R.id.view4, R.id.reminder_icon, R.id.reminder_items_container, R.id.view5);
+        dated.setOnCheckedChangeListener((v, checked) -> update.run());
 
         captureDraft = () -> {
             Bundle draft = new Bundle();
@@ -349,13 +362,13 @@ public final class TaskListActivity extends AppCompatActivity {
             draft.putBoolean("complete", completed.isChecked());
             int pos = list.getSelectedItemPosition();
             draft.putLong("list_id", pos < 0 ? task.listId : available.get(pos).id);
-            draft.putBoolean("has_time", reminder && !allDay.isChecked());
+            draft.putBoolean("has_date", dated.isChecked());
+            draft.putBoolean("has_time", !allDay.isChecked());
             draft.putLong("date", date[0].toEpochDay());
             draft.putLong("time", time[0].toSecondOfDay());
             draft.putString("zone", zone[0].getId());
             draft.putBoolean("alarm", alarm.isChecked());
             draft.putInt("repeat", repeatIndex[0]);
-            draft.putInt("priority", priority.getSelectedItemPosition());
             return draft;
         };
         if (initialDraft == null) initialDraft = captureDraft.get();
@@ -368,19 +381,19 @@ public final class TaskListActivity extends AppCompatActivity {
             notes.setText(draft.getString("notes", task.notes));
             url.setText(draft.getString("url", task.url));
             itemColor[0] = draft.getInt("item_color", task.color);
-            countdown.setChecked(reminder && draft.getBoolean("countdown", task.countdown));
+            countdown.setChecked(draft.getBoolean("countdown", task.countdown));
             completed.setChecked(draft.getBoolean("complete", task.done));
             long selectedList = draft.getLong("list_id", task.listId);
             for (int i = 0; i < available.size(); i++)
                 if (available.get(i).id == selectedList) list.setSelection(i);
-            allDay.setChecked(reminder && !draft.getBoolean("has_time", !initialAllDay));
+            dated.setChecked(draft.getBoolean("has_date", initiallyDated));
+            allDay.setChecked(!draft.getBoolean("has_time", !initialAllDay));
             date[0] = LocalDate.ofEpochDay(draft.getLong("date", initialDate.toEpochDay()));
             time[0] = LocalTime.ofSecondOfDay(draft.getLong("time", initialTime.toSecondOfDay()));
             zone[0] = ZoneId.of(draft.getString("zone", initialZone.getId()));
             alarm.setChecked(draft.getBoolean("alarm", task.alarm));
             repeatIndex[0] = draft.getInt("repeat", repeatIndex[0]);
             repeat.setText(repeatOptions[repeatIndex[0]]);
-            priority.setSelection(draft.getInt("priority", priority.getSelectedItemPosition()));
         }
         update.run();
         updateColor.run();
@@ -408,7 +421,7 @@ public final class TaskListActivity extends AppCompatActivity {
 
 
         if (task.id != 0) deleteEditor = () -> new MaterialAlertDialogBuilder(this)
-                .setMessage(reminder ? R.string.reminders_delete_confirm : R.string.tasks_delete_confirm)
+                .setMessage(R.string.reminders_delete_confirm)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(R.string.tasks_delete, (dialog, which) -> {
                     store.delete(task.id);
@@ -425,11 +438,12 @@ public final class TaskListActivity extends AppCompatActivity {
             task.notes = notes.getText().toString();
             task.url = url.getText().toString().trim();
             task.color = itemColor[0];
+            boolean reminder = dated.isChecked();
             task.countdown = reminder && countdown.isChecked();
             task.listId = available.get(pos).id;
             Long oldDue = task.due;
             String oldRule = task.rule;
-            boolean scheduleEdited = reminder && (initialAllDay != allDay.isChecked()
+            boolean scheduleEdited = initiallyDated != reminder || reminder && (initialAllDay != allDay.isChecked()
                     || !initialDate.equals(date[0])
                     || (!allDay.isChecked() && (!initialTime.equals(time[0]) || !initialZone.equals(zone[0]))));
             task.allDay = reminder && allDay.isChecked();
@@ -445,7 +459,6 @@ public final class TaskListActivity extends AppCompatActivity {
                 task.repeatMinute = task.due == null || task.allDay ? null
                         : time[0].getHour() * 60 + time[0].getMinute();
             }
-            task.priority = new int[]{0,1,5,9}[Math.max(0, priority.getSelectedItemPosition())];
             task.alarm = reminder && !task.allDay && alarm.isChecked();
             if (!reminder) {
                 task.due = null; task.anchor = null; task.repeatMinute = null;

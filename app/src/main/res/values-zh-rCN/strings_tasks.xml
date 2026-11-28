@@ -73,4 +73,5 @@
     <string name="search_calendar_source">日历：%1$s</string>
     <string name="search_list_source">列表：%1$s</string>
     <string name="reminders_no_date">无日期</string>
+    <string name="reminders_due_time">截止时间</string>
 </resources>
