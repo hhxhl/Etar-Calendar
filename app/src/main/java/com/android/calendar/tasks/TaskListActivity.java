@@ -146,6 +146,7 @@ public final class TaskListActivity extends AppCompatActivity {
         if (saveEditor != null && (id == R.id.action_cancel || id == android.R.id.home)) {
             discardOrFinish(); return true;
         }
+        if (saveEditor == null && id == android.R.id.home) { finish(); return true; }
         if (deleteEditor != null && id == R.id.info_action_delete) { deleteEditor.run(); return true; }
         return super.onOptionsItemSelected(item);
     }
@@ -180,6 +181,9 @@ public final class TaskListActivity extends AppCompatActivity {
         int[] itemColor = {task.color};
         Spinner list = form.findViewById(R.id.calendars_spinner);
         List<TaskStore.TaskList> available = store.lists();
+        TaskStore.TaskList currentList = store.findList(task.listId);
+        if (task.id == 0 || task.writable) available.removeIf(l -> !l.isWritable()
+                || (task.id != 0 && currentList != null && !currentList.isLocal() && l.id != task.listId));
         if (available.isEmpty()) { finish(); return; }
         ArrayList<String> names = new ArrayList<>();
         int listPos = 0;
@@ -263,10 +267,16 @@ public final class TaskListActivity extends AppCompatActivity {
         repeatParams.topToBottom = times.getId();
         repeatIcon.setLayoutParams(repeatParams);
 
+        CompoundButton allDay = new com.google.android.material.materialswitch.MaterialSwitch(this);
+        allDay.setText(R.string.edit_event_all_day_label);
+        allDay.setChecked(task.allDay);
+        times.addView(allDay, new LinearLayout.LayoutParams(-1, -2));
         TimeField start = new TimeField(times, R.string.tasks_start_time, "start",
-                task.start, task.startAllDay, true, zone);
+                task.start, task.allDay, true, zone);
         TimeField due = new TimeField(times, R.string.tasks_due_time, "due",
                 task.due, task.allDay, true, zone);
+        start.allDay.setVisibility(View.GONE);
+        due.allDay.setVisibility(View.GONE);
         CompoundButton alarm = new com.google.android.material.materialswitch.MaterialSwitch(this);
         alarm.setText(R.string.tasks_alarm_time);
         alarm.setChecked(task.alarm);
@@ -313,6 +323,7 @@ public final class TaskListActivity extends AppCompatActivity {
         }
 
         Runnable update = () -> {
+            allDay.setVisibility(start.enabled.isChecked() || due.enabled.isChecked() ? View.VISIBLE : View.GONE);
             start.refresh();
             due.refresh();
             boolean hasAlarm = alarm.isChecked();
@@ -332,6 +343,11 @@ public final class TaskListActivity extends AppCompatActivity {
             repeat.setEnabled(any);
             countdown.setVisibility(due.enabled.isChecked() ? View.VISIBLE : View.GONE);
         };
+        allDay.setOnCheckedChangeListener((v, checked) -> {
+            start.allDay.setChecked(checked);
+            due.allDay.setChecked(checked);
+            update.run();
+        });
         start.changed = update;
         due.changed = update;
         absolute.changed = update;
@@ -429,6 +445,8 @@ public final class TaskListActivity extends AppCompatActivity {
                 if (available.get(i).id == selectedList) list.setSelection(i);
             start.restore(draft);
             due.restore(draft);
+            allDay.setChecked(start.allDay.isChecked());
+            due.allDay.setChecked(allDay.isChecked());
             absolute.restore(draft);
             zone[0] = ZoneId.of(draft.getString("zone", zone[0].getId()));
             alarm.setChecked(draft.getBoolean("alarm", task.alarm));
@@ -486,9 +504,8 @@ public final class TaskListActivity extends AppCompatActivity {
             boolean oldAllDay = task.displayAllDay();
             String oldZone = task.tz, oldRule = task.rule;
             task.start = newStart;
-            task.startAllDay = newStart != null && start.allDay.isChecked();
             task.due = newDue;
-            task.allDay = newDue != null && due.allDay.isChecked();
+            task.allDay = (newStart != null || newDue != null) && allDay.isChecked();
             task.tz = zone[0].getId();
             task.alarm = alarm.isChecked();
             task.alarmMode = mode[0];
@@ -510,6 +527,7 @@ public final class TaskListActivity extends AppCompatActivity {
                 }
             }
             long saved = store.save(task, completed.isChecked());
+            if (saved <= 0) return;
             finishAfterPermission = saved > 0 && task.alarm && !task.done;
             captureDraft = null;
             saveEditor = null;
@@ -519,7 +537,21 @@ public final class TaskListActivity extends AppCompatActivity {
         getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
             @Override public void handleOnBackPressed() { discardOrFinish(); }
         });
+        if (!task.writable) {
+            disableEditor(form);
+            saveEditor = null;
+            deleteEditor = null;
+            captureDraft = null;
+        }
         invalidateOptionsMenu();
+    }
+
+    private static void disableEditor(View view) {
+        view.setEnabled(false);
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i=0; i<group.getChildCount(); i++) disableEditor(group.getChildAt(i));
+        }
     }
 
     private Button outlinedButton() {

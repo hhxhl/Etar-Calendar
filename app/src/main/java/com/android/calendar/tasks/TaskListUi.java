@@ -75,8 +75,8 @@ public final class TaskListUi {
         if (task.hasRange()) {
             int flags = DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_ABBREV_ALL;
             String startLabel = com.android.calendar.ItemEditorUi.formatDateTime(context, task.start,
-                    flags | (task.startAllDay ? 0 : DateUtils.FORMAT_SHOW_TIME),
-                    task.startAllDay ? "UTC" : zone.getId());
+                    flags | (task.allDay ? 0 : DateUtils.FORMAT_SHOW_TIME),
+                    task.allDay ? "UTC" : zone.getId());
             String dueLabel = com.android.calendar.ItemEditorUi.formatDateTime(context, task.due,
                     flags | (task.allDay ? 0 : DateUtils.FORMAT_SHOW_TIME),
                     task.allDay ? "UTC" : zone.getId());
@@ -96,6 +96,7 @@ public final class TaskListUi {
         ZoneId zone = ZoneId.of(Utils.getTimeZone(context, null));
         done.setOnCheckedChangeListener(null);
         done.setChecked(task.done);
+        done.setEnabled(task.writable);
         int color = bindPresentation(root, done, title, task, zone, System.currentTimeMillis());
         done.setContentDescription(context.getString(R.string.tasks_complete) + " " + task.title);
         done.setOnCheckedChangeListener((button, checked) -> {

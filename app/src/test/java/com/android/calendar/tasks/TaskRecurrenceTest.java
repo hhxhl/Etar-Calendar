@@ -98,22 +98,19 @@ public class TaskRecurrenceTest {
         TaskStore.Task t = new TaskStore.Task();
         t.start = ms("2027-01-01T00:00:00Z");
         t.due = ms("2027-01-05T00:00:00Z");
-        t.startAllDay = t.allDay = true;
+        t.allDay = true;
         java.time.ZoneId zone = java.time.ZoneId.of("Asia/Tokyo");
         org.junit.Assert.assertTrue(t.rangeAllDay());
         assertEquals(t.start.longValue(), t.rangeStart(zone));
         assertEquals(ms("2027-01-06T00:00:00Z"), t.rangeEnd(zone));
     }
 
-    @Test public void mixedRangeUsesLocalDayBoundary() {
+    @Test public void startOnlyAllDayUsesDate() {
         TaskStore.Task t = new TaskStore.Task();
         t.start = ms("2027-01-01T00:00:00Z");
-        t.startAllDay = true;
-        t.due = ms("2027-01-05T09:00:00Z");
-        java.time.ZoneId zone = java.time.ZoneId.of("Asia/Tokyo");
-        org.junit.Assert.assertFalse(t.rangeAllDay());
-        assertEquals(ms("2026-12-31T15:00:00Z"), t.rangeStart(zone));
-        assertEquals(t.due.longValue(), t.rangeEnd(zone));
+        t.allDay = true;
+        org.junit.Assert.assertTrue(t.displayAllDay());
+        assertEquals(t.start, t.displayTime());
     }
 
     @Test public void deadlineOnlyRemainsPoint() {
