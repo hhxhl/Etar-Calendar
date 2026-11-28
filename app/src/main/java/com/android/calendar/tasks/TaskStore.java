@@ -267,7 +267,8 @@ public final class TaskStore extends SQLiteOpenHelper {
             db.endTransaction();
         }
         if (resetNotification) TaskAlarmReceiver.dismiss(appContext, t.id);
-        notifyChanged();
+        // Title, notes, URL and color changes do not change the next alarm.
+        notifyChanged(resetNotification);
         return t.id;
     }
 

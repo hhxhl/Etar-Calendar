@@ -11,6 +11,10 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
+import android.util.Log;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import androidx.core.app.NotificationCompat;
 import ws.xsoh.etar.R;
 
@@ -19,6 +23,9 @@ public final class TaskAlarmReceiver extends BroadcastReceiver {
     private static final String FIRE="com.android.calendar.tasks.FIRE";
     private static final String COMPLETE="com.android.calendar.tasks.COMPLETE";
     public static final String CHANNEL="task_reminders";
+    // Only system rescheduling broadcasts use this worker. It has no resident thread.
+    private static final ThreadPoolExecutor RESCHEDULE_EXECUTOR = new ThreadPoolExecutor(
+            0, 1, 10, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
     public static void ensureChannel(Context context) {
         NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         nm.createNotificationChannel(new NotificationChannel(CHANNEL,
@@ -29,9 +36,17 @@ public final class TaskAlarmReceiver extends BroadcastReceiver {
     }
     public static synchronized void schedule(Context c) {
         AlarmManager manager=(AlarmManager)c.getSystemService(Context.ALARM_SERVICE);
-        PendingIntent pi=alarm(c); manager.cancel(pi);
-        if(Build.VERSION.SDK_INT>=33 && c.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)return;
-        Long next=TaskStore.get(c).nextAlarm();if(next==null)return;
+        PendingIntent pi=alarm(c);
+        if(Build.VERSION.SDK_INT>=33 && c.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED){
+            manager.cancel(pi);
+            return;
+        }
+        Long next=TaskStore.get(c).nextAlarm();
+        if(next==null){
+            manager.cancel(pi);
+            return;
+        }
+        // Setting the same PendingIntent replaces the existing alarm atomically.
         long when=Math.max(System.currentTimeMillis()+1000,next);
         try {
             if(manager.canScheduleExactAlarms())manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,when,pi);
@@ -42,6 +57,21 @@ public final class TaskAlarmReceiver extends BroadcastReceiver {
         ((NotificationManager)c.getSystemService(Context.NOTIFICATION_SERVICE)).cancel("task:"+id,1);
     }
     @Override public void onReceive(Context context,Intent intent) {
+        String action = intent.getAction();
+        if (!FIRE.equals(action) && !COMPLETE.equals(action)) {
+            Context app = context.getApplicationContext();
+            PendingResult pending = goAsync();
+            RESCHEDULE_EXECUTOR.execute(() -> {
+                try {
+                    schedule(app);
+                } catch (RuntimeException error) {
+                    Log.e("TaskAlarmReceiver", "Could not reschedule task alarm", error);
+                } finally {
+                    pending.finish();
+                }
+            });
+            return;
+        }
         TaskStore store=TaskStore.get(context);
         if(COMPLETE.equals(intent.getAction())){
             long id=intent.getLongExtra("id",0);
