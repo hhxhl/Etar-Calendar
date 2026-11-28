@@ -299,11 +299,11 @@ public final class TaskListActivity extends AppCompatActivity {
 
         Button repeat = form.findViewById(R.id.rrule);
         String[] repeatOptions = getResources().getStringArray(R.array.tasks_repeat_options);
-        int[] repeatIndex = {0};
+        int[] repeatIndex = {task.rule == null ? 0 : -1};
         for (int i = 0; i < RULES.length; i++)
             if (java.util.Objects.equals(task.rule, RULES[i])) repeatIndex[0] = i;
         int initialRepeat = repeatIndex[0];
-        repeat.setText(repeatOptions[repeatIndex[0]]);
+        repeat.setText(repeatIndex[0] < 0 ? task.rule : repeatOptions[repeatIndex[0]]);
         repeat.setOnClickListener(v -> new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.tasks_repeat)
                 .setSingleChoiceItems(repeatOptions, repeatIndex[0], (dialog, which) -> {
@@ -453,7 +453,7 @@ public final class TaskListActivity extends AppCompatActivity {
             mode[0] = draft.getInt("alarm_mode", mode[0]);
             offset[0] = draft.getInt("alarm_offset", offset[0]);
             repeatIndex[0] = draft.getInt("repeat", repeatIndex[0]);
-            repeat.setText(repeatOptions[repeatIndex[0]]);
+            repeat.setText(repeatIndex[0] < 0 ? task.rule : repeatOptions[repeatIndex[0]]);
         }
         update.run();
         updateColor.run();
@@ -488,7 +488,8 @@ public final class TaskListActivity extends AppCompatActivity {
             Long newStart = start.value(), newDue = due.value();
             if (newStart != null && newDue != null) {
                 long from = start.comparisonValue(false), until = due.comparisonValue(true);
-                if (from > until) {
+                // RFC 5545 requires a synced DUE to be strictly later than DTSTART.
+                if (from > until || (!available.get(pos).isLocal() && newStart >= newDue)) {
                     android.widget.Toast.makeText(this, R.string.tasks_invalid_range,
                             android.widget.Toast.LENGTH_SHORT).show();
                     return;
@@ -515,7 +516,8 @@ public final class TaskListActivity extends AppCompatActivity {
             task.countdown = newDue != null && countdown.isChecked();
             task.listId = available.get(pos).id;
             Long display = task.displayTime();
-            task.rule = display == null ? null : (repeatIndex[0] == initialRepeat ? oldRule : RULES[repeatIndex[0]]);
+            task.rule = repeatIndex[0] == initialRepeat ? oldRule
+                    : display == null || repeatIndex[0] < 0 ? null : RULES[repeatIndex[0]];
             if (!java.util.Objects.equals(oldDisplay, display) || oldAllDay != task.displayAllDay()
                     || !java.util.Objects.equals(oldZone, task.tz)
                     || !java.util.Objects.equals(oldRule, task.rule) || task.anchor == null) {

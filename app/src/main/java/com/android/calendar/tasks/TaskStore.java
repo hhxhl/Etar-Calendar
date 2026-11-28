@@ -320,6 +320,7 @@ public final class TaskStore extends SQLiteOpenHelper {
             v.put("show_countdown", t.due != null && t.countdown ? 1 : 0);
             v.put("due", t.due);
             v.put("dtstart", t.start);
+            if (t.due != null || t.start == null) v.putNull("duration");
             v.put("recurrence_anchor", t.anchor);
             v.put("alarm_at", t.alarmTime());
             v.put("repeat_minute", t.repeatMinute);

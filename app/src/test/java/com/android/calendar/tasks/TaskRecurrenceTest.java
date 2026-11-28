@@ -105,6 +105,17 @@ public class TaskRecurrenceTest {
         assertEquals(ms("2027-01-06T00:00:00Z"), t.rangeEnd(zone));
     }
 
+    @Test public void allDayStartAlarmUsesSameDateFlag() {
+        TaskStore.Task t = new TaskStore.Task();
+        t.start = ms("2027-01-01T00:00:00Z");
+        t.due = ms("2027-01-02T00:00:00Z");
+        t.allDay = true;
+        t.tz = "Asia/Tokyo";
+        t.alarm = true;
+        t.alarmMode = TaskStore.Task.ALARM_START;
+        assertEquals(Long.valueOf(ms("2026-12-31T15:00:00Z")), t.alarmTime());
+    }
+
     @Test public void startOnlyAllDayUsesDate() {
         TaskStore.Task t = new TaskStore.Task();
         t.start = ms("2027-01-01T00:00:00Z");
