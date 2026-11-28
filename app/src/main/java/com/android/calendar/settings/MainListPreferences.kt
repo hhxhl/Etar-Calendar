@@ -43,6 +43,22 @@ class MainListPreferences : PreferenceFragmentCompat() {
     private lateinit var mainListViewModel: MainListViewModel
 
     private var currentCalendars = mutableSetOf<Long>()
+    private val taskChanges = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: android.content.Context, intent: Intent) {
+            updateTaskListPreferences(preferenceScreen)
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        ContextCompat.registerReceiver(requireContext(), taskChanges,
+            android.content.IntentFilter(TaskStore.ACTION_TASKS_CHANGED), ContextCompat.RECEIVER_NOT_EXPORTED)
+    }
+
+    override fun onStop() {
+        requireContext().unregisterReceiver(taskChanges)
+        super.onStop()
+    }
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         val context = preferenceManager.context
@@ -185,11 +201,7 @@ class MainListPreferences : PreferenceFragmentCompat() {
             title = getString(R.string.tasks_add_caldav_list)
             icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_add)
             setOnPreferenceClickListener {
-                MaterialAlertDialogBuilder(requireContext())
-                        .setTitle(R.string.tasks_add_caldav_list)
-                        .setMessage(R.string.tasks_caldav_list_unavailable)
-                        .setPositiveButton(android.R.string.ok, null)
-                        .show()
+                launchDavX5Login()
                 true
             }
         })
@@ -206,29 +218,42 @@ class MainListPreferences : PreferenceFragmentCompat() {
     }
 
     private fun updateTaskListPreferences(screen: PreferenceScreen) {
-        val categoryKey = "offline_task_lists"
-        val old = screen.findPreference<PreferenceCategory>(categoryKey)
-        if (old != null) screen.removePreference(old)
-        val lists = TaskStore.get(requireContext()).lists()
-        if (lists.isEmpty()) return
-        val category = PreferenceCategory(requireContext()).apply {
-            key = categoryKey
-            title = getString(R.string.tasks_offline_lists)
-            icon = ContextCompat.getDrawable(requireContext(), R.drawable.outline_account_circle)
-            order = 11
-            isOrderingAsAdded = false
+        val oldTaskKeys = mutableListOf<String>()
+        for (i in 0 until screen.preferenceCount) {
+            val group = screen.getPreference(i) as? PreferenceCategory ?: continue
+            for (j in 0 until group.preferenceCount) {
+                val key = group.getPreference(j).key ?: continue
+                if (key.startsWith("task_list_")) oldTaskKeys.add(key)
+            }
         }
-        // A PreferenceGroup must be attached to the screen before adding children,
-        // otherwise AndroidX has no PreferenceManager to allocate their IDs.
-        screen.addPreference(category)
-        for (list in lists) {
+        oldTaskKeys.forEach { screen.removePreferenceRecursively(it) }
+        val empty = mutableListOf<PreferenceCategory>()
+        for (i in 0 until screen.preferenceCount) {
+            val category = screen.getPreference(i) as? PreferenceCategory ?: continue
+            if (category.preferenceCount == 0) empty.add(category)
+        }
+        empty.forEach { screen.removePreference(it) }
+        for (list in TaskStore.get(requireContext()).lists()) {
+            val categoryKey = if (list.isLocal()) "offline_task_lists"
+                else "account_category_${list.accountName}_${list.accountType}"
+            val category = screen.findPreference<PreferenceCategory>(categoryKey)
+                ?: PreferenceCategory(requireContext()).apply {
+                    key = categoryKey
+                    title = if (list.isLocal()) getString(R.string.tasks_offline_lists) else list.accountName
+                    icon = ContextCompat.getDrawable(requireContext(), R.drawable.outline_account_circle)
+                    order = if (list.isLocal()) 11 else 12
+                    isOrderingAsAdded = false
+                    screen.addPreference(this)
+                }
             category.addPreference(Preference(requireContext()).apply {
                 key = "task_list_${list.id}"
                 title = list.name.ifBlank { getString(R.string.tasks_default_list) }
                 icon = getCalendarIcon(
-                        if (list.color == 0) requireContext().getColor(R.color.event_center) else list.color,
-                        list.visible, true)
-                summary = if (list.visible) "" else getString(R.string.tasks_list_hidden)
+                    if (list.color == 0) requireContext().getColor(R.color.event_center) else list.color,
+                    list.visible, list.isLocal() || list.syncEnabled)
+                summary = if (list.isLocal()) {
+                    if (list.visible) "" else getString(R.string.tasks_list_hidden)
+                } else getCalendarSummary(list.visible, list.syncEnabled)
                 fragment = TaskListPreferences::class.java.name
                 extras.putLong(TaskListPreferences.ARG_LIST_ID, list.id)
             })

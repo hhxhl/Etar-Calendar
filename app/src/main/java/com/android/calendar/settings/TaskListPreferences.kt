@@ -56,7 +56,7 @@ class TaskListPreferences : PreferenceFragmentCompat(), OnColorSelectedListener 
         })
 
         screen.addPreference(SourcePreferences.color(context, COLOR_KEY, displayColor(list), ::showColorPicker))
-        screen.addPreference(SourcePreferences.name(context, "task_list_name").apply {
+        if (list.isLocal()) screen.addPreference(SourcePreferences.name(context, "task_list_name").apply {
             isPersistent = false
             text = displayName(list)
             setOnPreferenceChangeListener { _, value ->
@@ -72,7 +72,7 @@ class TaskListPreferences : PreferenceFragmentCompat(), OnColorSelectedListener 
                 }
             }
         })
-        if (listId != 1L) {
+        if (list.isLocal() && listId != 1L) {
             screen.addPreference(SourcePreferences.delete(context, R.string.tasks_delete_list,
                     R.string.tasks_delete_list_confirm, R.string.tasks_delete, android.R.string.cancel) {
                 store.deleteList(listId)
@@ -87,8 +87,14 @@ class TaskListPreferences : PreferenceFragmentCompat(), OnColorSelectedListener 
             info.addPreference(SourcePreferences.info(context, label))
         }
         addInfo(resources.getQuantityString(R.plurals.tasks_list_task_count, items.size, items.size))
-        addInfo(getString(R.string.tasks_offline_list))
-        addInfo(getString(R.string.tasks_offline_list_message))
+        if (list.isLocal()) {
+            addInfo(getString(R.string.tasks_offline_list))
+            addInfo(getString(R.string.tasks_offline_list_message))
+        } else {
+            addInfo(list.accountName)
+            if (!list.syncEnabled) addInfo(getString(R.string.preferences_list_calendar_summary_sync_off))
+            list.remoteUrl?.let { addInfo(it) }
+        }
     }
 
     @Suppress("DEPRECATION")

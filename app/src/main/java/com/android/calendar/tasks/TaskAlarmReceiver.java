@@ -88,10 +88,11 @@ public final class TaskAlarmReceiver extends BroadcastReceiver {
                     PendingIntent view=PendingIntent.getActivity(context,0,open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
                     Intent done=new Intent(context,TaskAlarmReceiver.class).setAction(COMPLETE).setData(Uri.parse("etar-task:"+t.id+":"+alarmTime)).putExtra("id",t.id).putExtra("due",alarmTime.longValue());
                     PendingIntent complete=PendingIntent.getBroadcast(context,0,done,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
-                    nm.notify("task:"+t.id,1,new NotificationCompat.Builder(context,CHANNEL)
+                    NotificationCompat.Builder notification = new NotificationCompat.Builder(context,CHANNEL)
                         .setSmallIcon(android.R.drawable.ic_dialog_info).setContentTitle(t.title).setContentText(t.notes)
-                        .setContentIntent(view).setAutoCancel(true).setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
-                        .addAction(0,context.getString(R.string.tasks_complete),complete).build());
+                        .setContentIntent(view).setAutoCancel(true).setVisibility(NotificationCompat.VISIBILITY_PRIVATE);
+                    if (t.writable) notification.addAction(0,context.getString(R.string.tasks_complete),complete);
+                    nm.notify("task:"+t.id,1,notification.build());
                     store.markFired(t.id,alarmTime);
                 }
             }

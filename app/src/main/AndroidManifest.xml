@@ -53,6 +53,9 @@
         </intent>
     </queries>
 
+    <permission android:name="${applicationId}.permission.READ_TASKS" android:protectionLevel="signature" />
+    <permission android:name="${applicationId}.permission.WRITE_TASKS" android:protectionLevel="signature" />
+
     <application android:name="com.android.calendar.CalendarApplication"
         android:hardwareAccelerated="true"
         android:icon="@mipmap/ic_launcher"
@@ -251,6 +254,13 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/provider_paths"/>
         </provider>
+
+        <provider
+            android:name="com.android.calendar.tasks.TaskProvider"
+            android:authorities="${applicationId}.tasks"
+            android:exported="true"
+            android:readPermission="${applicationId}.permission.READ_TASKS"
+            android:writePermission="${applicationId}.permission.WRITE_TASKS" />
 
         <provider android:name="com.android.calendar.CalendarRecentSuggestionsProvider"
             android:exported="false"

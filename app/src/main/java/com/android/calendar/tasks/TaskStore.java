@@ -38,6 +38,32 @@ public final class TaskStore extends SQLiteOpenHelper {
         appContext.sendBroadcast(new android.content.Intent(ACTION_TASKS_CHANGED)
                 .setPackage(appContext.getPackageName()));
     }
+    private void requestTaskSync(long listId) {
+        TaskList list = findList(listId);
+        if (list != null && !list.isLocal() && list.syncEnabled)
+            appContext.getContentResolver().notifyChange(TaskContract.uri(appContext, "tasks"), null,
+                    android.content.ContentResolver.NOTIFY_SYNC_TO_NETWORK);
+    }
+
+    /** Rebuild derived local fields after an entire remote transaction, not between sub-row writes. */
+    boolean reconcileSyncedTask(SQLiteDatabase db, long id, Task before) {
+        Task after = find(id);
+        if (after == null) return before != null;
+        Long alarm = after.alarmTime();
+        boolean changed = before == null || before.done != after.done
+                || !Objects.equals(before.alarmTime(), alarm);
+        ContentValues values = new ContentValues();
+        values.put("alarm_at", alarm);
+        if (changed) values.putNull("alarm_fired");
+        if (before == null || !Objects.equals(before.displayTime(), after.displayTime())
+                || before.allDay != after.allDay || !Objects.equals(before.rule, after.rule)) {
+            values.put("recurrence_anchor", after.displayTime());
+            values.putNull("repeat_minute");
+        }
+        db.update("tasks", values, "_id=?", new String[]{Long.toString(id)});
+        return changed;
+    }
+
     @Override public void onConfigure(SQLiteDatabase db) { db.setForeignKeyConstraintsEnabled(true); }
     @Override public void onCreate(SQLiteDatabase db) {
         createTables(db);
@@ -47,7 +73,7 @@ public final class TaskStore extends SQLiteOpenHelper {
 
     private static void createTables(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE tasklists (_id INTEGER PRIMARY KEY AUTOINCREMENT, account_name TEXT NOT NULL DEFAULT 'Local', account_type TEXT NOT NULL DEFAULT 'org.dmfs.account.LOCAL', list_name TEXT NOT NULL, list_color INTEGER NOT NULL DEFAULT 0, visible INTEGER NOT NULL DEFAULT 1, sync_enabled INTEGER NOT NULL DEFAULT 0, _sync_id TEXT, sync_version TEXT, sync1 TEXT, list_owner TEXT, list_access_level INTEGER NOT NULL DEFAULT 700)");
-        db.execSQL("CREATE TABLE tasks (_id INTEGER PRIMARY KEY AUTOINCREMENT, list_id INTEGER NOT NULL REFERENCES tasklists(_id) ON DELETE CASCADE, _uid TEXT NOT NULL, _sync_id TEXT, sync_version INTEGER, sync1 TEXT, sync2 INTEGER NOT NULL DEFAULT 0, original_instance_id INTEGER, original_instance_sync_id TEXT, original_instance_time INTEGER, original_instance_allday INTEGER, _dirty INTEGER NOT NULL DEFAULT 1, _deleted INTEGER NOT NULL DEFAULT 0, title TEXT, description TEXT, location TEXT, geo TEXT, organizer TEXT, class TEXT, duration TEXT, rdate TEXT, exdate TEXT, parent_id INTEGER, completed_is_allday INTEGER NOT NULL DEFAULT 0, due INTEGER, dtstart INTEGER, is_allday INTEGER NOT NULL DEFAULT 0, tz TEXT, status INTEGER NOT NULL DEFAULT 0, completed INTEGER, percent_complete INTEGER NOT NULL DEFAULT 0, priority INTEGER NOT NULL DEFAULT 0, rrule TEXT, created INTEGER, last_modified INTEGER, alarm_fired INTEGER, repeat_minute INTEGER, task_color INTEGER, url TEXT, show_countdown INTEGER NOT NULL DEFAULT 0, recurrence_anchor INTEGER, alarm_at INTEGER, UNIQUE(list_id,_uid))");
+        db.execSQL("CREATE TABLE tasks (_id INTEGER PRIMARY KEY AUTOINCREMENT, list_id INTEGER NOT NULL REFERENCES tasklists(_id) ON DELETE CASCADE, _uid TEXT NOT NULL, _sync_id TEXT, sync_version INTEGER, sync1 TEXT, sync2 INTEGER NOT NULL DEFAULT 0, original_instance_id INTEGER, original_instance_sync_id TEXT, original_instance_time INTEGER, original_instance_allday INTEGER, _dirty INTEGER NOT NULL DEFAULT 1, _deleted INTEGER NOT NULL DEFAULT 0, title TEXT, description TEXT, location TEXT, geo TEXT, organizer TEXT, class INTEGER, duration TEXT, rdate TEXT, exdate TEXT, parent_id INTEGER, completed_is_allday INTEGER NOT NULL DEFAULT 0, due INTEGER, dtstart INTEGER, is_allday INTEGER NOT NULL DEFAULT 0, tz TEXT, status INTEGER NOT NULL DEFAULT 0, completed INTEGER, percent_complete INTEGER DEFAULT 0, priority INTEGER NOT NULL DEFAULT 0, rrule TEXT, created INTEGER, last_modified INTEGER, alarm_fired INTEGER, repeat_minute INTEGER, task_color INTEGER, url TEXT, show_countdown INTEGER NOT NULL DEFAULT 0, recurrence_anchor INTEGER, alarm_at INTEGER, UNIQUE(list_id,_uid))");
         db.execSQL("CREATE TABLE properties (property_id INTEGER PRIMARY KEY AUTOINCREMENT, task_id INTEGER NOT NULL REFERENCES tasks(_id) ON DELETE CASCADE, mimetype TEXT NOT NULL, data0, data1, data2, data3, data4, data5, data6, data7, data8, data9, data10, data11, data12, data13, data14, data15)");
     }
 
@@ -83,7 +109,8 @@ public final class TaskStore extends SQLiteOpenHelper {
         public boolean writable = true;
         public int alarmMode=ALARM_DUE, alarmOffset;
         public ZoneId zone() {
-            return tz == null ? ZoneId.systemDefault() : ZoneId.of(tz);
+            try { return tz == null ? ZoneId.systemDefault() : ZoneId.of(tz); }
+            catch (java.time.DateTimeException ex) { return ZoneId.systemDefault(); }
         }
         /** All-day dates are stored at UTC midnight, but alarms use local wall time. */
         private Long timedValue(Long value, boolean dateOnly) {
@@ -321,6 +348,7 @@ public final class TaskStore extends SQLiteOpenHelper {
         if (resetNotification) TaskAlarmReceiver.dismiss(appContext, t.id);
         // Title, notes, URL and color changes do not change the next alarm.
         notifyChanged(resetNotification);
+        requestTaskSync(t.listId);
         return t.id;
     }
 
@@ -341,6 +369,7 @@ public final class TaskStore extends SQLiteOpenHelper {
         if (changed > 0) {
             TaskAlarmReceiver.dismiss(appContext, id);
             notifyChanged();
+            requestTaskSync(task.listId);
         }
     }
 
@@ -435,12 +464,14 @@ public final class TaskStore extends SQLiteOpenHelper {
         }
         TaskAlarmReceiver.dismiss(appContext, id);
         notifyChanged();
+        Task task = find(id);
+        if (task != null) requestTaskSync(task.listId);
     }
 
     private static final String ALARM_FILTER = " AND t.status IN (0,1)"
             + " AND t.alarm_at IS NOT NULL AND t.alarm_fired IS NULL"
             + " AND EXISTS(SELECT 1 FROM properties p WHERE p.task_id=t._id AND p.mimetype='vnd.android.cursor.item/alarm')";
-    private static final String ALARMS = " FROM tasks t WHERE t._deleted=0" + ALARM_FILTER;
+    private static final String ALARMS = " FROM tasks t WHERE t._deleted=0 AND t.original_instance_id IS NULL" + ALARM_FILTER;
     public Long nextAlarm() {
         try(Cursor c=getReadableDatabase().rawQuery("SELECT MIN(t.alarm_at)"+ALARMS,null)){return c.moveToFirst()&&!c.isNull(0)?c.getLong(0):null;}
     }
