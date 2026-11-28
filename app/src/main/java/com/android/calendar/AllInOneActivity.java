@@ -300,7 +300,7 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
             timeMillis = icicle.getLong(BUNDLE_KEY_RESTORE_TIME);
             viewType = icicle.getInt(BUNDLE_KEY_RESTORE_VIEW, -1);
             mAgendaRestoreState = icicle.getBundle(BUNDLE_KEY_AGENDA_STATE);
-            mReminderRestoreState = icicle.getBundle("task_view_state");
+            mReminderRestoreState = icicle.getBundle("reminder_view_state");
         } else {
             String action = intent.getAction();
             if (Intent.ACTION_VIEW.equals(action)) {
@@ -313,7 +313,6 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
             }
         }
 
-        viewType = Utils.normalizeSavedView(viewType);
         if (viewType == -1 || viewType > ViewType.MAX_VALUE) {
             viewType = Utils.getViewTypeFromIntentAndSharedPref(this);
         }
@@ -753,7 +752,7 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         } else if (isReminderView(mCurrentView)) {
             Fragment f = getSupportFragmentManager().findFragmentById(R.id.main_pane);
             if (f instanceof com.android.calendar.tasks.DatedRemindersFragment reminders)
-                outState.putBundle("task_view_state", reminders.saveViewState());
+                outState.putBundle("reminder_view_state", reminders.saveViewState());
         } else if (mCurrentView == ViewType.AGENDA) {
             FragmentManager fm = getSupportFragmentManager();
             Fragment f = fm.findFragmentById(R.id.main_pane);

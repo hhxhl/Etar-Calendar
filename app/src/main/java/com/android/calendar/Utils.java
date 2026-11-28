@@ -255,9 +255,11 @@ public class Utils {
         return getPreferredStartView(activity);
     }
 
-    /** A saved standalone-task destination from an older release opens Reminders. */
-    public static int normalizeSavedView(int view) {
-        return view == 7 ? ViewType.REMINDERS : view;
+    /** Validate the current set of selectable destinations, without legacy mappings. */
+    private static int validStartView(int view) {
+        return view == ViewType.DAY || view == ViewType.WEEK || view == ViewType.MONTH
+                || view == ViewType.AGENDA || view == ViewType.REMINDERS
+                ? view : GeneralPreferences.DEFAULT_START_VIEW;
     }
 
     /** Resolves the general default-view preference independently of launch intent extras. */
@@ -270,10 +272,10 @@ public class Utils {
             // Return the last view used
             int last = prefs.getInt(
                     GeneralPreferences.KEY_START_VIEW, GeneralPreferences.DEFAULT_START_VIEW);
-            return normalizeSavedView(last);
+            return validStartView(last);
         } else {
             // Return the default view
-            return normalizeSavedView(defaultStart);
+            return validStartView(defaultStart);
         }
     }
 

@@ -25,7 +25,7 @@ public final class TaskStore extends SQLiteOpenHelper {
     }
     private final Context appContext;
     private TaskStore(Context context) {
-        super(context, "tasks.db", null, 4);
+        super(context, "reminders.db", null, 1);
         appContext = context.getApplicationContext();
     }
     public static final String ACTION_TASKS_CHANGED = "com.android.calendar.tasks.CHANGED";
@@ -59,51 +59,9 @@ public final class TaskStore extends SQLiteOpenHelper {
     }
 
     @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        if (newVersion != 4 || oldVersion < 1 || oldVersion > 3)
-            throw new IllegalStateException("Missing task database migration");
-        if (oldVersion >= 2) {
-            if (oldVersion == 2) {
-            db.execSQL("ALTER TABLE tasks ADD COLUMN item_color INTEGER NOT NULL DEFAULT 0");
-            db.execSQL("ALTER TABLE tasks ADD COLUMN url TEXT NOT NULL DEFAULT ''");
-            db.execSQL("ALTER TABLE tasks ADD COLUMN show_countdown INTEGER NOT NULL DEFAULT 0");
-            }
-            db.execSQL("ALTER TABLE tasks ADD COLUMN recurrence_anchor INTEGER");
-            db.execSQL("ALTER TABLE tasks ADD COLUMN start_all_day INTEGER NOT NULL DEFAULT 0");
-            db.execSQL("ALTER TABLE tasks ADD COLUMN alarm_mode INTEGER NOT NULL DEFAULT 2");
-            db.execSQL("ALTER TABLE tasks ADD COLUMN alarm_offset INTEGER NOT NULL DEFAULT 0");
-            db.execSQL("ALTER TABLE tasks ADD COLUMN alarm_absolute INTEGER");
-            db.execSQL("ALTER TABLE tasks ADD COLUMN alarm_at INTEGER");
-            db.execSQL("CREATE INDEX task_alarm ON tasks(status, _deleted, alarm_at)");
-            migrateLegacyTimes(db);
-            return;
-        }
-        // The v1 rebuild below creates the current schema; new fields use defaults.
-        // SQLiteOpenHelper already wraps upgrades in a transaction. Rename parents
-        // before children so the old foreign keys continue referencing old tables.
-        db.execSQL("ALTER TABLE tasklists RENAME TO old_tasklists");
-        db.execSQL("ALTER TABLE tasks RENAME TO old_tasks");
-        db.execSQL("ALTER TABLE properties RENAME TO old_properties");
-        createTables(db);
-        db.execSQL("INSERT INTO tasklists SELECT * FROM old_tasklists");
-        db.execSQL("INSERT INTO tasks (_id,list_id,_uid,_sync_id,sync_version,_dirty,_deleted,title,description,due,dtstart,is_allday,tz,status,completed,percent_complete,priority,rrule,created,last_modified,alarm_fired) "
-                + "SELECT _id,list_id,_uid,_sync_id,sync_version,_dirty,_deleted,title,description,due,dtstart,is_allday,tz,status,completed,percent_complete,priority,rrule,created,last_modified,alarm_fired FROM old_tasks");
-        db.execSQL("INSERT INTO properties SELECT * FROM old_properties");
-        db.execSQL("DROP TABLE old_properties");
-        db.execSQL("DROP TABLE old_tasks");
-        db.execSQL("DROP TABLE old_tasklists");
-        createIndexes(db);
-        migrateLegacyTimes(db);
+        throw new IllegalStateException("Unsupported reminder database version: " + oldVersion);
     }
 
-    /** Old DTSTART was a recurrence anchor, not a user-selected start date. */
-    private static void migrateLegacyTimes(SQLiteDatabase db) {
-        db.execSQL("UPDATE tasks SET recurrence_anchor=dtstart, dtstart=NULL");
-        db.execSQL("UPDATE tasks SET alarm_at=due WHERE is_allday=0 AND due IS NOT NULL"
-                + " AND EXISTS(SELECT 1 FROM properties p WHERE p.task_id=tasks._id"
-                + " AND p.mimetype='vnd.android.cursor.item/alarm')");
-        db.execSQL("DELETE FROM properties WHERE mimetype='vnd.android.cursor.item/alarm'"
-                + " AND task_id IN (SELECT _id FROM tasks WHERE alarm_at IS NULL)");
-    }
     public static final class TaskList {
         public long id;
         public String name;
