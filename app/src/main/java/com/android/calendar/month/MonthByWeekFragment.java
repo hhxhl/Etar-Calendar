@@ -320,7 +320,8 @@ public class MonthByWeekFragment extends SimpleDayPickerFragment implements
 
         // To get a smoother transition when showing this fragment, delay loading of events until
         // the fragment is expended fully and the calendar controls are gone.
-        if (Utils.isCalendarPermissionGranted(mContext, true) && !mIsMiniMonth) {
+        if (!mIsMiniMonth) {
+            Utils.isCalendarPermissionGranted(mContext, true);
             if (mShowCalendarControls) {
                 mListView.postDelayed(mLoadingRunnable, mEventsLoadingDelay);
             } else {
@@ -359,7 +360,18 @@ public class MonthByWeekFragment extends SimpleDayPickerFragment implements
 
             loader = new CursorLoader(
                     requireActivity(), mEventUri, Event.EVENT_PROJECTION, where,
-                    null /* WHERE_CALENDARS_SELECTED_ARGS */, INSTANCES_SORT_ORDER);
+                    null /* WHERE_CALENDARS_SELECTED_ARGS */, INSTANCES_SORT_ORDER) {
+                @Override public Cursor loadInBackground() {
+                    if (!Utils.isCalendarPermissionGranted(getContext(), false))
+                        return new android.database.MatrixCursor(Event.EVENT_PROJECTION, 0);
+                    try {
+                        return super.loadInBackground();
+                    } catch (SecurityException denied) {
+                        if (Utils.isCalendarPermissionGranted(getContext(), false)) throw denied;
+                        return new android.database.MatrixCursor(Event.EVENT_PROJECTION, 0);
+                    }
+                }
+            };
             loader.setUpdateThrottle(LOADER_THROTTLE_DELAY);
         }
         if (Log.isLoggable(TAG, Log.DEBUG)) {

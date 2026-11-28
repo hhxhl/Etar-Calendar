@@ -196,13 +196,7 @@ public class Event implements Cloneable {
             Debug.startMethodTracing("loadEvents");
         }
 
-        if (!Utils.isCalendarPermissionGranted(context, false)) {
-            //If permission is not granted then just return.
-            return;
-        }
-
         Cursor cEvents = null;
-        Cursor cAllday = null;
 
         events.clear();
         try {
@@ -223,19 +217,16 @@ public class Event implements Cloneable {
             boolean hideDeclined = prefs.getBoolean(GeneralPreferences.KEY_HIDE_DECLINED,
                     false);
 
-            String where = EVENTS_WHERE;
-            String whereAllday = ALLDAY_WHERE;
-            if (hideDeclined) {
-                String hideString = " AND " + Instances.SELF_ATTENDEE_STATUS + "!="
-                        + Attendees.ATTENDEE_STATUS_DECLINED;
-                where += hideString;
-                whereAllday += hideString;
+            String where = hideDeclined ? Instances.SELF_ATTENDEE_STATUS + "!="
+                    + Attendees.ATTENDEE_STATUS_DECLINED : null;
+            if (Utils.isCalendarPermissionGranted(context, false)) {
+                try {
+                    cEvents = instancesQuery(context.getContentResolver(), EVENT_PROJECTION, startDay,
+                            endDay, where, null, SORT_EVENTS_BY);
+                } catch (SecurityException denied) {
+                    if (Utils.isCalendarPermissionGranted(context, false)) throw denied;
+                }
             }
-
-            cEvents = instancesQuery(context.getContentResolver(), EVENT_PROJECTION, startDay,
-                    endDay, where, null, SORT_EVENTS_BY);
-            cAllday = instancesQuery(context.getContentResolver(), EVENT_PROJECTION, startDay,
-                    endDay, whereAllday, null, SORT_ALLDAY_BY);
 
             // Check if we should return early because there are more recent
             // load requests waiting.
@@ -243,16 +234,12 @@ public class Event implements Cloneable {
                 return;
             }
 
-            buildEventsFromCursor(events, cEvents, context, startDay, endDay);
-            buildEventsFromCursor(events, cAllday, context, startDay, endDay);
+            if (cEvents != null) buildEventsFromCursor(events, cEvents, context, startDay, endDay);
             com.android.calendar.tasks.TaskCalendarUi.append(context, events, startDay, endDay);
 
         } finally {
             if (cEvents != null) {
                 cEvents.close();
-            }
-            if (cAllday != null) {
-                cAllday.close();
             }
             if (PROFILE) {
                 Debug.stopMethodTracing();

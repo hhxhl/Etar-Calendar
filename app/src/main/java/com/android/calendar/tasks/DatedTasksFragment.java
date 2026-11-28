@@ -129,7 +129,7 @@ public final class DatedTasksFragment extends Fragment implements CalendarContro
     private void refresh(boolean preservePosition) {
         if (loader == null || list == null || !isAdded()) return;
         ZoneId queryZone = zone();
-        loader.request(listId, id -> DatedItemsRepository.tasks(store, id, queryZone), result -> {
+        loader.request(listId, (id, signal) -> DatedItemsRepository.tasks(store, id, queryZone, signal), result -> {
             if (list == null || !isAdded()) return;
             listId = result.selected;
             TaskListUi.bindFilter(filter, result.lists, R.string.tasks_all, listId, selected -> {

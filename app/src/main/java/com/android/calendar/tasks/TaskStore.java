@@ -220,22 +220,37 @@ public final class TaskStore extends SQLiteOpenHelper {
     public List<Task> visibleTasks(long listId) {
         return queryTasks(listId, true, false);
     }
+    public List<Task> visibleTasks(long listId, android.os.CancellationSignal signal) {
+        return queryTasks(listId, true, false, signal);
+    }
     private static final String DISPLAY_TIME = "COALESCE(t.due,t.dtstart,t.alarm_at)";
     private static final String DISPLAY_ALL_DAY = "CASE WHEN t.due IS NOT NULL THEN t.is_allday WHEN t.dtstart IS NOT NULL THEN t.is_allday ELSE 0 END";
     public List<Task> visibleUndatedTasks(long listId) {
         return queryTasks(listId, true, true);
     }
+    public List<Task> visibleUndatedTasks(long listId, android.os.CancellationSignal signal) {
+        return queryTasks(listId, true, true, signal);
+    }
     private List<Task> queryTasks(long listId, boolean visibleOnly, boolean undatedOnly) {
+        return queryTasks(listId, visibleOnly, undatedOnly, null);
+    }
+    private List<Task> queryTasks(long listId, boolean visibleOnly, boolean undatedOnly, android.os.CancellationSignal signal) {
         ArrayList<Task> result=new ArrayList<>();
         String filter=listId==0?"":" AND t.list_id=?";
         if (visibleOnly) filter += " AND l.visible=1";
         if (undatedOnly) filter += " AND "+DISPLAY_TIME+" IS NULL";
-        try(Cursor c=getReadableDatabase().rawQuery(SELECT+filter+" ORDER BY t.status>=2,"+DISPLAY_TIME+" IS NULL,"+DISPLAY_TIME+",t._id",listId==0?null:new String[]{Long.toString(listId)})) {
-            while(c.moveToNext()) result.add(read(c));
+        try(Cursor c=getReadableDatabase().rawQuery(SELECT+filter+" ORDER BY t.status>=2,"+DISPLAY_TIME+" IS NULL,"+DISPLAY_TIME+",t._id",listId==0?null:new String[]{Long.toString(listId)}, signal)) {
+            while(c.moveToNext()) {
+                if (signal != null) signal.throwIfCanceled();
+                result.add(read(c));
+            }
         }
         return result;
     }
     public List<Task> datedTasks(long from,long until,long utcFrom,long utcUntil) {
+        return datedTasks(from, until, utcFrom, utcUntil, null);
+    }
+    public List<Task> datedTasks(long from,long until,long utcFrom,long utcUntil, android.os.CancellationSignal signal) {
         ArrayList<Task> result=new ArrayList<>();
         // Query overlapping ranges as well as isolated display points.
         String where=" AND ((t.dtstart IS NOT NULL AND t.due IS NOT NULL"
@@ -247,8 +262,11 @@ public final class TaskStore extends SQLiteOpenHelper {
                 + " AND l.visible=1";
         try(Cursor c=getReadableDatabase().rawQuery(SELECT+where+" ORDER BY "+DISPLAY_TIME+",t._id",
                 new String[]{Long.toString(until),Long.toString(utcUntil),Long.toString(from),Long.toString(utcFrom),
-                        Long.toString(from),Long.toString(until),Long.toString(utcFrom),Long.toString(utcUntil)})){
-            while(c.moveToNext())result.add(read(c));
+                        Long.toString(from),Long.toString(until),Long.toString(utcFrom),Long.toString(utcUntil)}, signal)){
+            while(c.moveToNext()) {
+                if (signal != null) signal.throwIfCanceled();
+                result.add(read(c));
+            }
         }
         return result;
     }

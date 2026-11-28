@@ -184,6 +184,7 @@ public class EventLoader {
             //query which days have events
             Cursor cursor = EventDays.query(cr, startDay, numDays, PROJECTION);
             try {
+                if (cursor == null) { eventLoader.postCallback(uiCallback); return; }
                 int startDayColumnIndex = cursor.getColumnIndexOrThrow(EventDays.STARTDAY);
                 int endDayColumnIndex = cursor.getColumnIndexOrThrow(EventDays.ENDDAY);
 
@@ -193,7 +194,7 @@ public class EventLoader {
                     int lastDay = cursor.getInt(endDayColumnIndex);
                     //we want the entire range the event occurs, but only within the month
                     int firstIndex = Math.max(firstDay - startDay, 0);
-                    int lastIndex = Math.min(lastDay - startDay, 30);
+                    int lastIndex = Math.min(lastDay - startDay, eventDays.length - 1);
 
                     for(int i = firstIndex; i <= lastIndex; i++) {
                         eventDays[i] = true;
@@ -232,12 +233,23 @@ public class EventLoader {
         }
 
         public void processRequest(EventLoader eventLoader) {
-            Event.loadEvents(eventLoader.mContext, events, startDay,
-                    numDays, id, eventLoader.mSequenceNumber);
+            ArrayList<Event> snapshot = new ArrayList<>();
+            try {
+                Event.loadEvents(eventLoader.mContext, snapshot, startDay,
+                        numDays, id, eventLoader.mSequenceNumber);
+            } catch (RuntimeException error) {
+                Log.w("Cal", "Could not load calendar items", error);
+                eventLoader.postCallback(cancelCallback);
+                return;
+            }
 
             // Check again on the main thread; another request may arrive before delivery.
             eventLoader.postCallback(() -> {
-                if (id == eventLoader.mSequenceNumber.get()) successCallback.run();
+                if (id == eventLoader.mSequenceNumber.get()) {
+                    events.clear();
+                    events.addAll(snapshot);
+                    successCallback.run();
+                }
                 else cancelCallback.run();
             });
         }

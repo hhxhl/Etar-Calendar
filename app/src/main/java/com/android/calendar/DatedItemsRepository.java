@@ -121,9 +121,9 @@ public final class DatedItemsRepository {
                 first.atStartOfDay(zone).toInstant().toEpochMilli(),
                 until.atStartOfDay(zone).toInstant().toEpochMilli(),
                 first.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
-                until.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli());
+                until.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(), signal);
         signal.throwIfCanceled();
-        candidates.addAll(store.visibleUndatedTasks(listId));
+        candidates.addAll(store.visibleUndatedTasks(listId, signal));
         for (TaskStore.Task task : candidates) {
             signal.throwIfCanceled();
             if (listId != 0 && task.listId != listId) continue;
@@ -141,9 +141,10 @@ public final class DatedItemsRepository {
         return value != null && value.toLowerCase(Locale.ROOT).contains(keyword);
     }
 
-    public static List<Item<TaskStore.Task>> tasks(TaskStore store, long listId, ZoneId zone) {
+    public static List<Item<TaskStore.Task>> tasks(TaskStore store, long listId, ZoneId zone, CancellationSignal signal) {
         ArrayList<Item<TaskStore.Task>> items = new ArrayList<>();
-        for (TaskStore.Task task : store.visibleTasks(listId)) {
+        for (TaskStore.Task task : store.visibleTasks(listId, signal)) {
+            signal.throwIfCanceled();
             LocalDate date = TaskTimes.displayDay(task, zone);
             items.add(new Item<>(date, task));
         }
