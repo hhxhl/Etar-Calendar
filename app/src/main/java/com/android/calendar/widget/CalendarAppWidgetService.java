@@ -228,13 +228,11 @@ public class CalendarAppWidgetService extends RemoteViewsService {
             }
 
             RowInfo rowInfo = mModel.mRowInfos.get(position);
-            if (rowInfo.mType == RowInfo.TYPE_DAY || rowInfo.mType == RowInfo.TYPE_UNDATED) {
+            if (rowInfo.mType == RowInfo.TYPE_DAY) {
                 RemoteViews views = new RemoteViews(mContext.getPackageName(),
                         R.layout.appwidget_day);
-                String label = rowInfo.mType == RowInfo.TYPE_UNDATED
-                        ? mContext.getString(R.string.tasks_no_date_count, rowInfo.mIndex)
-                        : mModel.mDayInfos.get(rowInfo.mIndex).mDayLabel;
-                updateTextView(views, R.id.date, View.VISIBLE, label);
+                DayInfo dayInfo = mModel.mDayInfos.get(rowInfo.mIndex);
+                updateTextView(views, R.id.date, View.VISIBLE, dayInfo.mDayLabel);
                 views.setColorStateList(R.id.date, "setTextColor", R.color.widget_live_text);
                 return views;
             } else {
@@ -304,7 +302,6 @@ public class CalendarAppWidgetService extends RemoteViewsService {
                 return 0;
             }
             RowInfo rowInfo = mModel.mRowInfos.get(position);
-            if (rowInfo.mType == RowInfo.TYPE_UNDATED) return Long.MIN_VALUE;
             if (rowInfo.mType == RowInfo.TYPE_DAY) {
                 return rowInfo.mIndex;
             }

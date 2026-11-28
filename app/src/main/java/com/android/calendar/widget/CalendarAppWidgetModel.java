@@ -187,7 +187,7 @@ class CalendarAppWidgetModel {
         }
     }
 
-    /** Independent section: no fabricated start, due or all-day date. */
+    /** Prepend compact undated rows without adding section headers or fabricated dates. */
     void prependUndatedTasks(java.util.List<com.android.calendar.tasks.TaskStore.Task> tasks,
             java.util.Set<String> selectedLists, String timeZone) {
         java.util.ArrayList<RowInfo> undated = new java.util.ArrayList<>();
@@ -206,13 +206,6 @@ class CalendarAppWidgetModel {
             undated.add(new RowInfo(RowInfo.TYPE_MEETING, mEventInfos.size()));
             mEventInfos.add(info);
         }
-        if (undated.isEmpty()) return;
-        if (!mRowInfos.isEmpty() && mRowInfos.get(0).mType == RowInfo.TYPE_MEETING) {
-            int index = mDayInfos.size();
-            mDayInfos.add(populateDayInfo(mTodayJulianDay, new Time(timeZone)));
-            mRowInfos.add(0, new RowInfo(RowInfo.TYPE_DAY, index));
-        }
-        undated.add(0, new RowInfo(RowInfo.TYPE_UNDATED, undated.size()));
         mRowInfos.addAll(0, undated);
     }
 
@@ -305,7 +298,6 @@ class CalendarAppWidgetModel {
     static class RowInfo {
         static final int TYPE_DAY = 0;
         static final int TYPE_MEETING = 1;
-        static final int TYPE_UNDATED = 2;
 
         /**
          * mType is either a day header (TYPE_DAY) or an event (TYPE_MEETING)
