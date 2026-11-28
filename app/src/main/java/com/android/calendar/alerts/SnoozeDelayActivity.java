@@ -16,66 +16,57 @@
 
 package com.android.calendar.alerts;
 
-import android.app.Activity;
-import android.app.Dialog;
-import android.app.TimePickerDialog;
-import android.content.DialogInterface;
 import android.content.Intent;
-import android.widget.TimePicker;
+import android.os.Bundle;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.android.calendar.Utils;
 import com.android.calendar.settings.GeneralPreferences;
+import com.google.android.material.timepicker.MaterialTimePicker;
+import com.google.android.material.timepicker.TimeFormat;
 
 import ws.xsoh.etar.R;
 
-public class SnoozeDelayActivity extends Activity implements
-        TimePickerDialog.OnTimeSetListener, DialogInterface.OnCancelListener {
-    private static final int DIALOG_DELAY = 1;
+public class SnoozeDelayActivity extends AppCompatActivity {
+    private static final String PICKER_TAG = "snooze_delay";
 
     @Override
-    protected void onResume() {
-        super.onResume();
-        showDialog(DIALOG_DELAY);
-    }
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
 
-    @Override
-    protected Dialog onCreateDialog(int id) {
-        if (id == DIALOG_DELAY) {
-            TimePickerDialog d = new TimePickerDialog(this, this, 0, 0, true);
-            d.setTitle(R.string.snooze_delay_dialog_title);
-            d.setCancelable(true);
-            d.setOnCancelListener(this);
-            return d;
-        }
-
-        return super.onCreateDialog(id);
-    }
-
-    @Override
-    protected void onPrepareDialog(int id, Dialog d) {
-        if (id == DIALOG_DELAY) {
-            TimePickerDialog tpd = (TimePickerDialog) d;
+        MaterialTimePicker picker = (MaterialTimePicker) getSupportFragmentManager()
+                .findFragmentByTag(PICKER_TAG);
+        boolean isNew = picker == null;
+        if (isNew) {
             int delayMinutes = (int) (Utils.getDefaultSnoozeDelayMs(this) / (60L * 1000L));
-
             if (delayMinutes < 0) {
                 delayMinutes = GeneralPreferences.SNOOZE_DELAY_DEFAULT_TIME;
             }
-
-            int hours = delayMinutes / 60;
-            int minutes = delayMinutes % 60;
-
-            tpd.updateTime(hours, minutes);
+            // The original picker represents a duration of less than 24 hours.
+            delayMinutes = Math.min(delayMinutes, 23 * 60 + 59);
+            picker = new MaterialTimePicker.Builder()
+                    .setTitleText(R.string.snooze_delay_dialog_title)
+                    .setTimeFormat(TimeFormat.CLOCK_24H)
+                    .setInputMode(MaterialTimePicker.INPUT_MODE_KEYBOARD)
+                    .setHour(delayMinutes / 60)
+                    .setMinute(delayMinutes % 60)
+                    .build();
         }
-        super.onPrepareDialog(id, d);
+        MaterialTimePicker delayPicker = picker;
+        picker.addOnPositiveButtonClickListener(view ->
+                snooze(delayPicker.getHour(), delayPicker.getMinute()));
+        picker.addOnDismissListener(dialog -> {
+            if (!isChangingConfigurations()) {
+                finish();
+            }
+        });
+        if (isNew) {
+            picker.show(getSupportFragmentManager(), PICKER_TAG);
+        }
     }
 
-    @Override
-    public void onCancel(DialogInterface d) {
-        finish();
-    }
-
-    @Override
-    public void onTimeSet(TimePicker view, int hour, int minute) {
+    private void snooze(int hour, int minute) {
         long delay = (hour * 60 + minute) * 60L * 1000L;
         Intent intent = getIntent();
         intent.setClass(this, SnoozeAlarmsService.class);
