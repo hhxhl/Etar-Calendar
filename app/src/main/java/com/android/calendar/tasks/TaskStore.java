@@ -25,7 +25,7 @@ public final class TaskStore extends SQLiteOpenHelper {
     }
     private final Context appContext;
     private TaskStore(Context context) {
-        super(context, "tasks.db", null, 3);
+        super(context, "tasks.db", null, 4);
         appContext = context.getApplicationContext();
     }
     public static final String ACTION_TASKS_CHANGED = "com.android.calendar.tasks.CHANGED";
@@ -47,25 +47,35 @@ public final class TaskStore extends SQLiteOpenHelper {
 
     private static void createTables(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE tasklists (_id INTEGER PRIMARY KEY AUTOINCREMENT, account_name TEXT NOT NULL DEFAULT 'Local', account_type TEXT NOT NULL DEFAULT 'org.dmfs.account.LOCAL', list_name TEXT NOT NULL, list_color INTEGER NOT NULL DEFAULT 0, visible INTEGER NOT NULL DEFAULT 1, sync_enabled INTEGER NOT NULL DEFAULT 0, _sync_id TEXT, sync_version TEXT)");
-        db.execSQL("CREATE TABLE tasks (_id INTEGER PRIMARY KEY AUTOINCREMENT, list_id INTEGER NOT NULL REFERENCES tasklists(_id) ON DELETE CASCADE, _uid TEXT NOT NULL UNIQUE, _sync_id TEXT, sync_version TEXT, _dirty INTEGER NOT NULL DEFAULT 1, _deleted INTEGER NOT NULL DEFAULT 0, title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', due INTEGER, dtstart INTEGER, is_allday INTEGER NOT NULL DEFAULT 0, tz TEXT, status INTEGER NOT NULL DEFAULT 0, completed INTEGER, percent_complete INTEGER NOT NULL DEFAULT 0, priority INTEGER NOT NULL DEFAULT 0, rrule TEXT, created INTEGER NOT NULL, last_modified INTEGER NOT NULL, alarm_fired INTEGER, repeat_minute INTEGER, item_color INTEGER NOT NULL DEFAULT 0, url TEXT NOT NULL DEFAULT '', show_countdown INTEGER NOT NULL DEFAULT 0)");
+        db.execSQL("CREATE TABLE tasks (_id INTEGER PRIMARY KEY AUTOINCREMENT, list_id INTEGER NOT NULL REFERENCES tasklists(_id) ON DELETE CASCADE, _uid TEXT NOT NULL UNIQUE, _sync_id TEXT, sync_version TEXT, _dirty INTEGER NOT NULL DEFAULT 1, _deleted INTEGER NOT NULL DEFAULT 0, title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', due INTEGER, dtstart INTEGER, is_allday INTEGER NOT NULL DEFAULT 0, tz TEXT, status INTEGER NOT NULL DEFAULT 0, completed INTEGER, percent_complete INTEGER NOT NULL DEFAULT 0, priority INTEGER NOT NULL DEFAULT 0, rrule TEXT, created INTEGER NOT NULL, last_modified INTEGER NOT NULL, alarm_fired INTEGER, repeat_minute INTEGER, item_color INTEGER NOT NULL DEFAULT 0, url TEXT NOT NULL DEFAULT '', show_countdown INTEGER NOT NULL DEFAULT 0, recurrence_anchor INTEGER, start_all_day INTEGER NOT NULL DEFAULT 0, alarm_mode INTEGER NOT NULL DEFAULT 2, alarm_offset INTEGER NOT NULL DEFAULT 0, alarm_absolute INTEGER, alarm_at INTEGER)");
         db.execSQL("CREATE TABLE properties (property_id INTEGER PRIMARY KEY AUTOINCREMENT, task_id INTEGER NOT NULL REFERENCES tasks(_id) ON DELETE CASCADE, mimetype TEXT NOT NULL, data0 INTEGER, data1 INTEGER, data2 TEXT, data3 INTEGER)");
     }
 
     private static void createIndexes(SQLiteDatabase db) {
         db.execSQL("CREATE INDEX task_due ON tasks(status, _deleted, due)");
         db.execSQL("CREATE INDEX task_list ON tasks(list_id)");
+        db.execSQL("CREATE INDEX task_alarm ON tasks(status, _deleted, alarm_at)");
         db.execSQL("CREATE INDEX property_task ON properties(task_id)");
     }
 
     @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        if (oldVersion == 2 && newVersion == 3) {
+        if (newVersion != 4 || oldVersion < 1 || oldVersion > 3)
+            throw new IllegalStateException("Missing task database migration");
+        if (oldVersion >= 2) {
+            if (oldVersion == 2) {
             db.execSQL("ALTER TABLE tasks ADD COLUMN item_color INTEGER NOT NULL DEFAULT 0");
             db.execSQL("ALTER TABLE tasks ADD COLUMN url TEXT NOT NULL DEFAULT ''");
             db.execSQL("ALTER TABLE tasks ADD COLUMN show_countdown INTEGER NOT NULL DEFAULT 0");
+            }
+            db.execSQL("ALTER TABLE tasks ADD COLUMN recurrence_anchor INTEGER");
+            db.execSQL("ALTER TABLE tasks ADD COLUMN start_all_day INTEGER NOT NULL DEFAULT 0");
+            db.execSQL("ALTER TABLE tasks ADD COLUMN alarm_mode INTEGER NOT NULL DEFAULT 2");
+            db.execSQL("ALTER TABLE tasks ADD COLUMN alarm_offset INTEGER NOT NULL DEFAULT 0");
+            db.execSQL("ALTER TABLE tasks ADD COLUMN alarm_absolute INTEGER");
+            db.execSQL("ALTER TABLE tasks ADD COLUMN alarm_at INTEGER");
+            db.execSQL("CREATE INDEX task_alarm ON tasks(status, _deleted, alarm_at)");
+            migrateLegacyTimes(db);
             return;
-        }
-        if (oldVersion != 1 || newVersion != 3) {
-            throw new IllegalStateException("Missing task database migration");
         }
         // The v1 rebuild below creates the current schema; new fields use defaults.
         // SQLiteOpenHelper already wraps upgrades in a transaction. Rename parents
@@ -82,6 +92,17 @@ public final class TaskStore extends SQLiteOpenHelper {
         db.execSQL("DROP TABLE old_tasks");
         db.execSQL("DROP TABLE old_tasklists");
         createIndexes(db);
+        migrateLegacyTimes(db);
+    }
+
+    /** Old DTSTART was a recurrence anchor, not a user-selected start date. */
+    private static void migrateLegacyTimes(SQLiteDatabase db) {
+        db.execSQL("UPDATE tasks SET recurrence_anchor=dtstart, dtstart=NULL");
+        db.execSQL("UPDATE tasks SET alarm_at=due WHERE is_allday=0 AND due IS NOT NULL"
+                + " AND EXISTS(SELECT 1 FROM properties p WHERE p.task_id=tasks._id"
+                + " AND p.mimetype='vnd.android.cursor.item/alarm')");
+        db.execSQL("DELETE FROM properties WHERE mimetype='vnd.android.cursor.item/alarm'"
+                + " AND task_id IN (SELECT _id FROM tasks WHERE alarm_at IS NULL)");
     }
     public static final class TaskList {
         public long id;
@@ -93,8 +114,35 @@ public final class TaskStore extends SQLiteOpenHelper {
     public static final class Task {
         public long id, listId = 1;
         public String title = "", notes = "", url = "", rule, tz;
-        public Long due, anchor;
-        public boolean allDay, done, alarm, countdown;
+        public static final int ALARM_ABSOLUTE=0, ALARM_START=1, ALARM_DUE=2;
+        public Long due, start, anchor, alarmAbsolute;
+        public boolean allDay, startAllDay, done, alarm, countdown;
+        public int alarmMode=ALARM_DUE, alarmOffset;
+        public ZoneId zone() {
+            return tz == null ? ZoneId.systemDefault() : ZoneId.of(tz);
+        }
+        /** All-day dates are stored at UTC midnight, but alarms use local wall time. */
+        private Long timedValue(Long value, boolean dateOnly) {
+            if (value == null || !dateOnly) return value;
+            return Instant.ofEpochMilli(value).atZone(ZoneOffset.UTC).toLocalDate()
+                    .atStartOfDay(zone()).toInstant().toEpochMilli();
+        }
+        public Long alarmTime() {
+            if (!alarm) return null;
+            if (alarmMode == ALARM_ABSOLUTE) return alarmAbsolute;
+            Long base = alarmMode == ALARM_START ? timedValue(start, startAllDay)
+                    : timedValue(due, allDay);
+            return base == null ? null : base - alarmOffset * 60000L;
+        }
+        /** One display date per item: deadline, start, or standalone alarm. */
+        public Long displayTime() {
+            if (due != null) return due;
+            if (start != null) return start;
+            return alarmTime();
+        }
+        public boolean displayAllDay() {
+            return due != null ? allDay : start != null && startAllDay;
+        }
         public int priority, color, listColor;
         public Integer repeatMinute;
     }
@@ -152,7 +200,7 @@ public final class TaskStore extends SQLiteOpenHelper {
             notifyChanged();
         }
     }
-    private static final String SELECT = "SELECT t._id,t.list_id,t.title,t.description,t.due,t.dtstart,t.is_allday,t.tz,t.status,t.priority,t.rrule, EXISTS(SELECT 1 FROM properties p WHERE p.task_id=t._id AND p.mimetype='vnd.android.cursor.item/alarm'),t.repeat_minute,t.item_color,t.url,t.show_countdown, (SELECT l.list_color FROM tasklists l WHERE l._id=t.list_id) FROM tasks t WHERE t._deleted=0";
+    private static final String SELECT = "SELECT t._id,t.list_id,t.title,t.description,t.due,t.recurrence_anchor,t.is_allday,t.tz,t.status,t.priority,t.rrule, EXISTS(SELECT 1 FROM properties p WHERE p.task_id=t._id AND p.mimetype='vnd.android.cursor.item/alarm'),t.repeat_minute,t.item_color,t.url,t.show_countdown, (SELECT l.list_color FROM tasklists l WHERE l._id=t.list_id),t.dtstart,t.start_all_day,t.alarm_mode,t.alarm_offset,t.alarm_absolute FROM tasks t WHERE t._deleted=0";
     private static Task read(Cursor c) {
         Task t = new Task(); t.id=c.getLong(0); t.listId=c.getLong(1); t.title=c.getString(2); t.notes=c.getString(3);
         t.due=c.isNull(4)?null:c.getLong(4); t.anchor=c.isNull(5)?null:c.getLong(5); t.allDay=c.getInt(6)!=0;
@@ -160,6 +208,9 @@ public final class TaskStore extends SQLiteOpenHelper {
         t.repeatMinute=c.isNull(12)?null:c.getInt(12);
         t.color=c.getInt(13); t.url=c.getString(14); t.countdown=c.getInt(15)!=0;
         t.listColor=c.getInt(16);
+        t.start=c.isNull(17)?null:c.getLong(17); t.startAllDay=c.getInt(18)!=0;
+        t.alarmMode=c.getInt(19); t.alarmOffset=c.getInt(20);
+        t.alarmAbsolute=c.isNull(21)?null:c.getLong(21);
         return t;
     }
     public List<Task> tasks(long listId) {
@@ -220,10 +271,12 @@ public final class TaskStore extends SQLiteOpenHelper {
         try {
             Task old = t.id == 0 ? null : find(t.id);
             if (t.id != 0 && old == null) return 0;
-            t.alarm = t.alarm && t.due != null && !t.allDay;
+            t.alarm = t.alarm && t.alarmTime() != null;
             boolean completionChanged = completed != (old != null && old.done);
             resetNotification = old == null || !Objects.equals(old.due, t.due)
-                    || old.alarm != t.alarm || old.allDay != t.allDay || completionChanged;
+                    || old.alarm != t.alarm || !Objects.equals(old.alarmTime(), t.alarmTime())
+                    || !Objects.equals(old.start, t.start) || old.startAllDay != t.startAllDay
+                    || old.allDay != t.allDay || completionChanged;
             ContentValues v = new ContentValues();
             v.put("list_id", t.listId);
             v.put("title", t.title.trim());
@@ -232,7 +285,13 @@ public final class TaskStore extends SQLiteOpenHelper {
             v.put("url", t.url == null ? "" : t.url);
             v.put("show_countdown", t.due != null && t.countdown ? 1 : 0);
             v.put("due", t.due);
-            v.put("dtstart", t.anchor);
+            v.put("dtstart", t.start);
+            v.put("recurrence_anchor", t.anchor);
+            v.put("start_all_day", t.startAllDay ? 1 : 0);
+            v.put("alarm_mode", t.alarmMode);
+            v.put("alarm_offset", t.alarmOffset);
+            v.put("alarm_absolute", t.alarmAbsolute);
+            v.put("alarm_at", t.alarmTime());
             v.put("repeat_minute", t.repeatMinute);
             v.put("is_allday", t.allDay ? 1 : 0);
             v.put("tz", t.tz);
@@ -281,11 +340,12 @@ public final class TaskStore extends SQLiteOpenHelper {
 
     /** Preset recurrence: preserve original day-of-month and wall-clock time. */
     static Long nextDue(Task t) {
-        if(t.due==null || t.rule==null) return null;
-        ZoneId zone=t.allDay?ZoneOffset.UTC:ZoneId.of(t.tz==null?ZoneId.systemDefault().getId():t.tz);
-        ZonedDateTime current=Instant.ofEpochMilli(t.due).atZone(zone);
-        ZonedDateTime anchor=Instant.ofEpochMilli(t.anchor==null?t.due:t.anchor).atZone(zone);
-        LocalTime wallTime = t.allDay ? LocalTime.MIDNIGHT
+        Long display = t.displayTime();
+        if(display==null || t.rule==null) return null;
+        ZoneId zone=t.displayAllDay()?ZoneOffset.UTC:t.zone();
+        ZonedDateTime current=Instant.ofEpochMilli(display).atZone(zone);
+        ZonedDateTime anchor=Instant.ofEpochMilli(t.anchor==null?display:t.anchor).atZone(zone);
+        LocalTime wallTime = t.displayAllDay() ? LocalTime.MIDNIGHT
                 : t.repeatMinute != null ? LocalTime.of(t.repeatMinute / 60, t.repeatMinute % 60)
                 : anchor.toLocalTime();
         ZonedDateTime next;
@@ -302,14 +362,30 @@ public final class TaskStore extends SQLiteOpenHelper {
         }
         return next.toInstant().toEpochMilli();
     }
+    private static Long shiftDays(Long value, boolean allDay, ZoneId zone, long days) {
+        return value == null ? null : Instant.ofEpochMilli(value)
+                .atZone(allDay ? ZoneOffset.UTC : zone).plusDays(days).toInstant().toEpochMilli();
+    }
+
     private static void applyCompletion(ContentValues v, Task t, boolean complete) {
         Long next = complete ? nextDue(t) : null;
         if (next != null) {
-            v.put("due", next);
+            ZoneId zone = t.displayAllDay() ? ZoneOffset.UTC : t.zone();
+            long days = java.time.temporal.ChronoUnit.DAYS.between(
+                    Instant.ofEpochMilli(t.displayTime()).atZone(zone).toLocalDate(),
+                    Instant.ofEpochMilli(next).atZone(zone).toLocalDate());
+            boolean hasDue = t.due != null, hasStart = t.start != null;
+            t.due = hasDue ? next : null;
+            t.start = !hasDue && hasStart ? next : shiftDays(t.start, t.startAllDay, t.zone(), days);
+            t.alarmAbsolute = !hasDue && !hasStart && t.alarmMode == Task.ALARM_ABSOLUTE
+                    ? next : shiftDays(t.alarmAbsolute, false, t.zone(), days);
+            v.put("due", t.due);
+            v.put("dtstart", t.start);
+            v.put("alarm_absolute", t.alarmAbsolute);
+            v.put("alarm_at", t.alarmTime());
             v.put("status", 0);
             v.put("percent_complete", 0);
             v.putNull("completed");
-            t.due = next;
             t.done = false;
         } else {
             v.put("status", complete ? 2 : 0);
@@ -322,20 +398,24 @@ public final class TaskStore extends SQLiteOpenHelper {
     }
 
     public void complete(long id, boolean complete) {
-        completeInternal(id, complete, false, null);
+        completeInternal(id, complete, false, false, null);
     }
 
     /** A stale notification or list row must not advance a newer occurrence. */
     public void complete(long id, boolean complete, Long expectedDue) {
-        completeInternal(id, complete, true, expectedDue);
+        completeInternal(id, complete, true, false, expectedDue);
     }
 
-    private void completeInternal(long id, boolean complete, boolean checkDue, Long expectedDue) {
+    public void completeAlarm(long id, long expectedAlarm) {
+        completeInternal(id, true, true, true, expectedAlarm);
+    }
+
+    private void completeInternal(long id, boolean complete, boolean checkDue, boolean checkAlarm, Long expectedDue) {
         SQLiteDatabase db = getWritableDatabase();
         db.beginTransaction();
         try {
             Task t = find(id);
-            if (t == null || t.done == complete || (checkDue && !Objects.equals(t.due, expectedDue))) return;
+            if (t == null || t.done == complete || (checkDue && !Objects.equals(checkAlarm ? t.alarmTime() : t.displayTime(), expectedDue))) return;
             ContentValues v = new ContentValues();
             applyCompletion(v, t, complete);
             v.put("last_modified", System.currentTimeMillis());
@@ -349,23 +429,23 @@ public final class TaskStore extends SQLiteOpenHelper {
         notifyChanged();
     }
 
-    private static final String ALARM_FILTER = " AND t.status=0 AND t.is_allday=0"
-            + " AND t.due IS NOT NULL AND t.alarm_fired IS NULL"
+    private static final String ALARM_FILTER = " AND t.status=0"
+            + " AND t.alarm_at IS NOT NULL AND t.alarm_fired IS NULL"
             + " AND EXISTS(SELECT 1 FROM properties p WHERE p.task_id=t._id AND p.mimetype='vnd.android.cursor.item/alarm')";
     private static final String ALARMS = " FROM tasks t WHERE t._deleted=0" + ALARM_FILTER;
     public Long nextAlarm() {
-        try(Cursor c=getReadableDatabase().rawQuery("SELECT MIN(t.due)"+ALARMS,null)){return c.moveToFirst()&&!c.isNull(0)?c.getLong(0):null;}
+        try(Cursor c=getReadableDatabase().rawQuery("SELECT MIN(t.alarm_at)"+ALARMS,null)){return c.moveToFirst()&&!c.isNull(0)?c.getLong(0):null;}
     }
     public List<Task> dueAlarms(long now) {
         ArrayList<Task> result=new ArrayList<>();
         try (Cursor c = getReadableDatabase().rawQuery(SELECT + ALARM_FILTER
-                + " AND t.due<=? ORDER BY t.due,t._id", new String[]{Long.toString(now)})) {
+                + " AND t.alarm_at<=? ORDER BY t.alarm_at,t._id", new String[]{Long.toString(now)})) {
             while (c.moveToNext()) result.add(read(c));
         }
         return result;
     }
     public void markFired(long id,long due) {
         ContentValues v=new ContentValues();v.put("alarm_fired",due);
-        getWritableDatabase().update("tasks",v,"_id=? AND due=?",new String[]{Long.toString(id),Long.toString(due)});
+        getWritableDatabase().update("tasks",v,"_id=? AND alarm_at=? AND status=0",new String[]{Long.toString(id),Long.toString(due)});
     }
 }

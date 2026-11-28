@@ -75,22 +75,24 @@ public final class TaskAlarmReceiver extends BroadcastReceiver {
         TaskStore store=TaskStore.get(context);
         if(COMPLETE.equals(intent.getAction())){
             long id=intent.getLongExtra("id",0);
-            store.complete(id, true, intent.getLongExtra("due", Long.MIN_VALUE));
+            store.completeAlarm(id, intent.getLongExtra("due", Long.MIN_VALUE));
             return; // Successful completion already reschedules the alarm.
         } else if(FIRE.equals(intent.getAction())){
             if(Build.VERSION.SDK_INT<33 || context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)==PackageManager.PERMISSION_GRANTED){
                 NotificationManager nm=(NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
                 ensureChannel(context);
                 for(TaskStore.Task t:store.dueAlarms(System.currentTimeMillis())){
+                    Long alarmTime = t.alarmTime();
+                    if (alarmTime == null) continue;
                     Intent open=new Intent(context,TaskListActivity.class).setData(Uri.parse("etar-task:"+t.id)).putExtra("task_id",t.id);
                     PendingIntent view=PendingIntent.getActivity(context,0,open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
-                    Intent done=new Intent(context,TaskAlarmReceiver.class).setAction(COMPLETE).setData(Uri.parse("etar-task:"+t.id+":"+t.due)).putExtra("id",t.id).putExtra("due",t.due.longValue());
+                    Intent done=new Intent(context,TaskAlarmReceiver.class).setAction(COMPLETE).setData(Uri.parse("etar-task:"+t.id+":"+alarmTime)).putExtra("id",t.id).putExtra("due",alarmTime.longValue());
                     PendingIntent complete=PendingIntent.getBroadcast(context,0,done,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
                     nm.notify("task:"+t.id,1,new NotificationCompat.Builder(context,CHANNEL)
                         .setSmallIcon(android.R.drawable.ic_dialog_info).setContentTitle(t.title).setContentText(t.notes)
                         .setContentIntent(view).setAutoCancel(true).setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
                         .addAction(0,context.getString(R.string.tasks_complete),complete).build());
-                    store.markFired(t.id,t.due);
+                    store.markFired(t.id,alarmTime);
                 }
             }
         }
