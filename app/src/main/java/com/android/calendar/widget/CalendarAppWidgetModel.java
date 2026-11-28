@@ -205,6 +205,7 @@ class CalendarAppWidgetModel {
             if (endDay > startDay || (eventId < -1 && startDay < mTodayJulianDay)) {
                 flags |= DateUtils.FORMAT_SHOW_DATE;
             }
+            // For tasks, taskRange is based on real endpoints, not the minimum drawing interval.
             whenString.append(Utils.formatDateRange(mContext, start, eventId < -1 && !taskRange ? start : end, flags));
 
             if (mShowTZ) {

@@ -63,6 +63,10 @@ public final class TaskListUi {
     }
 
     public static String dueLabel(Context context, TaskStore.Task task, ZoneId zone, long now) {
+        if (TaskTimePresentation.enabled(context)) {
+            TaskTimePresentation times = TaskTimePresentation.of(task, true);
+            if (times.hasDuplicates()) return mergedTimeLabel(context, task, times, zone, now);
+        }
         if (task.due == null) {
             Long display = task.displayTime();
             if (display == null) return "";
@@ -84,6 +88,40 @@ public final class TaskListUi {
         }
         boolean overdue = ItemStateSymbols.isTaskOverdue(task.done, task.due, task.allDay, zone, now);
         return overdue ? time + " · " + context.getString(R.string.tasks_overdue) : time;
+    }
+
+    private static String mergedTimeLabel(Context context, TaskStore.Task task,
+            TaskTimePresentation times, ZoneId zone, long now) {
+        ArrayList<String> labels = new ArrayList<>();
+        Long alarm = task.alarmTime();
+        if (times.range) {
+            String start = formatEndpoint(context, task.start, task.allDay, zone, true);
+            String due = formatEndpoint(context, task.due, task.allDay, zone, true);
+            if (times.alarmMatchesStart) start = context.getString(R.string.tasks_alarm_time) + " · " + start;
+            if (times.alarmMatchesDue) due = context.getString(R.string.tasks_alarm_time) + " · " + due;
+            labels.add(start + " – " + due);
+        } else {
+            if (task.start != null && !times.hideStart)
+                labels.add(context.getString(R.string.tasks_start_time) + " · "
+                        + formatEndpoint(context, task.start, task.allDay, zone, false));
+            if (task.due != null && !times.hideDue)
+                labels.add(context.getString(R.string.tasks_due_time) + " · "
+                        + formatEndpoint(context, task.due, task.allDay, zone, false));
+            if (alarm != null && (times.reminderPoint() || (!times.alarmMatchesStart && !times.alarmMatchesDue)))
+                labels.add(context.getString(R.string.tasks_alarm_time) + " · "
+                        + formatEndpoint(context, alarm, false, zone, task.displayTime() != null
+                                && !java.util.Objects.equals(task.displayTime(), alarm)));
+        }
+        String time = String.join(" · ", labels);
+        boolean overdue = task.due != null && ItemStateSymbols.isTaskOverdue(task.done, task.due, task.allDay, zone, now);
+        return overdue ? time + " · " + context.getString(R.string.tasks_overdue) : time;
+    }
+
+    private static String formatEndpoint(Context context, long value, boolean allDay, ZoneId zone, boolean date) {
+        if (allDay && !date) return context.getString(R.string.tasks_all_day);
+        int flags = (date ? DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_ABBREV_ALL : 0)
+                | (allDay ? 0 : DateUtils.FORMAT_SHOW_TIME);
+        return com.android.calendar.ItemEditorUi.formatDateTime(context, value, flags, allDay ? "UTC" : zone.getId());
     }
 
     public static String countdownLabel(Context context, TaskStore.Task task) {

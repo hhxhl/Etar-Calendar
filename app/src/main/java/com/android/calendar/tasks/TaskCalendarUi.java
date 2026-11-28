@@ -121,13 +121,15 @@ public final class TaskCalendarUi {
         TaskStore store = TaskStore.get(context);
         java.util.List<TaskStore.Task> tasks = store.datedTasks(from, until, utcFrom, utcUntil);
         if (includeOverdue) tasks.addAll(store.overdueTasks(from, utcFrom));
+        boolean mergeTimes = TaskTimePresentation.enabled(context);
         for (TaskStore.Task task : tasks) {
             if (listIds != null && !listIds.contains(Long.toString(task.listId))) continue;
             Event item = Event.newInstance();
             item.taskId = task.id;
             item.taskCompleted = task.done;
             item.taskNoDeadline = task.due == null;
-            item.taskRange = task.hasRange();
+            TaskTimePresentation times = TaskTimePresentation.of(task, mergeTimes);
+            item.taskRange = times.range;
             item.taskDue = task.due == null ? 0 : task.due;
             item.taskDueAllDay = task.allDay;
             // Negative identity is reserved for tasks in the display model only.
@@ -139,8 +141,10 @@ public final class TaskCalendarUi {
             item.color = displayColor(context, task);
             item.taskCountdown = task.due != null && task.countdown && !task.done;
             ZoneId drawingZone = item.allDay ? ZoneOffset.UTC : zone;
-            item.startMillis = task.rangeStart(zone);
-            item.endMillis = Math.max(item.startMillis + 60000, task.rangeEnd(zone));
+            item.startMillis = mergeTimes && times.reminderPoint() ? task.alarmTime() : task.rangeStart(zone);
+            // A point has a minimum drawing interval, not a real deadline.
+            item.endMillis = times.range ? task.rangeEnd(zone)
+                    : item.startMillis + (item.allDay ? 86400000L : 60000L);
             ZonedDateTime startDate = Instant.ofEpochMilli(item.startMillis).atZone(drawingZone);
             ZonedDateTime endDate = Instant.ofEpochMilli(item.endMillis).atZone(drawingZone);
             // Midnight is the exclusive end of the preceding day, as in CalendarProvider.

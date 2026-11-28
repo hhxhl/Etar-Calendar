@@ -134,7 +134,7 @@ public final class TaskStore extends SQLiteOpenHelper {
         public boolean displayAllDay() {
             return (due != null || start != null) && allDay;
         }
-        public boolean hasRange() { return start != null && due != null; }
+        public boolean hasRange() { return TaskTimePresentation.isRange(start, due); }
         /** All-day endpoints are dates, with an inclusive deadline day. */
         public boolean rangeAllDay() { return hasRange() && allDay; }
         public long rangeStart(ZoneId calendarZone) {

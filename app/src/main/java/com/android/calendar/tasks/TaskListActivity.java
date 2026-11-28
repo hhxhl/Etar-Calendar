@@ -322,6 +322,16 @@ public final class TaskListActivity extends AppCompatActivity {
             form.addView(completed, params);
         }
 
+        final boolean mergeTimes = TaskTimePresentation.enabled(this);
+        final boolean[] expandedTimes = {false};
+        Button expandTimes = outlinedButton();
+        times.addView(expandTimes, 0, new LinearLayout.LayoutParams(-1, -2));
+        expandTimes.setVisibility(View.GONE);
+        final Runnable[] updateTimes = new Runnable[1];
+        expandTimes.setOnClickListener(v -> {
+            expandedTimes[0] = !expandedTimes[0];
+            updateTimes[0].run();
+        });
         Runnable update = () -> {
             allDay.setVisibility(start.enabled.isChecked() || due.enabled.isChecked() ? View.VISIBLE : View.GONE);
             start.refresh();
@@ -342,7 +352,27 @@ public final class TaskListActivity extends AppCompatActivity {
                     System.currentTimeMillis(), true));
             repeat.setEnabled(any);
             countdown.setVisibility(due.enabled.isChecked() ? View.VISIBLE : View.GONE);
+            // Hide duplicate controls only; every field retains its own draft and value.
+            TaskStore.Task preview = new TaskStore.Task();
+            preview.start = start.value();
+            preview.due = due.value();
+            preview.allDay = allDay.isChecked();
+            preview.tz = zone[0].getId();
+            preview.alarm = hasAlarm;
+            preview.alarmMode = mode[0];
+            preview.alarmOffset = offset[0];
+            preview.alarmAbsolute = hasAlarm && mode[0] == TaskStore.Task.ALARM_ABSOLUTE ? absolute.value() : null;
+            TaskTimePresentation presentation = TaskTimePresentation.of(preview, mergeTimes);
+            boolean collapsed = mergeTimes && !expandedTimes[0];
+            start.root.setVisibility(collapsed && presentation.hideStart ? View.GONE : View.VISIBLE);
+            due.root.setVisibility(collapsed && presentation.hideDue ? View.GONE : View.VISIBLE);
+            expandTimes.setVisibility(mergeTimes && (presentation.hasDuplicates() || expandedTimes[0])
+                    ? View.VISIBLE : View.GONE);
+            expandTimes.setText(expandedTimes[0] ? getString(R.string.tasks_collapse_equal_times)
+                    : getString(R.string.tasks_expand_equal_times,
+                        TaskListUi.dueLabel(this, preview, zone[0], System.currentTimeMillis())));
         };
+        updateTimes[0] = update;
         allDay.setOnCheckedChangeListener((v, checked) -> {
             start.allDay.setChecked(checked);
             due.allDay.setChecked(checked);
@@ -488,8 +518,11 @@ public final class TaskListActivity extends AppCompatActivity {
             Long newStart = start.value(), newDue = due.value();
             if (newStart != null && newDue != null) {
                 long from = start.comparisonValue(false), until = due.comparisonValue(true);
-                // RFC 5545 requires a synced DUE to be strictly later than DTSTART.
-                if (from > until || (!available.get(pos).isLocal() && newStart >= newDue)) {
+                // Preserve equal endpoints imported from clients such as iOS. New online
+                // ranges still follow RFC 5545 and must have DUE later than DTSTART.
+                boolean originallyEqual = task.start != null && java.util.Objects.equals(task.start, task.due);
+                if (from > until || !TaskTimePresentation.validRange(newStart, newDue,
+                        available.get(pos).isLocal(), originallyEqual)) {
                     android.widget.Toast.makeText(this, R.string.tasks_invalid_range,
                             android.widget.Toast.LENGTH_SHORT).show();
                     return;
@@ -541,6 +574,7 @@ public final class TaskListActivity extends AppCompatActivity {
         });
         if (!task.writable) {
             disableEditor(form);
+            expandTimes.setEnabled(true);
             saveEditor = null;
             deleteEditor = null;
             captureDraft = null;

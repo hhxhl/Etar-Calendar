@@ -1101,7 +1101,8 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
 
     @Override
     public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
-        if (key.equals(GeneralPreferences.KEY_WEEK_START_DAY) || key.equals(GeneralPreferences.KEY_DAYS_PER_WEEK)) {
+        if (key.equals(GeneralPreferences.KEY_WEEK_START_DAY) || key.equals(GeneralPreferences.KEY_DAYS_PER_WEEK)
+                || key.equals(com.android.calendar.tasks.TaskTimePresentation.KEY)) {
             if (mPaused) {
                 mUpdateOnResume = true;
             } else {

@@ -130,6 +130,11 @@
     <PreferenceCategory
         app:key="preferences_experimental_category"
         app:title="@string/preferences_experimental_category">
+        <com.android.calendar.settings.MaterialSwitchPreference
+            app:key="preferences_merge_equal_task_times"
+            app:defaultValue="false"
+            app:title="@string/tasks_merge_equal_times_title"
+            app:summary="@string/tasks_merge_equal_times_summary" />
         <Preference
             app:key="preferences_copy_db"
             app:title="@string/copy_db"

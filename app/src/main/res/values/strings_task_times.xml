@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tasks_merge_equal_times_title">Merge equal task times</string>
+    <string name="tasks_merge_equal_times_summary">Merge identical start, due and reminder times in task displays, preferring the actual reminder. Original values are retained.</string>
+    <string name="tasks_expand_equal_times">%1$s · Show individual times</string>
+    <string name="tasks_collapse_equal_times">Collapse identical times</string>
+</resources>

@@ -191,6 +191,9 @@ class GeneralPreferences : PreferenceFragmentCompat(),
         BackupManager.dataChanged(a.packageName)
 
         when (key) {
+            com.android.calendar.tasks.TaskTimePresentation.KEY -> {
+                Utils.notifyWidgetDataChanged(a)
+            }
             KEY_THEME_PREF -> {
                 Utils.sendUpdateWidgetIntent(a)
                 a.recreate()

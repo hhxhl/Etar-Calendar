@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tasks_merge_equal_times_title">合并相同的任务时间</string>
+    <string name="tasks_merge_equal_times_summary">当开始时间、截止时间或提醒时间相同时，合并为单个时间点，优先显示实际提醒时间，保留原始字段。</string>
+    <string name="tasks_expand_equal_times">%1$s · 展开独立时间</string>
+    <string name="tasks_collapse_equal_times">折叠相同时间</string>
+</resources>
