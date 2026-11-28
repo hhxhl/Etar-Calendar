@@ -268,8 +268,6 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
     // Params for animating the controls on the right
     private LayoutParams mControlsParams;
     private LinearLayout.LayoutParams mVerticalControlsParams;
-    private AllInOneMenuExtensionsInterface mExtensions = ExtensionsFactory
-            .getAllInOneMenuExtensions();
 
     @Override
     protected void onNewIntent(Intent intent) {
@@ -921,12 +919,6 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         }
         updateViewSwitchButtons();
 
-        // Add additional options (if any).
-        Integer extensionMenuRes = mExtensions.getExtensionMenuResource(menu);
-        if (extensionMenuRes != null) {
-            getMenuInflater().inflate(extensionMenuRes, menu);
-        }
-
         MenuItem item = menu.findItem(R.id.action_import);
         if (item != null) {
             item.setVisible(true);
@@ -1055,7 +1047,7 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         } else if (itemId == R.id.action_info) {
             checkAndRequestDisablingDoze();
         } else {
-                return mExtensions.handleItemSelected(item, this);
+            return false;
         }
 
         return true;
