@@ -134,7 +134,7 @@
 
     <style name="NotificationPrimaryText" parent="@android:style/TextAppearance.StatusBar.EventContent.Title" />
 
-    <style name="NotificationSecondaryText" parent="@android:style/TextAppearance.Holo">
+    <style name="NotificationSecondaryText" parent="@android:style/TextAppearance.Material.Body2">
         <item name="android:textColor">?android:attr/textColorSecondary</item>
     </style>
 

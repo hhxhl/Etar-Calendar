@@ -742,8 +742,8 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         }
 
         mTodayIndicator = new TodayIndicator(context);
-        mExpandAlldayDrawable = ResourcesCompat.getDrawable(mResources, R.drawable.ic_expand_holo_light, null);
-        mCollapseAlldayDrawable = ResourcesCompat.getDrawable(mResources, R.drawable.ic_collapse_holo_light, null);
+        mExpandAlldayDrawable = ResourcesCompat.getDrawable(mResources, R.drawable.ic_expand_small, context.getTheme());
+        mCollapseAlldayDrawable = ResourcesCompat.getDrawable(mResources, R.drawable.ic_collapse_small, context.getTheme());
 
         mEventLoader = eventLoader;
         mEventGeometry = new EventGeometry();

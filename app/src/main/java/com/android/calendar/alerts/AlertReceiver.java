@@ -284,12 +284,12 @@ public class AlertReceiver extends BroadcastReceiver {
             numActions++;
         }
         if (emailIntent != null && numActions < MAX_NOTIF_ACTIONS) {
-            notificationBuilder.addAction(R.drawable.ic_menu_email_holo_dark,
+            notificationBuilder.addAction(R.drawable.ic_notification_email,
                     resources.getString(R.string.email_guests_label), emailIntent);
             numActions++;
         }
         if (snoozeIntent != null && numActions < MAX_NOTIF_ACTIONS) {
-            notificationBuilder.addAction(R.drawable.ic_alarm_holo_dark,
+            notificationBuilder.addAction(R.drawable.ic_notification_snooze,
                     resources.getString(R.string.snooze_label), snoozeIntent);
             numActions++;
         }
