@@ -72,7 +72,11 @@ public final class TaskProvider extends ContentProvider {
         return condition;
     }
 
-    private static Map<String,String> columns(SQLiteDatabase db, String table) {
+    private final Map<String, Map<String,String>> columnCache = new java.util.HashMap<>();
+
+    private synchronized Map<String,String> columns(SQLiteDatabase db, String table) {
+        Map<String,String> cached = columnCache.get(table);
+        if (cached != null) return new LinkedHashMap<>(cached);
         Map<String,String> columns = new LinkedHashMap<>();
         try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + table + ")", null)) {
             while (cursor.moveToNext()) {
@@ -80,7 +84,8 @@ public final class TaskProvider extends ContentProvider {
                 columns.put(name, name);
             }
         }
-        return columns;
+        columnCache.put(table, columns);
+        return new LinkedHashMap<>(columns);
     }
 
     private SQLiteQueryBuilder builder(SQLiteDatabase db, Route route, Uri uri, boolean read) {
@@ -111,7 +116,7 @@ public final class TaskProvider extends ContentProvider {
         return qb;
     }
 
-    private static ContentValues validated(SQLiteDatabase db, String table, ContentValues source) {
+    private ContentValues validated(SQLiteDatabase db, String table, ContentValues source) {
         ContentValues values = new ContentValues(Objects.requireNonNull(source));
         Map<String,String> columns = columns(db,table);
         for (String key : values.keySet())

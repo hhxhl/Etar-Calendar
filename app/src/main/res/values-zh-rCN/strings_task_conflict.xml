@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tasks_edit_conflict">编辑期间任务已发生变化。请重新打开任务，检查最新内容后再保存。</string>
+</resources>

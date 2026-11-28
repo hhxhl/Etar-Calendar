@@ -54,6 +54,7 @@ public final class TaskListActivity extends AppCompatActivity {
     private java.util.function.Supplier<Bundle> captureDraft;
     private Runnable saveEditor, deleteEditor;
     private Bundle initialDraft;
+    private String originalRevision;
 
     private void discardOrFinish() {
         if (captureDraft == null || initialDraft == null
@@ -88,11 +89,14 @@ public final class TaskListActivity extends AppCompatActivity {
             restoredPermissionFlow=finishAfterPermission || waitingForPermissionSettings;
             restoredDraft=state.getBundle("editor_draft");
             initialDraft=state.getBundle("initial_editor_draft");
+            originalRevision=state.getString("original_task_revision");
         }
         if (finishAfterPermission || waitingForPermissionSettings) return;
         long id = getIntent().getLongExtra("task_id", 0);
         TaskStore.Task task = id == 0 ? newTask() : store.find(id);
         if (task == null) { finish(); return; }
+        if (originalRevision == null) originalRevision = task.revision;
+        task.revision = originalRevision;
         // An explicit date means a new reminder from a selected calendar cell.
         // Otherwise open the same editor with all time switches off.
         if (id == 0 && getIntent().hasExtra("date")) {
@@ -114,6 +118,7 @@ public final class TaskListActivity extends AppCompatActivity {
         state.putBoolean("waiting_for_permission_settings", waitingForPermissionSettings);
         if (captureDraft != null) state.putBundle("editor_draft", captureDraft.get());
         if (initialDraft != null) state.putBundle("initial_editor_draft", initialDraft);
+        state.putString("original_task_revision", originalRevision);
         super.onSaveInstanceState(state);
     }
 
@@ -507,6 +512,11 @@ public final class TaskListActivity extends AppCompatActivity {
                 }).show();
 
         saveEditor = () -> {
+            if (task.id != 0 && initialDraft != null && sameDraft(initialDraft, captureDraft.get())) {
+                captureDraft = null;
+                finish();
+                return;
+            }
             String text = title.getText().toString().trim();
             if (text.isEmpty()) { title.setError(getString(R.string.tasks_required)); title.requestFocus(); return; }
             int pos = list.getSelectedItemPosition();
@@ -540,7 +550,8 @@ public final class TaskListActivity extends AppCompatActivity {
             task.start = newStart;
             task.due = newDue;
             task.allDay = (newStart != null || newDue != null) && allDay.isChecked();
-            task.tz = zone[0].getId();
+            if (initialDraft == null || !java.util.Objects.equals(initialDraft.getString("zone"), zone[0].getId()))
+                task.tz = zone[0].getId();
             task.alarm = alarm.isChecked();
             task.alarmMode = mode[0];
             task.alarmOffset = offset[0];
@@ -562,7 +573,13 @@ public final class TaskListActivity extends AppCompatActivity {
                 }
             }
             long saved = store.save(task, completed.isChecked());
-            if (saved <= 0) return;
+            if (saved < 0) {
+                new MaterialAlertDialogBuilder(this)
+                        .setMessage(R.string.tasks_edit_conflict)
+                        .setPositiveButton(android.R.string.ok, null).show();
+                return;
+            }
+            if (saved == 0) return;
             finishAfterPermission = saved > 0 && task.alarm && !task.done;
             captureDraft = null;
             saveEditor = null;

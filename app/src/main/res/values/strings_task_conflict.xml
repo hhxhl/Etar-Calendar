@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tasks_edit_conflict">This task changed while you were editing. Reopen it to review the latest version before saving.</string>
+</resources>

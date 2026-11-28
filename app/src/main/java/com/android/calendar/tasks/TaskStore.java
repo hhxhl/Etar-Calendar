@@ -108,6 +108,7 @@ public final class TaskStore extends SQLiteOpenHelper {
         public boolean allDay, done, alarm, countdown;
         public boolean writable = true, local = true;
         boolean hasRecurrenceDates, hasRecurrenceExceptions;
+        String revision;
         public int alarmMode=ALARM_DUE, alarmOffset;
         public ZoneId zone() {
             try { return tz == null ? ZoneId.systemDefault() : ZoneId.of(tz); }
@@ -185,7 +186,7 @@ public final class TaskStore extends SQLiteOpenHelper {
     static final String ALARM_MIME = "vnd.android.cursor.item/alarm";
     // data0 = minutes before, data1 = DUE (1) or DTSTART (2), data2 = message,
     // data3 = action, data4 = absolute UTC trigger (Etar extension).
-    private static final String SELECT = "SELECT t._id,t.list_id,COALESCE(t.title,''),COALESCE(t.description,''),t.due,t.recurrence_anchor,t.is_allday,t.tz,t.status,t.priority,t.rrule,a.property_id,t.repeat_minute,t.task_color,COALESCE(t.url,''),t.show_countdown,l.list_color,t.dtstart,a.data0,a.data1,a.data4,l.account_type,l.list_access_level,t.rdate,t.exdate,EXISTS(SELECT 1 FROM tasks x WHERE x.original_instance_id=t._id OR (x.list_id=t.list_id AND x.original_instance_sync_id=t._sync_id)) FROM tasks t JOIN tasklists l ON l._id=t.list_id LEFT JOIN properties a ON a.property_id=(SELECT MIN(p.property_id) FROM properties p WHERE p.task_id=t._id AND p.mimetype='vnd.android.cursor.item/alarm') WHERE t._deleted=0 AND t.original_instance_id IS NULL";
+    private static final String SELECT = "SELECT t._id,t.list_id,COALESCE(t.title,''),COALESCE(t.description,''),t.due,t.recurrence_anchor,t.is_allday,t.tz,t.status,t.priority,t.rrule,a.property_id,t.repeat_minute,t.task_color,COALESCE(t.url,''),t.show_countdown,l.list_color,t.dtstart,a.data0,a.data1,a.data4,l.account_type,l.list_access_level,t.rdate,t.exdate,EXISTS(SELECT 1 FROM tasks x WHERE x.original_instance_id=t._id OR (x.list_id=t.list_id AND x.original_instance_sync_id=t._sync_id)),t.last_modified,t.sync1,t._dirty,t.status,t.completed,t.percent_complete FROM tasks t JOIN tasklists l ON l._id=t.list_id LEFT JOIN properties a ON a.property_id=(SELECT MIN(p.property_id) FROM properties p WHERE p.task_id=t._id AND p.mimetype='vnd.android.cursor.item/alarm') WHERE t._deleted=0 AND t.original_instance_id IS NULL";
     private static Task read(Cursor c) {
         Task t = new Task(); t.id=c.getLong(0); t.listId=c.getLong(1); t.title=c.getString(2); t.notes=c.getString(3);
         t.due=c.isNull(4)?null:c.getLong(4); t.anchor=c.isNull(5)?null:c.getLong(5); t.allDay=c.getInt(6)!=0;
@@ -200,19 +201,63 @@ public final class TaskStore extends SQLiteOpenHelper {
         t.writable=t.local || c.getInt(22)>200;
         t.hasRecurrenceDates = !android.text.TextUtils.isEmpty(c.getString(23)) || !android.text.TextUtils.isEmpty(c.getString(24));
         t.hasRecurrenceExceptions = c.getInt(25) != 0;
+        // Include visible fields and server ETag; do not include derived alarm_fired.
+        t.revision = revision(c);
         return t;
     }
+    private static String revision(Cursor cursor) {
+        StringBuilder token = new StringBuilder();
+        for (int i = 0; i < cursor.getColumnCount(); i++) {
+            // Exclude list color/access and dirty state: they may change independently.
+            if (i == 16 || i == 22 || i == 28) continue;
+            String value = cursor.isNull(i) ? null : cursor.getString(i);
+            if (value == null) token.append("-;");
+            else token.append(value.length()).append(':').append(value).append(';');
+        }
+        return token.toString();
+    }
+
+    private static boolean sameAlarm(Task a, Task b) {
+        return a.alarm == b.alarm && (!a.alarm ||
+                (a.alarmMode == b.alarmMode && a.alarmOffset == b.alarmOffset
+                        && Objects.equals(a.alarmAbsolute, b.alarmAbsolute)));
+    }
+
+    private static boolean sameSyncedFields(Task a, Task b) {
+        return a.listId == b.listId && Objects.equals(a.title, b.title.trim())
+                && Objects.equals(a.notes, b.notes) && Objects.equals(a.url, b.url)
+                && Objects.equals(a.start, b.start) && Objects.equals(a.due, b.due)
+                && a.allDay == b.allDay && Objects.equals(a.tz, b.tz)
+                && a.priority == b.priority && Objects.equals(a.rule, b.rule)
+                && sameAlarm(a, b);
+    }
+
     private static void writeAlarm(SQLiteDatabase db, Task t) {
-        db.delete("properties", "task_id=? AND mimetype=?", new String[]{Long.toString(t.id), ALARM_MIME});
-        if (!t.alarm) return;
+        String[] alarmArgs = {Long.toString(t.id), ALARM_MIME};
+        if (!t.alarm) {
+            // An explicit disable removes reminders; ordinary metadata edits never touch them.
+            db.delete("properties", "task_id=? AND mimetype=?", alarmArgs);
+            return;
+        }
+        Long first = null;
+        try (Cursor cursor = db.query("properties", new String[]{"property_id"},
+                "task_id=? AND mimetype=?", alarmArgs, null, null, "property_id", "1")) {
+            if (cursor.moveToFirst()) first = cursor.getLong(0);
+        }
         ContentValues v = new ContentValues();
-        v.put("task_id", t.id); v.put("mimetype", ALARM_MIME); v.put("data3", 1);
+        v.put("task_id", t.id); v.put("mimetype", ALARM_MIME);
+        v.putNull("data0"); v.putNull("data1"); v.putNull("data4");
         if (t.alarmMode == Task.ALARM_ABSOLUTE) v.put("data4", t.alarmAbsolute);
         else {
             v.put("data0", t.alarmOffset);
             v.put("data1", t.alarmMode == Task.ALARM_START ? 2 : 1);
         }
-        db.insertOrThrow("properties", null, v);
+        if (first == null) {
+            v.put("data3", 1);
+            db.insertOrThrow("properties", null, v);
+        } else {
+            db.update("properties", v, "property_id=?", new String[]{Long.toString(first)});
+        }
     }
     public List<Task> tasks(long listId) {
         return queryTasks(listId, false, false);
@@ -293,16 +338,20 @@ public final class TaskStore extends SQLiteOpenHelper {
     public long save(Task t, boolean completed) {
         SQLiteDatabase db = getWritableDatabase();
         boolean resetNotification;
+        boolean syncChanged;
         db.beginTransaction();
         try {
             Task old = t.id == 0 ? null : find(t.id);
             TaskList target = findList(t.listId);
             if (target == null || !target.isWritable() || (t.id != 0 && (old == null || !old.writable))) return 0;
+            if (old != null && t.revision != null && !Objects.equals(t.revision, old.revision)) return -1;
             // Moving a synced resource requires a remote delete plus a new upload, not an ID change.
             if (old != null && old.listId != t.listId && !findList(old.listId).isLocal()) return 0;
             t.local = target.isLocal();
             t.alarm = t.alarm && t.alarmTime() != null;
             boolean completionChanged = completed != (old != null && old.done);
+            syncChanged = old == null || completionChanged || !sameSyncedFields(old, t);
+            if (!syncChanged && old.color == t.color && old.countdown == t.countdown) return t.id;
             resetNotification = old == null || !Objects.equals(old.due, t.due)
                     || old.alarm != t.alarm || !Objects.equals(old.alarmTime(), t.alarmTime())
                     || !Objects.equals(old.start, t.start) || old.allDay != t.allDay || completionChanged;
@@ -323,8 +372,10 @@ public final class TaskStore extends SQLiteOpenHelper {
             v.put("tz", t.tz);
             v.put("priority", t.priority);
             v.put("rrule", t.rule);
-            v.put("last_modified", System.currentTimeMillis());
-            v.put("_dirty", target.isLocal() ? 0 : 1);
+            if (syncChanged) {
+                v.put("last_modified", System.currentTimeMillis());
+                v.put("_dirty", target.isLocal() ? 0 : 1);
+            }
             if (resetNotification) v.putNull("alarm_fired");
             if (completionChanged) applyCompletion(v, t, completed);
             if (t.id == 0) {
@@ -334,9 +385,7 @@ public final class TaskStore extends SQLiteOpenHelper {
             } else {
                 db.update("tasks", v, "_id=?", new String[]{Long.toString(t.id)});
             }
-            if (old == null || old.alarm != t.alarm || old.alarmMode != t.alarmMode
-                    || old.alarmOffset != t.alarmOffset || !Objects.equals(old.alarmAbsolute, t.alarmAbsolute))
-                writeAlarm(db, t);
+            if (old == null || !sameAlarm(old, t)) writeAlarm(db, t);
             db.setTransactionSuccessful();
         } finally {
             db.endTransaction();
@@ -344,7 +393,7 @@ public final class TaskStore extends SQLiteOpenHelper {
         if (resetNotification) TaskAlarmReceiver.dismiss(appContext, t.id);
         // Title, notes, URL and color changes do not change the next alarm.
         notifyChanged(resetNotification);
-        requestTaskSync(t.listId);
+        if (syncChanged) requestTaskSync(t.listId);
         return t.id;
     }
 
