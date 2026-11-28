@@ -348,7 +348,6 @@
     <string name="add_calendar">Ychwanegu calendr</string>
     <string name="duplicate_label">Dyblygu</string>
     <string name="preferences_system_theme">Rhagosodiad system</string>
-    <string name="preferences_real_event_colors">Defnyddiwch liwiau digwyddiadau go iawn</string>
     <string name="preferences_pure_black_night_mode">Modd nos ddu pur</string>
     <string name="app_copyright">© 2015-<xliff:g> %1$s</xliff:g> Prosiect Etar. Darnau © 2005-<xliff:g> %1$s</xliff:g> Prosiect Cod Agored Android.</string>
     <string name="authors">Awduron</string>

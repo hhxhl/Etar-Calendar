@@ -178,8 +178,7 @@ public class CalendarColorPickerDialog extends ColorPickerDialog {
                         dismiss();
                         break;
                     }
-                    mSelectedColor = Utils.getDisplayColorFromColor(activity,
-                            cursor.getInt(CALENDARS_INDEX_CALENDAR_COLOR));
+                    mSelectedColor = cursor.getInt(CALENDARS_INDEX_CALENDAR_COLOR);
                     Uri uri = Colors.CONTENT_URI;
                     String[] args = new String[]{
                             cursor.getString(CALENDARS_INDEX_ACCOUNT_NAME),
@@ -199,7 +198,7 @@ public class CalendarColorPickerDialog extends ColorPickerDialog {
                     do {
                         int colorKey = cursor.getInt(COLORS_INDEX_COLOR_KEY);
                         int rawColor = cursor.getInt(COLORS_INDEX_COLOR);
-                        int displayColor = Utils.getDisplayColorFromColor(activity, rawColor);
+                        int displayColor = rawColor;
                         mColorKeyMap.put(displayColor, colorKey);
                         colors.add(displayColor);
                     } while (cursor.moveToNext());

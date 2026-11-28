@@ -284,7 +284,6 @@
     <string name="maximum_number_of_lines">Maximálny počet riadkov v udalosti</string>
     <string name="no_reminder_label">Žiadne</string>
     <string name="after_start_of_event">po štarte akcie</string>
-    <string name="preferences_real_event_colors">Použiť skutočné farby udalostí</string>
     <string name="authors">Autori</string>
     <string name="three_days">3 dni</string>
     <string name="preferences_calendar_configure_account">Nastaviť kalendár v %1$s</string>

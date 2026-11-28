@@ -337,7 +337,6 @@
     <string name="no_calendars_found">Mielőtt egy eseményt hozzáadhatna, hozzá kell adnia egy naptárat</string>
     <string name="add_calendar">Naptár hozzáadása</string>
     <string name="duplicate_label">Kettőzés</string>
-    <string name="preferences_real_event_colors">Valódi eseményszínek használata</string>
     <string name="week_start_locale_default">Területi beállítás alapértelmezése</string>
     <string name="preferences_staggered_display_title">Eltolt elrendezés</string>
     <string name="preferences_staggered_display_summary">Átfedő események megjelenítése eltolt elrendezéssel</string>

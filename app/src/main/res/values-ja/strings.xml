@@ -237,7 +237,6 @@
     <string name="default_start_last">最後に使用した表示</string>
     <string name="preferences_days_per_week_title">1 週間の日数</string>
     <string name="preferences_default_event_duration_title">デフォルトの予定の期間</string>
-    <string name="preferences_real_event_colors">実際の予定の色で表示する</string>
     <string name="preferences_pure_black_night_mode">ピュアブラックのナイトモード</string>
     <string name="default_start_title">起動時の表示</string>
     <string name="display_options">表示設定</string>

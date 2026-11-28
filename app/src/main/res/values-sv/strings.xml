@@ -316,7 +316,6 @@
         <item quantity="other"><xliff:g id="count">%d</xliff:g> veckor</item>
     </plurals>
     <string name="menu_info">Info</string>
-    <string name="preferences_real_event_colors">Använd riktiga händelsefärger</string>
     <string name="preferences_calendar_color_warning_message">Ändringen av färgen kan återställas när kalendern är synkroniserad igen.
 \n
 \nI DAVx⁵ kan \"Hantera kalenderfärger\" inaktiveras för att förhindra detta.</string>

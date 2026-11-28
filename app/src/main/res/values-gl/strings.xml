@@ -294,7 +294,6 @@
     <string name="when_label">Cando</string>
     <string name="app_label">Calendario</string>
     <string name="after_start_of_event">despois do inicio do evento</string>
-    <string name="preferences_real_event_colors">Usa cores de eventos reais</string>
     <plurals name="Nweeks">
         <item quantity="one">1 semana</item>
         <item quantity="other"><xliff:g id="count">%d</xliff:g> semanas</item>

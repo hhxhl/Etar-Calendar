@@ -55,7 +55,7 @@ public final class TaskListUi {
     public static int bindPresentation(View root, TextView marker, TextView title, TaskStore.Task task,
             ZoneId zone, long now, TextView... details) {
         int color = ItemAppearance.bindRow(root,
-                TaskCalendarUi.displayColor(root.getContext(), task, false), marker, title);
+                TaskCalendarUi.displayColor(root.getContext(), task), marker, title);
         ItemAppearance.setTextColor(color, details);
         marker.setText(stateSymbol(task, task.done, zone, now));
         ItemAppearance.bindTitle(title, task.title, !task.done, task.done);

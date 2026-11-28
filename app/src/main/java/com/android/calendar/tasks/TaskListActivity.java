@@ -210,7 +210,7 @@ public final class TaskListActivity extends AppCompatActivity {
             if (pos < 0 || pos >= available.size()) return;
             int color = itemColor[0] != 0 ? itemColor[0] : available.get(pos).color;
             listColor.setBackgroundColor(color == 0 ? getColor(R.color.event_center)
-                    : Utils.getDisplayColorFromColor(this, color));
+                    : color);
         };
         list.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {

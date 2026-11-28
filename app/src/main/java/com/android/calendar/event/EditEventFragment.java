@@ -1130,7 +1130,7 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
                             do {
                                 String colorKey = cursor.getString(EditEventHelper.COLORS_INDEX_COLOR_KEY);
                                 int rawColor = cursor.getInt(EditEventHelper.COLORS_INDEX_COLOR);
-                                int displayColor = Utils.getDisplayColorFromColor(activity, rawColor);
+                                int displayColor = rawColor;
                                 String accountName = cursor
                                         .getString(EditEventHelper.COLORS_INDEX_ACCOUNT_NAME);
                                 String accountType = cursor

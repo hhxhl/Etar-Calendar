@@ -102,10 +102,10 @@ public final class TaskCalendarUi {
 
     /** Project dated tasks into the existing display model; never write them to CalendarProvider. */
     /** Individual color overrides the list; zero means inherit the default. */
-    public static int displayColor(Context context, TaskStore.Task task, boolean rawColor) {
+    public static int displayColor(Context context, TaskStore.Task task) {
         int color = task.color != 0 ? task.color : task.listColor;
         if (color == 0) return context.getColor(R.color.event_center);
-        return rawColor ? color : Utils.getDisplayColorFromColor(context, color);
+        return color;
     }
 
     public static void append(Context context, ArrayList<Event> events, int firstDay, int lastDay) {
@@ -113,12 +113,7 @@ public final class TaskCalendarUi {
     }
 
     public static void append(Context context, ArrayList<Event> events, int firstDay, int lastDay,
-            java.util.Set<String> listIds, boolean rawColor) {
-        append(context, events, firstDay, lastDay, listIds, rawColor, false);
-    }
-
-    public static void append(Context context, ArrayList<Event> events, int firstDay, int lastDay,
-            java.util.Set<String> listIds, boolean rawColor, boolean includeOverdue) {
+            java.util.Set<String> listIds, boolean includeOverdue) {
         if (lastDay < firstDay) return;
         ZoneId zone = ZoneId.of(Utils.getTimeZone(context, null));
         LocalDate first = LocalDate.ofEpochDay(firstDay - JULIAN_EPOCH);
@@ -141,7 +136,7 @@ public final class TaskCalendarUi {
             item.allDay = task.allDay;
             item.hasAlarm = task.alarm;
             item.isRepeating = task.rule != null;
-            item.color = displayColor(context, task, rawColor);
+            item.color = displayColor(context, task);
             item.taskCountdown = task.countdown && !task.done;
             ZonedDateTime date = Instant.ofEpochMilli(task.due).atZone(task.allDay ? ZoneOffset.UTC : zone);
             item.startDay = item.endDay = (int) (date.toLocalDate().toEpochDay() + JULIAN_EPOCH);

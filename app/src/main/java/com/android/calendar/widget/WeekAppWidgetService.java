@@ -310,7 +310,7 @@ public class WeekAppWidgetService extends RemoteViewsService {
                         }
 
                         int color = cursor.getInt(INDEX_DISPLAY_COLOR);
-                        int displayColor = Utils.getDisplayColorFromColor(mContext, color);
+                        int displayColor = color;
                         int allDay = cursor.getInt(INDEX_ALL_DAY);
                         long displayId = cursor.getLong(cursor.getColumnIndexOrThrow(Instances.EVENT_ID));
                         long taskId = displayId < -1 ? -displayId - 1 : 0;

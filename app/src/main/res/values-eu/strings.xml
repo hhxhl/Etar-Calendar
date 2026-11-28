@@ -301,7 +301,6 @@
         <item quantity="one">Aste 1</item>
         <item quantity="other"><xliff:g id="count">%d</xliff:g> aste</item>
     </plurals>
-    <string name="preferences_real_event_colors">Erabili gertaera kolore errealak</string>
     <string name="menu_info">Informazioa</string>
     <string name="hint_time_zone_search" msgid="804776560897143016">"Idatzi herrialdearen izena"</string>
     <string name="searchview_description_clear" msgid="1603860069305867810">"Garbitu kontsulta"</string>

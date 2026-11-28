@@ -285,7 +285,6 @@
     <plurals name="Nweeks">
         <item quantity="other"><xliff:g id="count">%d</xliff:g>주</item>
     </plurals>
-    <string name="preferences_real_event_colors">실제 일정 색상으로 표시</string>
     <string name="preferences_list_add_remote">CalDAV 캘린더 추가</string>
     <string name="preferences_calendar_delete_message">이 캘린더를 정말로 삭제하시겠습니까?</string>
     <string name="preferences_calendar_delete_delete">캘린더 삭제</string>

@@ -176,7 +176,7 @@ public class SelectCalendarsSimpleAdapter extends BaseAdapter implements ListAda
         } else {
             view = convertView;
         }
-        int color = Utils.getDisplayColorFromColor(view.getContext(), mData[position].color);
+        int color = mData[position].color;
 
         TextView calendarName = (TextView) view.findViewById(R.id.calendar);
         calendarName.setText(name);

@@ -314,7 +314,6 @@
     <string name="preferences_pure_black_night_mode">Beksvart nattmodus</string>
     <string name="no_reminder_label">Ingen</string>
     <string name="after_start_of_event">etter aktivitetsstart</string>
-    <string name="preferences_real_event_colors">Bruk virkelige aktivitetsfarger</string>
     <string name="foreground_notification_title">Planlegger nye påminnelser…</string>
     <plurals name="Nweeks">
         <item quantity="one">1 uke</item>

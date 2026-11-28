@@ -336,7 +336,6 @@
     </plurals>
     <string name="foreground_notification_title">Planiranje novih podsjetnika …</string>
     <string name="after_start_of_event">nakon početka događaja</string>
-    <string name="preferences_real_event_colors">Koristi boje stvarnog događaja</string>
     <string name="menu_info">Informacije</string>
     <string name="duplicate_label">Dupliciraj</string>
     <string name="hint_url">URL</string>

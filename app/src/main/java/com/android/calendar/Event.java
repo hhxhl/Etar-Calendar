@@ -358,7 +358,7 @@ public class Event implements Cloneable {
 
         if (!cEvents.isNull(PROJECTION_COLOR_INDEX)) {
             // Read the color from the database
-            e.color = Utils.getDisplayColorFromColor(context, cEvents.getInt(PROJECTION_COLOR_INDEX));
+            e.color = cEvents.getInt(PROJECTION_COLOR_INDEX);
         } else {
             e.color = mNoColorColor;
         }

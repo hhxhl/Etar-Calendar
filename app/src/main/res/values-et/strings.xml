@@ -239,7 +239,6 @@
     <string name="foreground_notification_channel_description">Sisemiseks sünkroonimiseks tuleb lubada märguanded. Selle kanali võib turvaliselt peita.</string>
     <string name="rsvp_declined">Vastas ei.</string>
     <string name="preferences_system_theme">Süsteemi vaikeseade</string>
-    <string name="preferences_real_event_colors">Kasuta tõelisi sündmuse värve</string>
     <string name="no_snooze_label">Pole</string>
     <string name="share_label">Jaga</string>
     <string name="hint_url">URL</string>

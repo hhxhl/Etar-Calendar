@@ -314,7 +314,6 @@
     <string name="preferences_pure_black_night_mode">Pure black night mode</string>
     <string name="no_reminder_label">None</string>
     <string name="after_start_of_event">after start of event</string>
-    <string name="preferences_real_event_colors">Use real event colours</string>
     <string name="foreground_notification_title">Scheduling new reminders…</string>
     <plurals name="Nweeks">
         <item quantity="one">1 week</item>

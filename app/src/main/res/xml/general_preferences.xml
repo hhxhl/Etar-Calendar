@@ -27,10 +27,6 @@
             app:key="pref_pure_black_night_mode"
             app:defaultValue="false"
             app:title="@string/preferences_pure_black_night_mode" />
-        <com.android.calendar.settings.MaterialSwitchPreference
-            app:key="pref_real_event_colors"
-            app:defaultValue="false"
-            app:title="@string/preferences_real_event_colors" />
         <ListPreference
             app:key="preferences_default_start"
             app:defaultValue="-2"

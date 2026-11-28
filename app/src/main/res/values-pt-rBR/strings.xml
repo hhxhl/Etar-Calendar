@@ -316,7 +316,6 @@
     <string name="foreground_notification_title">Agendando novos lembretes…</string>
     <string name="after_start_of_event">após o início do evento</string>
     <string name="duplicate_label">Duplicar</string>
-    <string name="preferences_real_event_colors">Usar cores reais de evento</string>
     <string name="hint_url">URL</string>
     <string name="menu_info">Informação</string>
     <string name="add_calendar">Adicionar calendário</string>

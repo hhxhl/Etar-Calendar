@@ -241,7 +241,6 @@
     <string name="preferences_system_theme">پیش‌فرض سیستم</string>
     <string name="preferences_light_theme">روشن</string>
     <string name="preferences_dark_theme">تاریک</string>
-    <string name="preferences_real_event_colors">از رنگ اصلی رویداد استفاده کنید</string>
     <string name="preferences_pure_black_night_mode">مشکی خالص حالت شب</string>
     <string name="display_options">گزینه‌های نمایش</string>
     <string name="display_time">نمایش زمان</string>

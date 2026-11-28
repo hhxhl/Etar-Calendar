@@ -307,7 +307,6 @@
     </plurals>
     <string name="foreground_notification_title">Đang lên lịch những lời nhắc mới…</string>
     <string name="after_start_of_event">after start of event</string>
-    <string name="preferences_real_event_colors">Sử dụng màu sự kiện thật</string>
     <string name="menu_info">Thông tin</string>
     <string name="hint_url">URL</string>
     <string name="duplicate_label">Nhân đôi</string>

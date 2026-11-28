@@ -270,7 +270,6 @@
     <string name="preferences_alerts_custom_snooze_delay_summary_on">Питане за периода на повторно напомняне</string>
     <string name="display_time">Показване на часа</string>
     <string name="preferences_theme">Тема</string>
-    <string name="preferences_real_event_colors">Използване истинските цветове на събитието</string>
     <string name="display_options">Оформление</string>
     <string name="foreground_notification_channel_description">Необходими са известия за вътрешна синхронизация. Можете безопасно да скриете този канал.</string>
     <string name="duplicate_label">Дубликат</string>

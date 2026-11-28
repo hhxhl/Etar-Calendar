@@ -630,7 +630,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
             boolean past = entry.allDay ? !row.day.isAfter(today)
                     : Math.max(entry.begin, millis(row.day)) <= System.currentTimeMillis();
             com.android.calendar.ItemAppearance.bindRow(root,
-                    Utils.getDisplayColorFromColor(context, entry.color),
+                    entry.color,
                     title, countdown, when, where, chip);
             ItemAppearance.bindTitle(title,
                     TextUtils.isEmpty(entry.title) ? context.getString(R.string.no_title_label) : entry.title,

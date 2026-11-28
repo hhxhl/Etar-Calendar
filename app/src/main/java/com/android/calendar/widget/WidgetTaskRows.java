@@ -104,7 +104,7 @@ final class WidgetTaskRows {
         }
         ArrayList<Event> tasks = new ArrayList<>();
         TaskCalendarUi.append(context, tasks, firstDay, lastDay,
-                WidgetUtils.getWidgetTaskListIds(context, widgetId), true, includeOverdue);
+                WidgetUtils.getWidgetTaskListIds(context, widgetId), includeOverdue);
         for (Event task : tasks) {
             Object[] row = new Object[columns.length];
             row[projection.length] = task.taskCompleted ? 1 : 0;

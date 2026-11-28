@@ -53,7 +53,6 @@ class GeneralPreferences : PreferenceFragmentCompat(),
         TimeZonePickerDialog.OnTimeZoneSetListener {
 
     private lateinit var themePref: ListPreference
-    private lateinit var realEventColors: MaterialSwitchPreference
     private lateinit var pureBlackNightModePref: MaterialSwitchPreference
     private lateinit var doNotCheckBatteryOptimizationPref: MaterialSwitchPreference
     private lateinit var defaultStartPref: ListPreference
@@ -87,7 +86,6 @@ class GeneralPreferences : PreferenceFragmentCompat(),
         super.onCreate(savedInstanceState)
 
         themePref = preferenceScreen.findPreference(KEY_THEME_PREF)!!
-        realEventColors = preferenceScreen.findPreference(KEY_REAL_EVENT_COLORS)!!
         pureBlackNightModePref = preferenceScreen.findPreference(KEY_PURE_BLACK_NIGHT_MODE)!!
         doNotCheckBatteryOptimizationPref = preferenceScreen.findPreference(KEY_DO_NOT_CHECK_BATTERY_OPTIMIZATION)!!
         defaultStartPref = preferenceScreen.findPreference(KEY_DEFAULT_START)!!
@@ -202,9 +200,6 @@ class GeneralPreferences : PreferenceFragmentCompat(),
                     Utils.sendUpdateWidgetIntent(a)
                     a.recreate()
                 }
-            }
-            KEY_REAL_EVENT_COLORS -> {
-                Utils.sendUpdateWidgetIntent(a)
             }
         }
     }
@@ -374,7 +369,6 @@ class GeneralPreferences : PreferenceFragmentCompat(),
     companion object {
         // Preference keys
         const val KEY_THEME_PREF = "pref_theme"
-        const val KEY_REAL_EVENT_COLORS = "pref_real_event_colors"
         /** Show buttons to switch between the day, week and month views in the toolbar */
         const val KEY_VIEW_SWITCH_BUTTONS = "pref_view_switch_buttons"
         const val KEY_DO_NOT_CHECK_BATTERY_OPTIMIZATION = "pref_do_not_check_battery_optimization"

@@ -336,7 +336,6 @@
     <string name="preferences_list_add_offline_cancel">Anulează</string>
     <string name="source_code">Sursă</string>
     <string name="after_start_of_event">după începerea evenimentului</string>
-    <string name="preferences_real_event_colors">Utilizează culorile reale ale evenimentului</string>
     <string name="menu_info">Informații</string>
     <string name="duplicate_label">Duplicat</string>
     <string name="hint_url">URL</string>

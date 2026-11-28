@@ -239,7 +239,7 @@ public class CalendarAppWidgetService extends RemoteViewsService {
                 } else {
                     views = new RemoteViews(mContext.getPackageName(), R.layout.widget_item);
                 }
-                int displayColor = Utils.getDisplayColorFromColor(mContext, eventInfo.color);
+                int displayColor = eventInfo.color;
                 if (eventInfo.allDay) {
                     com.android.calendar.ItemAppearance.bindWidget(mContext, views, displayColor,
                             R.id.widget_item_surface, R.id.agenda_item_color, R.id.title);
