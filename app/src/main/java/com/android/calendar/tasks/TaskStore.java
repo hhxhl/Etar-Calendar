@@ -112,41 +112,13 @@ public final class TaskStore extends SQLiteOpenHelper {
             try { return tz == null ? ZoneId.systemDefault() : ZoneId.of(tz); }
             catch (java.time.DateTimeException ex) { return ZoneId.systemDefault(); }
         }
-        /** All-day dates are stored at UTC midnight, but alarms use local wall time. */
-        private Long timedValue(Long value, boolean dateOnly) {
-            if (value == null || !dateOnly) return value;
-            return Instant.ofEpochMilli(value).atZone(ZoneOffset.UTC).toLocalDate()
-                    .atStartOfDay(zone()).toInstant().toEpochMilli();
-        }
-        public Long alarmTime() {
-            if (!alarm) return null;
-            if (alarmMode == ALARM_ABSOLUTE) return alarmAbsolute;
-            Long base = alarmMode == ALARM_START ? timedValue(start, allDay)
-                    : timedValue(due, allDay);
-            return base == null ? null : base - alarmOffset * 60000L;
-        }
-        /** One display date per item: deadline, start, or standalone alarm. */
-        public Long displayTime() {
-            if (due != null) return due;
-            if (start != null) return start;
-            return alarmTime();
-        }
-        public boolean displayAllDay() {
-            return (due != null || start != null) && allDay;
-        }
-        public boolean hasRange() { return TaskTimePresentation.isRange(start, due); }
-        /** All-day endpoints are dates, with an inclusive deadline day. */
+        public Long alarmTime() { return TaskTimes.alarm(this); }
+        public Long displayTime() { return TaskTimes.display(this); }
+        public boolean displayAllDay() { return TaskTimes.dateOnly(this); }
+        public boolean hasRange() { return TaskTimes.isRange(start, due); }
         public boolean rangeAllDay() { return hasRange() && allDay; }
-        public long rangeStart(ZoneId calendarZone) {
-            if (!hasRange()) return displayTime();
-            return start;
-        }
-        public long rangeEnd(ZoneId calendarZone) {
-            if (!hasRange()) return displayTime() + (displayAllDay() ? 86400000L : 60000L);
-            if (!allDay) return due;
-            return Instant.ofEpochMilli(due).atZone(ZoneOffset.UTC).toLocalDate().plusDays(1)
-                    .atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
-        }
+        public long rangeStart(ZoneId calendarZone) { return TaskTimes.rangeStart(this); }
+        public long rangeEnd(ZoneId calendarZone) { return TaskTimes.drawingEnd(this); }
         public int priority, color, listColor;
         public Integer repeatMinute;
     }
@@ -252,7 +224,7 @@ public final class TaskStore extends SQLiteOpenHelper {
     private List<Task> queryTasks(long listId, boolean visibleOnly, boolean undatedOnly) {
         ArrayList<Task> result=new ArrayList<>();
         String filter=listId==0?"":" AND t.list_id=?";
-        if (visibleOnly) filter += " AND EXISTS(SELECT 1 FROM tasklists l WHERE l._id=t.list_id AND l.visible=1)";
+        if (visibleOnly) filter += " AND l.visible=1";
         if (undatedOnly) filter += " AND "+DISPLAY_TIME+" IS NULL";
         try(Cursor c=getReadableDatabase().rawQuery(SELECT+filter+" ORDER BY t.status>=2,"+DISPLAY_TIME+" IS NULL,"+DISPLAY_TIME+",t._id",listId==0?null:new String[]{Long.toString(listId)})) {
             while(c.moveToNext()) result.add(read(c));
@@ -268,7 +240,7 @@ public final class TaskStore extends SQLiteOpenHelper {
                 + " OR ((t.dtstart IS NULL OR t.due IS NULL)"
                 + " AND (("+DISPLAY_ALL_DAY+"=0 AND "+DISPLAY_TIME+">=? AND "+DISPLAY_TIME+"<?)"
                 + " OR ("+DISPLAY_ALL_DAY+"=1 AND "+DISPLAY_TIME+">=? AND "+DISPLAY_TIME+"<?))))"
-                + " AND EXISTS(SELECT 1 FROM tasklists l WHERE l._id=t.list_id AND l.visible=1)";
+                + " AND l.visible=1";
         try(Cursor c=getReadableDatabase().rawQuery(SELECT+where+" ORDER BY "+DISPLAY_TIME+",t._id",
                 new String[]{Long.toString(until),Long.toString(utcUntil),Long.toString(from),Long.toString(utcFrom),
                         Long.toString(from),Long.toString(until),Long.toString(utcFrom),Long.toString(utcUntil)})){
@@ -280,7 +252,7 @@ public final class TaskStore extends SQLiteOpenHelper {
         ArrayList<Task> result = new ArrayList<>();
         String where = " AND t.status IN (0,1) AND t.due IS NOT NULL"
                 + " AND ((t.is_allday=0 AND t.due<?) OR (t.is_allday=1 AND t.due<?))"
-                + " AND EXISTS(SELECT 1 FROM tasklists l WHERE l._id=t.list_id AND l.visible=1)";
+                + " AND l.visible=1";
         try (Cursor c = getReadableDatabase().rawQuery(SELECT + where + " ORDER BY t.due,t._id",
                 new String[]{Long.toString(from), Long.toString(utcFrom)})) {
             while (c.moveToNext()) result.add(read(c));

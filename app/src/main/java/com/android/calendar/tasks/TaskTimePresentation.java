@@ -18,7 +18,7 @@ public final class TaskTimePresentation {
     }
 
     public static boolean isRange(Long start, Long due) {
-        return start != null && due != null && start < due;
+        return TaskTimes.isRange(start, due);
     }
 
     public TaskTimePresentation(Long start, Long due, Long alarm, boolean allDay, boolean merge) {

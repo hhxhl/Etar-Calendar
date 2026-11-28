@@ -10,6 +10,7 @@ import android.provider.CalendarContract.Attendees;
 import android.provider.CalendarContract.Calendars;
 import android.provider.CalendarContract.Instances;
 import com.android.calendar.tasks.TaskStore;
+import com.android.calendar.tasks.TaskTimes;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -128,8 +129,7 @@ public final class DatedItemsRepository {
             if (listId != 0 && task.listId != listId) continue;
             if (!matches(task.title, keyword) && !matches(task.notes, keyword)
                     && !matches(task.url, keyword)) continue;
-            LocalDate date = task.displayTime() == null ? null : Instant.ofEpochMilli(task.displayTime())
-                    .atZone(task.displayAllDay() ? ZoneOffset.UTC : zone).toLocalDate();
+            LocalDate date = TaskTimes.displayDay(task, zone);
             // Search range matches can start before or end after the visible search window.
             if (task.hasRange() && date != null && date.isAfter(last)) date = last;
             result.add(new Item<>(date, task));
@@ -144,8 +144,7 @@ public final class DatedItemsRepository {
     public static List<Item<TaskStore.Task>> tasks(TaskStore store, long listId, ZoneId zone) {
         ArrayList<Item<TaskStore.Task>> items = new ArrayList<>();
         for (TaskStore.Task task : store.visibleTasks(listId)) {
-            LocalDate date = task.displayTime() == null ? null : Instant.ofEpochMilli(task.displayTime())
-                    .atZone(task.displayAllDay() ? ZoneOffset.UTC : zone).toLocalDate();
+            LocalDate date = TaskTimes.displayDay(task, zone);
             items.add(new Item<>(date, task));
         }
         items.sort(Comparator.comparing((Item<TaskStore.Task> item) -> item.day, Comparator.nullsLast(Comparator.naturalOrder()))

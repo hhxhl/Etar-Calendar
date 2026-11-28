@@ -120,7 +120,12 @@ public final class TaskCalendarUi {
         long utcUntil = end.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
         TaskStore store = TaskStore.get(context);
         java.util.List<TaskStore.Task> tasks = store.datedTasks(from, until, utcFrom, utcUntil);
-        if (includeOverdue) tasks.addAll(store.overdueTasks(from, utcFrom));
+        if (includeOverdue) {
+            java.util.Set<Long> seen = new java.util.HashSet<>();
+            for (TaskStore.Task task : tasks) seen.add(task.id);
+            for (TaskStore.Task task : store.overdueTasks(from, utcFrom))
+                if (seen.add(task.id)) tasks.add(task);
+        }
         boolean mergeTimes = TaskTimePresentation.enabled(context);
         for (TaskStore.Task task : tasks) {
             if (listIds != null && !listIds.contains(Long.toString(task.listId))) continue;
@@ -141,19 +146,21 @@ public final class TaskCalendarUi {
             item.color = displayColor(context, task);
             item.taskCountdown = task.due != null && task.countdown && !task.done;
             ZoneId drawingZone = item.allDay ? ZoneOffset.UTC : zone;
-            item.startMillis = mergeTimes && times.reminderPoint() ? task.alarmTime() : task.rangeStart(zone);
-            // A point has a minimum drawing interval, not a real deadline.
-            item.endMillis = times.range ? task.rangeEnd(zone)
-                    : item.startMillis + (item.allDay ? 86400000L : 60000L);
+            item.startMillis = TaskTimes.rangeStart(task);
+            item.endMillis = TaskTimes.drawingEnd(task);
             ZonedDateTime startDate = Instant.ofEpochMilli(item.startMillis).atZone(drawingZone);
             ZonedDateTime endDate = Instant.ofEpochMilli(item.endMillis).atZone(drawingZone);
             // Midnight is the exclusive end of the preceding day, as in CalendarProvider.
             boolean midnightEnd = endDate.toLocalTime().equals(java.time.LocalTime.MIDNIGHT);
-            LocalDate lastDate = midnightEnd ? endDate.toLocalDate().minusDays(1) : endDate.toLocalDate();
+            // A synthetic drawing interval must not make a point span two days.
+            boolean timedPoint = !item.allDay && !times.range;
+            LocalDate lastDate = timedPoint ? startDate.toLocalDate()
+                    : midnightEnd ? endDate.toLocalDate().minusDays(1) : endDate.toLocalDate();
             item.startDay = (int) (startDate.toLocalDate().toEpochDay() + JULIAN_EPOCH);
             item.endDay = (int) (lastDate.toEpochDay() + JULIAN_EPOCH);
             item.startTime = item.allDay ? 0 : startDate.getHour() * 60 + startDate.getMinute();
-            item.endTime = item.allDay || midnightEnd ? 1440 : endDate.getHour() * 60 + endDate.getMinute();
+            item.endTime = timedPoint ? Math.min(1440, item.startTime + 1)
+                    : item.allDay || midnightEnd ? 1440 : endDate.getHour() * 60 + endDate.getMinute();
             if (item.startDay > lastDay || (item.endDay < firstDay && !includeOverdue)) continue;
             if (item.endDay < firstDay && (task.done || task.due == null)) continue;
             events.add(item);
