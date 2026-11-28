@@ -78,8 +78,7 @@ public final class DatedListUi {
         view.setPadding(horizontal, vertical, horizontal, vertical);
         view.setTextColor(DynamicThemeKt.getColor(context,
                 section ? "agenda_item_standard_color" : "agenda_item_where_text_color"));
-        view.setBackgroundResource(DynamicThemeKt.getDrawableId(context,
-                section ? "agenda_item_bg_secondary" : "agenda_item_bg_primary"));
+        view.setBackgroundResource(section ? R.drawable.agenda_item_bg_secondary : R.drawable.agenda_item_bg_primary);
         return view;
     }
 
@@ -199,8 +198,7 @@ public final class DatedListUi {
                 (int) (day.toEpochDay() + 2440588L), (int) (today.toEpochDay() + 2440588L), millis, context));
         ((TextView) header.findViewById(R.id.date)).setText(
                 Utils.formatDateRange(context, millis, millis, DateUtils.FORMAT_SHOW_DATE));
-        header.setBackgroundResource(DynamicThemeKt.getDrawableId(context,
-                day.isAfter(today) ? "agenda_item_bg_primary" : "agenda_item_bg_secondary"));
+        header.setBackgroundResource(day.isAfter(today) ? R.drawable.agenda_item_bg_primary : R.drawable.agenda_item_bg_secondary);
         header.findViewById(R.id.top_divider_past_present).setVisibility(View.GONE);
         return header;
     }
