@@ -82,4 +82,46 @@ public class TaskRecurrenceTest {
         t.alarmAbsolute = ms("2027-01-04T09:00:00Z");
         assertEquals(Long.valueOf(ms("2027-01-05T09:00:00Z")), TaskStore.nextDue(t));
     }
+    @Test public void timedRangePreservesBothEndpoints() {
+        TaskStore.Task t = new TaskStore.Task();
+        t.start = ms("2027-01-01T09:00:00Z");
+        t.due = ms("2027-01-05T18:00:00Z");
+        java.time.ZoneId zone = java.time.ZoneId.of("UTC");
+        org.junit.Assert.assertTrue(t.hasRange());
+        org.junit.Assert.assertFalse(t.rangeAllDay());
+        assertEquals(t.start.longValue(), t.rangeStart(zone));
+        assertEquals(t.due.longValue(), t.rangeEnd(zone));
+        assertEquals(t.due, t.displayTime());
+    }
+
+    @Test public void allDayRangeIncludesDeadlineDate() {
+        TaskStore.Task t = new TaskStore.Task();
+        t.start = ms("2027-01-01T00:00:00Z");
+        t.due = ms("2027-01-05T00:00:00Z");
+        t.startAllDay = t.allDay = true;
+        java.time.ZoneId zone = java.time.ZoneId.of("Asia/Tokyo");
+        org.junit.Assert.assertTrue(t.rangeAllDay());
+        assertEquals(t.start.longValue(), t.rangeStart(zone));
+        assertEquals(ms("2027-01-06T00:00:00Z"), t.rangeEnd(zone));
+    }
+
+    @Test public void mixedRangeUsesLocalDayBoundary() {
+        TaskStore.Task t = new TaskStore.Task();
+        t.start = ms("2027-01-01T00:00:00Z");
+        t.startAllDay = true;
+        t.due = ms("2027-01-05T09:00:00Z");
+        java.time.ZoneId zone = java.time.ZoneId.of("Asia/Tokyo");
+        org.junit.Assert.assertFalse(t.rangeAllDay());
+        assertEquals(ms("2026-12-31T15:00:00Z"), t.rangeStart(zone));
+        assertEquals(t.due.longValue(), t.rangeEnd(zone));
+    }
+
+    @Test public void deadlineOnlyRemainsPoint() {
+        TaskStore.Task t = new TaskStore.Task();
+        t.due = ms("2027-01-05T09:00:00Z");
+        java.time.ZoneId zone = java.time.ZoneId.of("UTC");
+        org.junit.Assert.assertFalse(t.hasRange());
+        assertEquals(t.due.longValue(), t.rangeStart(zone));
+        assertEquals(t.due + 60000L, t.rangeEnd(zone));
+    }
 }
