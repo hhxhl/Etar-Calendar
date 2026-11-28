@@ -30,19 +30,29 @@ public final class ItemStateIcons {
         }
     }
 
+    /** A standalone list marker is a centered drawable, not a text span. */
     public static void bindMarker(TextView view, String state) {
-        view.setText(withIcon(view.getContext(), state, "", false));
+        int id = resource(state);
+        view.setText(null);
+        view.setForegroundGravity(android.view.Gravity.CENTER);
+        if (id == 0) {
+            view.setForeground(null);
+            return;
+        }
+        Drawable icon = view.getContext().getDrawable(id).mutate();
+        icon.setTint(view.getCurrentTextColor());
+        view.setForeground(icon);
     }
 
     public static CharSequence prefix(Context context, String state, CharSequence title) {
-        return withIcon(context, state, title, true);
+        return withIcon(context, state, title);
     }
 
-    private static CharSequence withIcon(Context context, String state, CharSequence text, boolean gap) {
+    private static CharSequence withIcon(Context context, String state, CharSequence text) {
         int id = resource(state);
         if (id == 0) return text;
         SpannableStringBuilder result = new SpannableStringBuilder("\uFFFC");
-        result.setSpan(new MarkerSpan(context, state, id, gap), 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        result.setSpan(new MarkerSpan(context, state, id), 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         if (text != null) result.append(text);
         return result;
     }
@@ -64,18 +74,16 @@ public final class ItemStateIcons {
     private static final class MarkerSpan extends ReplacementSpan {
         final String state;
         private final Drawable icon;
-        private final boolean gap;
 
-        MarkerSpan(Context context, String state, int id, boolean gap) {
+        MarkerSpan(Context context, String state, int id) {
             this.state = state;
             this.icon = context.getDrawable(id).mutate();
-            this.gap = gap;
         }
 
         private int size(Paint paint) { return Math.max(1, Math.round(paint.getTextSize())); }
 
         @Override public int getSize(Paint paint, CharSequence text, int start, int end, Paint.FontMetricsInt fm) {
-            return size(paint) + (gap ? Math.max(1, Math.round(paint.getTextSize() * .22f)) : 0);
+            return size(paint) + Math.max(1, Math.round(paint.getTextSize() * .22f));
         }
 
         @Override public void draw(Canvas canvas, CharSequence text, int start, int end,
