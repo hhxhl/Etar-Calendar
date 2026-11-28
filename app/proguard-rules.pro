@@ -14,21 +14,15 @@
 
 # Uncomment this to preserve the line number information for
 # debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+-keepattributes SourceFile,LineNumberTable
 
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
--keep class com.android.calendar.selectcalendars.SelectCalendarsSyncFragment
--keep class com.android.calendar.OtherPreferences
--keep class com.android.calendar.AboutPreferences
 -keep class com.android.calendar.settings.QuickResponsePreferences
 -keepclassmembers class com.android.calendar.AllInOneActivity {
   *** setControlsOffset(...);
-}
--keepclassmembers class com.android.calendar.selectcalendars.SelectVisibleCalendarsActivity {
-  *** handleSelectSyncedCalendarsClicked(...);
 }
 -keepclassmembers class com.android.calendar.AllInOneActivity {
   *** handleSelectSyncedCalendarsClicked(...);
@@ -66,3 +60,12 @@
   public *** apply();
 }
 
+# WorkManager stores worker class names in its database across application updates.
+-keep class com.android.calendar.alerts.AlertWorker {
+    public <init>(android.content.Context, androidx.work.WorkerParameters);
+}
+
+# Fragment class names are used for saved-state restoration and navigation.
+-keep class com.android.calendar.** extends androidx.fragment.app.Fragment {
+    public <init>();
+}

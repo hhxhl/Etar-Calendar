@@ -27,8 +27,13 @@ android {
 
 	buildTypes {
 		release {
-			// TODO: could be enabled for ProGuard minimization
-			isMinifyEnabled = false
+			isMinifyEnabled = true
+			// Test code shrinking independently of resource shrinking.
+			isShrinkResources = false
+			proguardFiles(
+				getDefaultProguardFile("proguard-android-optimize.txt"),
+				"proguard-rules.pro"
+			)
 			resValue(
 				"string",
 				"search_authority",
