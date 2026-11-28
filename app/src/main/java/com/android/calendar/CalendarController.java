@@ -257,6 +257,29 @@ public class CalendarController {
     }
 
     public void sendEvent(Object sender, final EventInfo event) {
+        // Display-only task IDs must never be passed to CalendarProvider.
+        if (event.id < -1 && (event.eventType == EventType.VIEW_EVENT
+                || event.eventType == EventType.VIEW_EVENT_DETAILS
+                || event.eventType == EventType.EDIT_EVENT
+                || event.eventType == EventType.DELETE_EVENT)) {
+            com.android.calendar.tasks.TaskCalendarUi.openTask(mContext, -event.id - 1);
+            return;
+        }
+        // Every existing calendar event uses the same editor/viewer, including
+        // agenda, search, calendar grids and recurring occurrences.
+        if (event.id > 0 && (event.eventType == EventType.VIEW_EVENT
+                || event.eventType == EventType.VIEW_EVENT_DETAILS
+                || event.eventType == EventType.EDIT_EVENT)) {
+            EditEventActivity.openEvent(mContext, event.id,
+                    event.startTime == null ? -1 : event.startTime.toMillis(),
+                    event.endTime == null ? -1 : event.endTime.toMillis(),
+                    event.eventType == EventType.VIEW_EVENT ? event.getResponse()
+                            : Attendees.ATTENDEE_STATUS_NONE);
+            return;
+        }
+        if (event.eventType == EventType.GO_TO) {
+            com.android.calendar.tasks.TaskCalendarUi.clearSelection(this);
+        }
         // TODO Throw exception on invalid events
 
         if (DEBUG) {
@@ -576,6 +599,10 @@ public class CalendarController {
     }
 
     public void launchViewEvent(long eventId, long startMillis, long endMillis, int response) {
+        if (eventId > 0) {
+            EditEventActivity.openEvent(mContext, eventId, startMillis, endMillis, response);
+            return;
+        }
         Intent intent = new Intent(Intent.ACTION_VIEW);
         Uri eventUri = ContentUris.withAppendedId(Events.CONTENT_URI, eventId);
         intent.setData(eventUri);
@@ -733,7 +760,9 @@ public class CalendarController {
         final int WEEK = 3;
         final int MONTH = 4;
         final int EDIT = 5;
-        final int MAX_VALUE = 5;
+        final int REMINDERS = 6;
+        final int TASKS = 7;
+        final int MAX_VALUE = 7;
     }
 
     public interface EventHandler {

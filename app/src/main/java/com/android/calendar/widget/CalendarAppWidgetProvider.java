@@ -33,10 +33,14 @@ import android.provider.CalendarContract;
 import android.util.Log;
 import android.widget.RemoteViews;
 
-import com.android.calendar.AllInOneActivity;
-import com.android.calendar.EventInfoActivity;
 import com.android.calendar.Utils;
 import com.android.calendar.calendarcommon2.Time;
+import com.android.calendar.theme.ThemeUtils;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import ws.xsoh.etar.R;
 
@@ -49,6 +53,11 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
 
     private static boolean sWidgetChecked = false;
     private static boolean sWidgetSupported = false;
+
+    // Process-local state: after process death, send one complete update to recover
+    // the host layout before relying on partial updates.
+    private static final Map<Integer, List<?>> sHeaders = new HashMap<>();
+    private static final Map<Integer, List<?>> sBackgrounds = new HashMap<>();
 
     // TODO Move these to Calendar.java
     static final String EXTRA_EVENT_IDS = "com.android.calendar.EXTRA_EVENT_IDS";
@@ -70,11 +79,16 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
      * @param context Context to use when building broadcast.
      */
     static PendingIntent getUpdateIntent(Context context) {
+        return getUpdateIntent(context, AppWidgetManager.INVALID_APPWIDGET_ID);
+    }
+
+    static PendingIntent getUpdateIntent(Context context, int widgetId) {
         Intent intent = new Intent(Utils.getWidgetScheduledUpdateAction(context));
         intent.setClass(context, CalendarAppWidgetService.CalendarFactory.class);
         intent.setDataAndType(CalendarContract.CONTENT_URI, Utils.APPWIDGET_DATA_TYPE);
-        return PendingIntent.getBroadcast(context, 0 /* no requestCode */, intent,
-                PendingIntent.FLAG_IMMUTABLE);
+        intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
+        return PendingIntent.getBroadcast(context, widgetId == AppWidgetManager.INVALID_APPWIDGET_ID ? 0 : widgetId,
+                intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
     /**
@@ -82,16 +96,7 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
      * in combination with {@link RemoteViews#setPendingIntentTemplate(int, PendingIntent)}.
      */
     static PendingIntent getLaunchPendingIntentTemplate(Context context) {
-        Intent launchIntent = new Intent();
-        launchIntent.setAction(Intent.ACTION_VIEW);
-        launchIntent.setPackage(context.getPackageName());
-        launchIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK |
-                Intent.FLAG_ACTIVITY_CLEAR_TASK |
-                Intent.FLAG_ACTIVITY_TASK_ON_HOME |
-                Intent.FLAG_GRANT_READ_URI_PERMISSION);
-
-        return PendingIntent.getActivity(context, 0 /* no requestCode */, launchIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE);
+        return WidgetClickActivity.launchTemplate(context);
     }
 
     /**
@@ -106,6 +111,9 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
     static Intent getLaunchFillInIntent(Context context, long id, long start, long end,
                                         boolean allDay) {
         final Intent fillInIntent = new Intent();
+        if (id < -1) {
+            return WidgetClickActivity.itemIntent(-id - 1, start);
+        }
         String dataString = "content://com.android.calendar/events";
         if (id != 0) {
             fillInIntent.putExtra(Utils.INTENT_KEY_DETAIL_VIEW, true);
@@ -113,11 +121,6 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
                     Intent.FLAG_ACTIVITY_TASK_ON_HOME);
 
             dataString += "/" + id;
-            // If we have an event id - start the event info activity
-            fillInIntent.setClass(context, EventInfoActivity.class);
-        } else {
-            // If we do not have an event id - start AllInOne
-            fillInIntent.setClass(context, AllInOneActivity.class);
         }
         Uri data = Uri.parse(dataString);
         fillInIntent.setData(data);
@@ -150,7 +153,7 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
             AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
             performUpdate(context, appWidgetManager,
                     appWidgetManager.getAppWidgetIds(getComponentName(context)),
-                    null /* no eventIds */);
+                    null /* no eventIds */, false);
         } else {
             super.onReceive(context, intent);
         }
@@ -166,6 +169,8 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
         PendingIntent pendingUpdate = getUpdateIntent(context);
         am.cancel(pendingUpdate);
         am.cancel(getHeaderUpdateIntent(context));
+        sHeaders.clear();
+        sBackgrounds.clear();
     }
 
     /**
@@ -175,7 +180,11 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
     public void onDeleted(Context context, int[] appWidgetIds) {
         super.onDeleted(context, appWidgetIds);
         for (int appWidgetId : appWidgetIds) {
+            ((AlarmManager) context.getSystemService(Context.ALARM_SERVICE))
+                    .cancel(getUpdateIntent(context, appWidgetId));
             WidgetUtils.INSTANCE.deleteWidgetCalendarIds(context, appWidgetId);
+            sHeaders.remove(appWidgetId);
+            sBackgrounds.remove(appWidgetId);
         }
     }
 
@@ -184,7 +193,7 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
      */
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
-        performUpdate(context, appWidgetManager, appWidgetIds, null /* no eventIds */);
+        performUpdate(context, appWidgetManager, appWidgetIds, null /* no eventIds */, true);
     }
 
     /**
@@ -201,7 +210,7 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
      */
     private void performUpdate(Context context,
             AppWidgetManager appWidgetManager, int[] appWidgetIds,
-            long[] changedEventIds) {
+            long[] changedEventIds, boolean forceFull) {
         if (!isWidgetSupported(context)) {
             return;
         }
@@ -210,14 +219,8 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
         // Launch over to service so it can perform update
         for (int appWidgetId : appWidgetIds) {
             if (LOGD) Log.d(TAG, "Building widget update...");
-            Intent updateIntent = new Intent(context, CalendarAppWidgetService.class);
-            updateIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId);
-            if (changedEventIds != null) {
-                updateIntent.putExtra(EXTRA_EVENT_IDS, changedEventIds);
-            }
-            updateIntent.setData(Uri.parse(updateIntent.toUri(Intent.URI_INTENT_SCHEME)));
-
-            RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.appwidget);
+            boolean full = forceFull || !sHeaders.containsKey(appWidgetId)
+                    || !sBackgrounds.containsKey(appWidgetId);
             // Calendar header
             Time time = new Time(Utils.getTimeZone(context, null));
             time.set(System.currentTimeMillis());
@@ -229,43 +232,87 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
                     ? "周" + "一二三四五六日".charAt(today.getDayOfWeek().getValue() - 1)
                     : today.getDayOfWeek().getDisplayName(java.time.format.TextStyle.SHORT, locale);
             String lunar = com.android.calendar.LunarUtils.dayLabel(context, today);
-            views.setTextViewText(R.id.date, String.valueOf(today.getDayOfMonth()));
-            views.setTextViewText(R.id.day_of_week, "zh".equals(locale.getLanguage())
-                    ? WidgetHeaderUtils.vertical(weekday) : weekday);
-            views.setTextViewText(R.id.widget_lunar_day, WidgetHeaderUtils.vertical(lunar));
-            views.setViewVisibility(R.id.widget_lunar_day,
-                    lunar.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
             String marker = com.android.calendar.LocalizedDay.marker(context, today);
-            views.setTextViewText(R.id.widget_holiday_marker, marker);
-            views.setViewVisibility(R.id.widget_holiday_marker,
-                    marker.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
-            if (!marker.isEmpty()) {
-                views.setTextColor(R.id.widget_holiday_marker, WidgetHeaderUtils.markerColor(marker));
-            }
+            WidgetHeaderUtils.SpecialDates special = WidgetHeaderUtils.specialDates(context, today);
+            boolean festivalToday = special.days == 0 && !special.festival.isEmpty();
+            String primary = special.isEmpty() ? "" : special.days > 0
+                    ? context.getString(R.string.widget_special_countdown, special.names(), special.days)
+                    : festivalToday ? special.festival : special.term;
+            String secondary = festivalToday ? special.term : "";
             int headerTextColor = WidgetHeaderUtils.accentColor(context);
-            if (WidgetUtils.usesLiveTheme(context)) {
-                for (int id : new int[]{R.id.day_of_week, R.id.date, R.id.widget_lunar_day}) {
-                    views.setColorStateList(id, "setTextColor", R.color.widget_live_accent);
-                }
-                views.setColorStateList(R.id.iv_settings, "setImageTintList", R.color.widget_live_accent);
-                for (int id : new int[]{R.id.widget_header_divider, R.id.widget_date_lunar_divider,
-                        R.id.widget_lunar_weekday_divider}) {
-                    views.setInt(id, "setBackgroundResource", R.color.widget_live_divider);
-                }
-            } else {
-                views.setTextColor(R.id.day_of_week, headerTextColor);
-                views.setTextColor(R.id.date, headerTextColor);
-                views.setTextColor(R.id.widget_lunar_day, headerTextColor);
-                views.setInt(R.id.iv_settings, "setColorFilter", headerTextColor);
-                int dividerColor = WidgetHeaderUtils.dividerColor(context);
-                views.setInt(R.id.widget_header_divider, "setBackgroundColor", dividerColor);
-                views.setInt(R.id.widget_date_lunar_divider, "setBackgroundColor", dividerColor);
-                views.setInt(R.id.widget_lunar_weekday_divider, "setBackgroundColor", dividerColor);
+            int dividerColor = WidgetHeaderUtils.dividerColor(context);
+            int festivalColor = WidgetHeaderUtils.festivalColor(context);
+            boolean liveTheme = WidgetUtils.usesLiveTheme(context);
+            List<?> theme = Arrays.asList(ThemeUtils.INSTANCE.getTheme(context),
+                    Utils.getSharedPreference(context, "pref_pure_black_night_mode", false),
+                    liveTheme ? "" : ThemeUtils.INSTANCE.getSuffix(context));
+            List<?> headerKey = Arrays.asList(today, Utils.getTimeZone(context, null), locale,
+                    weekday, lunar, marker, primary, secondary, festivalToday, theme,
+                    liveTheme ? 0 : headerTextColor, liveTheme ? 0 : dividerColor,
+                    liveTheme ? 0 : festivalColor);
+            List<?> backgroundKey = Arrays.asList(theme,
+                    WidgetUtils.getBackgroundOpacity(context, appWidgetId));
+            boolean headerChanged = full || !headerKey.equals(sHeaders.get(appWidgetId));
+            boolean backgroundChanged = full || !backgroundKey.equals(sBackgrounds.get(appWidgetId));
+
+            // Normal event changes must not reapply the widget shell or its background.
+            if (!headerChanged && !backgroundChanged) {
+                appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId, R.id.events_list);
+                continue;
             }
-            views.setViewVisibility(R.id.widget_lunar_weekday_divider,
-                    lunar.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
-            WidgetUtils.applyWidgetBackground(context, views, R.id.widget_background, appWidgetId);
-            if (android.os.Build.VERSION.SDK_INT >= 31) {
+            RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.appwidget);
+            if (headerChanged) {
+                views.setTextViewText(R.id.date, String.valueOf(today.getDayOfMonth()));
+                views.setTextViewText(R.id.day_of_week, "zh".equals(locale.getLanguage())
+                        ? WidgetHeaderUtils.vertical(weekday) : weekday);
+                views.setTextViewText(R.id.widget_lunar_day, WidgetHeaderUtils.vertical(lunar));
+                views.setViewVisibility(R.id.widget_lunar_day,
+                        lunar.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
+                views.setTextViewText(R.id.widget_holiday_marker, marker);
+                views.setViewVisibility(R.id.widget_holiday_marker,
+                        marker.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
+                if (!marker.isEmpty()) {
+                    views.setTextColor(R.id.widget_holiday_marker, WidgetHeaderUtils.markerColor(marker));
+                }
+                if (liveTheme) {
+                    for (int id : new int[]{R.id.day_of_week, R.id.date, R.id.widget_lunar_day}) {
+                        views.setColorStateList(id, "setTextColor", R.color.widget_live_accent);
+                    }
+                    views.setColorStateList(R.id.iv_settings, "setImageTintList", R.color.widget_live_accent);
+                    for (int id : new int[]{R.id.widget_header_divider, R.id.widget_date_lunar_divider,
+                            R.id.widget_lunar_weekday_divider}) {
+                        views.setInt(id, "setBackgroundResource", R.color.widget_live_divider);
+                    }
+                } else {
+                    views.setTextColor(R.id.day_of_week, headerTextColor);
+                    views.setTextColor(R.id.date, headerTextColor);
+                    views.setTextColor(R.id.widget_lunar_day, headerTextColor);
+                    views.setInt(R.id.iv_settings, "setColorFilter", headerTextColor);
+                    views.setInt(R.id.widget_header_divider, "setBackgroundColor", dividerColor);
+                    views.setInt(R.id.widget_date_lunar_divider, "setBackgroundColor", dividerColor);
+                    views.setInt(R.id.widget_lunar_weekday_divider, "setBackgroundColor", dividerColor);
+                }
+                views.setViewVisibility(R.id.widget_lunar_weekday_divider,
+                        lunar.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
+                views.setTextViewText(R.id.widget_special_dates, primary);
+                views.setTextViewText(R.id.widget_special_term, secondary);
+                views.setViewVisibility(R.id.widget_special_dates_row,
+                        primary.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
+                views.setViewVisibility(R.id.widget_special_term,
+                        secondary.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
+                WidgetUtils.setThemeText(context, views, R.id.widget_special_dates,
+                        festivalToday ? R.color.widget_live_festival : R.color.widget_live_accent,
+                        festivalToday ? festivalColor : headerTextColor);
+                WidgetUtils.setThemeText(context, views, R.id.widget_special_term,
+                        R.color.widget_live_accent, headerTextColor);
+
+                views.setOnClickPendingIntent(R.id.header,
+                        WidgetUtils.getLaunchCalendarPendingIntent(context, appWidgetId, millis));
+            }
+            if (backgroundChanged) {
+                WidgetUtils.applyWidgetBackground(context, views, R.id.widget_background, appWidgetId);
+            }
+            if (full) {
                 android.os.Bundle options = appWidgetManager.getAppWidgetOptions(appWidgetId);
                 boolean landscape = context.getResources().getConfiguration().orientation
                         == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
@@ -279,43 +326,24 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
                         && height <= width * 1.4f;
                 views.setViewLayoutHeight(R.id.widget_background, compactSquare ? width : -1,
                         android.util.TypedValue.COMPLEX_UNIT_DIP);
+
+
+                Intent updateIntent = new Intent(context, CalendarAppWidgetService.class);
+                updateIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId);
+                if (changedEventIds != null) {
+                    updateIntent.putExtra(EXTRA_EVENT_IDS, changedEventIds);
+                }
+                updateIntent.setData(Uri.parse(updateIntent.toUri(Intent.URI_INTENT_SCHEME)));
+                views.setRemoteAdapter(R.id.events_list, updateIntent);
+                views.setOnClickPendingIntent(R.id.iv_settings,
+                        WidgetUtils.getMenuPendingIntent(context, appWidgetId));
+                views.setPendingIntentTemplate(R.id.events_list, getLaunchPendingIntentTemplate(context));
+                appWidgetManager.updateAppWidget(appWidgetId, views);
+            } else {
+                appWidgetManager.partiallyUpdateAppWidget(appWidgetId, views);
             }
-
-            WidgetHeaderUtils.SpecialDates special = WidgetHeaderUtils.specialDates(context, today);
-            boolean festivalToday = special.days == 0 && !special.festival.isEmpty();
-            String primary = special.isEmpty() ? "" : special.days > 0
-                    ? context.getString(R.string.widget_special_countdown, special.names(), special.days)
-                    : festivalToday ? special.festival : special.term;
-            String secondary = festivalToday ? special.term : "";
-            views.setTextViewText(R.id.widget_special_dates, primary);
-            views.setTextViewText(R.id.widget_special_term, secondary);
-            views.setViewVisibility(R.id.widget_special_dates_row,
-                    primary.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
-            views.setViewVisibility(R.id.widget_special_term,
-                    secondary.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
-            WidgetUtils.setThemeText(context, views, R.id.widget_special_dates,
-                    festivalToday ? R.color.widget_live_festival : R.color.widget_live_accent,
-                    festivalToday ? WidgetHeaderUtils.festivalColor(context) : headerTextColor);
-            WidgetUtils.setThemeText(context, views, R.id.widget_special_term,
-                    R.color.widget_live_accent, headerTextColor);
-
-            // Attach to list of events
-            views.setRemoteAdapter(R.id.events_list, updateIntent);
-
-
-            // PendingIntents
-            views.setOnClickPendingIntent(R.id.header,
-                    WidgetUtils.getLaunchCalendarPendingIntent(context, appWidgetId, millis));
-            views.setOnClickPendingIntent(R.id.iv_settings,
-                    WidgetUtils.getMenuPendingIntent(context, appWidgetId));
-
-            // Each list item will call setOnClickExtra() to let the list know
-            // which item
-            // is selected by a user.
-            final PendingIntent updateEventIntent = getLaunchPendingIntentTemplate(context);
-            views.setPendingIntentTemplate(R.id.events_list, updateEventIntent);
-
-            appWidgetManager.updateAppWidget(appWidgetId, views);
+            sHeaders.put(appWidgetId, headerKey);
+            sBackgrounds.put(appWidgetId, backgroundKey);
             appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId, R.id.events_list);
         }
         scheduleHeaderUpdate(context);
@@ -324,7 +352,7 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
     @Override
     public void onAppWidgetOptionsChanged(Context context, AppWidgetManager manager,
             int appWidgetId, android.os.Bundle newOptions) {
-        performUpdate(context, manager, new int[]{appWidgetId}, null);
+        performUpdate(context, manager, new int[]{appWidgetId}, null, true);
     }
 
     private static PendingIntent getHeaderUpdateIntent(Context context) {
@@ -335,11 +363,8 @@ public class CalendarAppWidgetProvider extends AppWidgetProvider {
     }
 
     private static void scheduleHeaderUpdate(Context context) {
-        java.time.ZoneId zone = java.time.ZoneId.of(Utils.getTimeZone(context, null));
-        long midnight = java.time.LocalDate.now(zone).plusDays(1)
-                .atStartOfDay(zone).toInstant().toEpochMilli();
-        AlarmManager alarm = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        alarm.set(AlarmManager.RTC, midnight, getHeaderUpdateIntent(context));
+        WidgetHeaderUtils.scheduleMidnight(context, getHeaderUpdateIntent(context),
+                java.time.ZoneId.of(Utils.getTimeZone(context, null)));
     }
 
     public static boolean isWidgetSupported(Context context) {

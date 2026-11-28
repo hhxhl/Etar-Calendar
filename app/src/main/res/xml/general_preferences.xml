@@ -23,21 +23,17 @@
             app:entries="@array/pref_theme_entries"
             app:entryValues="@array/pref_theme_values"
             app:defaultValue="@string/pref_theme_default" />
-        <SwitchPreference
+        <com.android.calendar.settings.MaterialSwitchPreference
             app:key="pref_pure_black_night_mode"
             app:defaultValue="false"
             app:title="@string/preferences_pure_black_night_mode" />
-        <SwitchPreference
-            app:key="pref_real_event_colors"
-            app:defaultValue="false"
-            app:title="@string/preferences_real_event_colors" />
         <ListPreference
             app:key="preferences_default_start"
             app:defaultValue="-2"
             app:title="@string/default_start_title"
             app:entries="@array/default_start_entries"
             app:entryValues="@array/default_start_values" />
-        <SwitchPreference
+        <com.android.calendar.settings.MaterialSwitchPreference
             app:key="pref_view_switch_buttons"
             app:defaultValue="false"
             app:title="@string/preferences_view_switch_buttons"
@@ -50,16 +46,16 @@
             app:key="pref_chinese_localization"
             app:title="@string/localization_title"
             app:fragment="com.android.calendar.settings.LocalizationPreferences" />
-        <SwitchPreference
+        <com.android.calendar.settings.MaterialSwitchPreference
             app:key="preferences_hide_declined"
             app:defaultValue="false"
             app:title="@string/preferences_hide_declined_title" />
-        <SwitchPreference
+        <com.android.calendar.settings.MaterialSwitchPreference
             app:key="preferences_staggered_display"
             app:defaultValue="false"
             app:title="@string/preferences_staggered_display_title"
             app:summary="@string/preferences_staggered_display_summary" />
-        <SwitchPreference
+        <com.android.calendar.settings.MaterialSwitchPreference
             app:key="preferences_show_week_num"
             app:defaultValue="false"
             app:title="@string/preferences_show_week_num_title" />
@@ -82,7 +78,7 @@
             app:title="@string/preferences_default_event_duration_title"
             app:entries="@array/preferences_default_duration_labels"
             app:entryValues="@array/preferences_default_duration_values" />
-        <CheckBoxPreference
+        <com.android.calendar.settings.MaterialSwitchPreference
             app:key="preferences_home_tz_enabled"
             app:defaultValue="false"
             app:title="@string/preferences_use_home_tz_title"
@@ -100,25 +96,11 @@
     <PreferenceCategory
         app:key="preferences_alerts_category"
         app:title="@string/preferences_reminder_title">
-        <CheckBoxPreference
-            app:key="preferences_alerts"
-            app:defaultValue="true"
+        <Preference
+            app:key="preferences_notification"
             app:title="@string/preferences_alerts_title" />
 
-        <Preference
-            app:key="preferences_alerts_ringtone"
-            app:title="@string/preferences_alerts_ringtone_title"
-            app:defaultValue="content://settings/system/notification_sound"
-            app:dependency="preferences_alerts" />
-
-        <SwitchPreference
-            app:layout="?android:attr/preferenceLayoutChild"
-            app:key="preferences_alerts_vibrate"
-            app:title="@string/preferences_alerts_vibrateWhen_title"
-            app:defaultValue="false"
-            app:dependency="preferences_alerts" />
-
-        <SwitchPreference
+        <com.android.calendar.settings.MaterialSwitchPreference
             app:key="preferences_custom_snooze_delay"
             app:defaultValue="false"
             app:title="@string/preferences_alerts_custom_snooze_delay_title"
@@ -160,7 +142,7 @@
             app:entryValues="@array/preferences_skip_reminders_values"
             app:dialogTitle="@string/preferences_reminders_responded_dialog" />
 
-        <SwitchPreference
+        <com.android.calendar.settings.MaterialSwitchPreference
             app:key="pref_do_not_check_battery_optimization"
             app:defaultValue="false"
             app:title="@string/preferences_do_not_check_battery_optimization"

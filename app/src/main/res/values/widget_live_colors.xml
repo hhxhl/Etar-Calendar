@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="widget_background_light">#FAFAFA</color>
-    <color name="widget_background_dark">#141414</color>
-    <color name="widget_live_background">@color/widget_background_light</color>
-    <color name="widget_live_background_black">@color/widget_background_light</color>
-    <color name="widget_live_accent">#3F51B5</color>
-    <color name="widget_live_text">#212121</color>
-    <color name="widget_live_divider">#CCCCCC</color>
-    <color name="widget_live_secondary">#616161</color>
-    <color name="widget_live_grid">#CCCCCC</color>
-    <color name="widget_live_on_primary">#FFFFFF</color>
+    <color name="widget_background_light">@color/etar_surface_light</color>
+    <color name="widget_background_dark">@color/etar_surface_dark</color>
+    <color name="widget_live_background">@color/etar_surface_light</color>
+    <color name="widget_live_background_black">@color/etar_surface_light</color>
+    <color name="widget_live_accent">@color/etar_primary_light</color>
+    <color name="widget_live_text">@android:color/system_neutral1_900</color>
+    <color name="widget_live_divider">@android:color/system_neutral2_300</color>
+    <color name="widget_live_secondary">@color/etar_on_surface_variant_light</color>
+    <color name="widget_live_grid">@color/etar_outline_variant_light</color>
+    <color name="widget_live_on_primary">@color/etar_on_primary_light</color>
     <color name="widget_live_festival">#A04419</color>
 </resources>

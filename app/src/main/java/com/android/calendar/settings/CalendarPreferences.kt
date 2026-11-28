@@ -25,17 +25,12 @@ import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.provider.CalendarContract
-import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.ContextCompat
-import androidx.preference.EditTextPreference
 import androidx.preference.Preference
-import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceFragmentCompat
-import androidx.preference.SwitchPreference
 import com.android.calendar.Utils
 import com.android.calendar.alerts.channelId
 import com.android.calendar.icalendar.IcalExporter
@@ -50,7 +45,7 @@ import kotlinx.coroutines.withContext
 import ws.xsoh.etar.R
 
 
-class CalendarPreferences : PreferenceFragmentCompat() {
+class CalendarPreferences : PreferenceFragmentCompat(), com.android.calendar.colorpicker.ColorPickerSwatch.OnColorSelectedListener {
 
     private var calendarId: Long = -1
     private lateinit var calendarRepository: ICalendarRepository
@@ -112,34 +107,18 @@ class CalendarPreferences : PreferenceFragmentCompat() {
         val currentColor = preferenceManager.preferenceDataStore!!.getInt(COLOR_KEY, -1)
         val authenticatorInfo = getAuthenticatorInfo(account)
 
-        val visiblePreference = SwitchPreference(context).apply {
-            key = VISIBLE_KEY
-            title = getString(R.string.preferences_calendar_visible)
-        }
-        val colorPreference = Preference(context).apply {
-            key = COLOR_KEY
-            title = getString(R.string.preferences_calendar_color)
-            icon = getColorIcon(currentColor)
-        }
-        colorPreference.setOnPreferenceClickListener {
-            displayCalendarColorPicker()
-            true
-        }
-        val displayNamePreference = EditTextPreference(context).apply {
-            key = DISPLAY_NAME_KEY
-            title = getString(R.string.preferences_calendar_display_name)
-            dialogTitle = getString(R.string.preferences_calendar_display_name)
-        }
+        val visiblePreference = SourcePreferences.visibility(context, VISIBLE_KEY, R.string.preferences_calendar_visible)
+        val colorPreference = SourcePreferences.color(context, COLOR_KEY, currentColor, ::displayCalendarColorPicker)
+        val displayNamePreference = SourcePreferences.name(context, DISPLAY_NAME_KEY)
         displayNamePreference.setOnPreferenceChangeListener { _, newValue ->
             activity?.title = newValue as String
             true
         }
-        val deletePreference = Preference(context).apply {
-            title = getString(R.string.preferences_calendar_delete)
-        }
-        deletePreference.setOnPreferenceClickListener {
-            deleteCalendar()
-            true
+        val deletePreference = SourcePreferences.delete(context,
+                R.string.preferences_calendar_delete, R.string.preferences_calendar_delete_message,
+                R.string.preferences_calendar_delete_delete, R.string.preferences_calendar_delete_cancel) {
+            calendarRepository.deleteLocalCalendar(account.name, calendarId)
+            activity?.supportFragmentManager?.popBackStackImmediate()
         }
         val exportPreference = Preference(context).apply {
             title = getString(R.string.cal_export_calendar_title)
@@ -154,40 +133,21 @@ class CalendarPreferences : PreferenceFragmentCompat() {
             intent = authenticatorInfo?.intent
         }
 
-        val infoCategory = PreferenceCategory(context).apply {
-            title = getString(R.string.preferences_calendar_info_category)
-        }
+        val infoCategory = SourcePreferences.information(context, R.string.preferences_calendar_info_category)
 
-        val numberOfEventsPreference = Preference(context).apply {
-            title = getString(R.string.preferences_calendar_number_of_events, numberOfEvents)
-            isSelectable = false
-        }
+        val numberOfEventsPreference = SourcePreferences.info(context,
+                getString(R.string.preferences_calendar_number_of_events, numberOfEvents))
         val accountPreference = Preference(context).apply {
             title = getString(R.string.preferences_calendar_account, authenticatorInfo?.label)
             icon = authenticatorInfo?.icon
             isSelectable = false
         }
-        val localAccountPreference = Preference(context).apply {
-            title = getString(R.string.preferences_calendar_account_local)
-            isSelectable = false
-        }
-        val localAccountInfoPreference = Preference(context).apply {
-            title = getString(R.string.preferences_list_add_offline_message)
-            isSelectable = false
-        }
+        val localAccountPreference = SourcePreferences.info(context, getString(R.string.preferences_calendar_account_local))
+        val localAccountInfoPreference = SourcePreferences.info(context, getString(R.string.preferences_list_add_offline_message))
 
         screen.addPreference(visiblePreference)
 
-        if(Utils.isOreoOrLater()){
-            val notificationPreference = Preference(context).apply {
-                title = getString(R.string.preferences_manage_notifications)
-                intent = Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).apply {
-                    putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                    putExtra(Settings.EXTRA_CHANNEL_ID, channelId(this@CalendarPreferences.calendarId))
-                }
-            }
-            screen.addPreference(notificationPreference)
-        }
+        screen.addPreference(SourcePreferences.notifications(context, channelId(calendarId)))
 
         screen.addPreference(colorPreference)
         if (isLocalAccount) {
@@ -214,26 +174,18 @@ class CalendarPreferences : PreferenceFragmentCompat() {
         preferenceScreen = screen
     }
 
-    private fun getColorIcon(color: Int): Drawable {
-        val icon: Drawable = ContextCompat.getDrawable(requireContext(), R.drawable.circle)!!
-        icon.mutate().setColorFilter(color, Mode.SRC_IN)
-        return icon
-    }
-
     private fun displayCalendarColorPicker() {
         if (parentFragmentManager.findFragmentByTag(COLOR_PICKER_DIALOG_TAG) != null) {
             return
         }
 
         val isTablet = Utils.getConfigBool(context, R.bool.tablet_config)
-        val calendarDialogPicker = CalendarColorPickerDialogX.newInstance(calendarId, isTablet,
-                object : CalendarColorPickerDialogX.OnCalendarColorSelectedListener {
-                    override fun onColorSelected(color: Int) {
-                        val colorPref = findPreference<Preference>(COLOR_KEY)!!
-                        colorPref.icon = getColorIcon(color)
-                    }
-                })
-        calendarDialogPicker.show(parentFragmentManager, COLOR_PICKER_DIALOG_TAG)
+        val calendarDialogPicker = CalendarColorPickerDialogX.newInstance(calendarId, isTablet)
+        SourcePreferences.showPicker(this, calendarDialogPicker, COLOR_PICKER_DIALOG_TAG)
+    }
+
+    override fun onColorSelected(color: Int) {
+        findPreference<Preference>(COLOR_KEY)?.icon = SourcePreferences.colorIcon(requireContext(), color)
     }
 
     data class AuthenticatorInfo(val label: String?,
@@ -270,20 +222,6 @@ class CalendarPreferences : PreferenceFragmentCompat() {
             }
         }
         return null
-    }
-
-    private fun deleteCalendar() {
-        val warningDialog = MaterialAlertDialogBuilder(requireActivity())
-                .setMessage(R.string.preferences_calendar_delete_message)
-                .setPositiveButton(R.string.preferences_calendar_delete_delete) { _, _ ->
-                    calendarRepository.deleteLocalCalendar(account.name, calendarId)
-                    activity?.supportFragmentManager?.popBackStackImmediate()
-                }
-                .setNegativeButton(R.string.preferences_calendar_delete_cancel) { dialogInterface, _ ->
-                    dialogInterface.dismiss()
-                }
-                .create()
-        warningDialog.show()
     }
 
     private fun startExport() {

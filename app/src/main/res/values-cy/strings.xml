@@ -84,14 +84,12 @@
     <string name="create_event_dialog_save">Cadw</string>
     <string name="alert_title">Hysbysiadau calendr</string>
     <string name="event_info_title">Gweld digwyddiad</string>
-    <string name="event_info_title_invite">Gwahoddiad i gyfarfod</string>
     <string name="edit_event_all_day_label">Trwy\'r dydd</string>
     <string name="edit_event_calendar_label">Calendr</string>
     <string name="presence_label">Fy nangos fel</string>
     <string name="privacy_label">Preifatrwydd</string>
     <string name="reminders_label">Ychwanegu nodyn atgoffa</string>
     <string name="no_syncable_calendars">Dim calendrau</string>
-    <string name="view_event_calendar_label">Calendr:</string>
     <string name="view_event_organizer_label">Trefnydd:</string>
     <string name="choose_event_color_label">Dewisa liw i\'r digwyddiad</string>
     <string name="event_color_picker_dialog_title">Lliw Digwyddiad</string>
@@ -103,7 +101,6 @@
     <string name="response_maybe">Efallai</string>
     <string name="response_no">Na</string>
     <string name="email_guests_label">Ebostio gwesteion</string>
-    <string name="email_organizer_label">Ebostio\'r trefnydd</string>
     <string name="email_picker_label">Ebostio gyda</string>
     <string name="event_not_found">Ni chanfuwyd digwyddiad.</string>
     <string name="map_label">Map</string>
@@ -115,8 +112,6 @@
     <string name="quick_response_dialog_title">Dewisa ateb cyflym</string>
     <string name="quick_response_email_failed">Methwyd â chanfod ap e-bost</string>
     <string name="quick_response_custom_msg">Ysgrifennu neges dy hun…</string>
-    <string name="event_info_organizer">Trefnydd:</string>
-    <string name="event_info_reminders_label">Hysbysiadau atgoffa</string>
     <string name="agenda_today">heddiw, <xliff:g id="date">%1$s</xliff:g>
     </string>
     <string name="agenda_yesterday">ddoe, <xliff:g id="date">%1$s</xliff:g>
@@ -124,10 +119,6 @@
     <string name="agenda_tomorrow">yfory, <xliff:g id="date">%1$s</xliff:g>
     </string>
     <string name="loading">Yn llwytho…</string>
-    <string name="show_older_events">Cyffyrdda i weld digwyddiadau cyn <xliff:g id="oldest_search_range">%1$s</xliff:g>
-    </string>
-    <string name="show_newer_events">Cyffyrdda i weld digwyddiadau ar ôl <xliff:g id="newest_search_range">%1$s</xliff:g>
-    </string>
     <string name="search_title">Chwilio fy nghalendrau</string>
     <string name="edit_event_label">Manylion</string>
     <string name="edit_label">Golygu</string>
@@ -177,7 +168,6 @@
     <string name="modify_all">Newid pob digwyddiad yn y gyfres</string>
     <string name="modify_all_following">Newid hwn a phob digwyddiad yn y dyfodol</string>
     <string name="new_event_dialog_label">Digwyddiad newydd</string>
-    <string name="new_event_dialog_option">Digwyddiad newydd</string>
     <string name="delete_this_event_title">Dileu\'r digwyddiad hwn\?</string>
     <string name="delete_recurring_event_title">Dileu <xliff:g id="eventtitle">%s</xliff:g>\?</string>
     <string name="change_response_title">Newid yr ateb</string>
@@ -188,9 +178,6 @@
     <string name="preferences_theme">Thema</string>
     <string name="preferences_light_theme">Golau</string>
     <string name="preferences_dark_theme">Tywyll</string>
-    <string name="preferences_black_theme">Du</string>
-    <string name="preferences_color">Prif Liw</string>
-    <string name="preferences_color_pick">Prif Liw</string>
     <string name="preferences_reminder_title">Hysbysiadau a nodiadau atgoffa</string>
     <string name="preferences_hide_declined_title">Cuddio pob digwyddiad gwrthodwyd</string>
     <string name="default_start_title">Golwg arferol</string>
@@ -207,9 +194,6 @@
     <string name="preferences_clear_search_history_summary">Tynnu dy holl chwiliadau o\'r hanes</string>
     <string name="search_history_cleared">Cliriwyd yr hanes chwilio.</string>
     <string name="preferences_alerts_title">Hysbysiadau</string>
-    <string name="preferences_alerts_vibrateWhen_title">Dirgrynu</string>
-    <string name="preferences_alerts_ringtone_title">Sain</string>
-    <string name="preferences_alerts_popup_title">Hysbysiad naid</string>
     <string name="preferences_default_reminder_title">Amser atgoffa arferol</string>
     <string name="preferences_default_reminder_dialog">Amser atgoffa arferol</string>
     <string name="preferences_default_reminder_default">10</string>
@@ -254,11 +238,9 @@
     <string name="accessibility_remove_reminder">Tynnu nodyn atgoffa</string>
     <string name="accessibility_add_attendee">Ychwanegu cyfranogwr</string>
     <string name="accessibility_all_day">Digwyddiad trwy\'r dydd</string>
-    <string name="accessibility_reminder_time">Amser atgoffa</string>
     <string name="accessibility_reminder_type">Dull atgoffa</string>
     <string name="accessibility_reminder_showmeas">Fy nangos fel</string>
     <string name="accessibility_reminder_privacy">Preifatrwydd</string>
-    <string name="day_view_new_event_hint">+ Digwyddiad newydd</string>
     <string name="template_announce_item_index">Digwyddiad <xliff:g id="item_index">%1$s</xliff:g> o <xliff:g id="item_count">%2$s</xliff:g>.</string>
     <plurals name="Nevents">
         <item quantity="zero"><xliff:g id="count">%d</xliff:g> digwyddiadau</item>
@@ -276,7 +258,6 @@
         <item quantity="many">+<xliff:g id="count">%d</xliff:g> digwyddiad</item>
         <item quantity="other">+<xliff:g id="count">%d</xliff:g> digwyddiad</item>
     </plurals>
-    <string name="acessibility_selected_marker_description">Digwyddiad a ddewisir</string>
     <plurals name="recurrence_interval_daily">
         <item quantity="zero">Byth</item>
         <item quantity="one">Pob dydd</item>
@@ -339,12 +320,9 @@
     <string name="error_generating_ics">Cafwyd problemau wrth geisio rhannu\'r digwyddiad</string>
     <string name="cal_share_intent_title">Anfon y digwyddiad at:</string>
     <string name="cal_export_event_title">Allforio i gerdyn SD</string>
-    <string name="cal_export_succ_msg">Allforiwyd y digwyddiad yn llwyddiannus: %1$s</string>
     <string name="cal_import_menu_title">Mewnforio digwyddiad</string>
     <string name="cal_nothing_to_import">Dim byd i\'w mewnforio</string>
     <string name="cal_import_error_msg">Methwyd â mewnforio i\'r calendr</string>
-    <string name="cal_import_error_date_msg">Methu â deall y dyddiad a roddwyd: %s</string>
-    <string name="cal_pick_ics">Dewisa ffeil i\'w mewnforio</string>
     <string name="show_time_no">Peidio â dangos yr amser</string>
     <string name="show_time_start">Amser dechrau yn unig</string>
     <string name="show_time_start_end">Amseroedd dechrau a diwedd</string>
@@ -370,7 +348,6 @@
     <string name="add_calendar">Ychwanegu calendr</string>
     <string name="duplicate_label">Dyblygu</string>
     <string name="preferences_system_theme">Rhagosodiad system</string>
-    <string name="preferences_real_event_colors">Defnyddiwch liwiau digwyddiadau go iawn</string>
     <string name="preferences_pure_black_night_mode">Modd nos ddu pur</string>
     <string name="app_copyright">© 2015-<xliff:g> %1$s</xliff:g> Prosiect Etar. Darnau © 2005-<xliff:g> %1$s</xliff:g> Prosiect Cod Agored Android.</string>
     <string name="authors">Awduron</string>
@@ -383,7 +360,6 @@
     <string name="five_days">5 diwrnod</string>
     <string name="six_days">6 diwrnod</string>
     <string name="seven_days">7 diwrnod</string>
-    <string name="cal_import_error_time_zone_msg">Methu deall y parth amser a roddir: %s</string>
     <string name="preferences_calendar_no_display_name">Calendr dienw</string>
     <string name="preferences_calendar_account">Cyfrif %1$s</string>
     <string name="preferences_calendar_account_local">Calendr all-lein</string>
@@ -395,7 +371,6 @@
     <string name="preferences_calendar_color">Lliw</string>
     <string name="preferences_calendar_visible">Dangos digwyddiadau</string>
     <string name="preferences_manage_notifications">Rheoli hysbysiadau</string>
-    <string name="preferences_calendar_synchronize">Cydweddu\'r calendr hwn</string>
     <string name="preferences_calendar_color_warning_title">Rhybudd</string>
     <string name="preferences_calendar_color_warning_message">Mae modd dadwneud newid y lliw pan fydd y calendr wedi\'i gydweddu eto.\n\nYn DAVx⁵ mae modd analluogi \'Rheoli lliwiau calendr\' i atal hyn.</string>
     <string name="preferences_calendar_color_warning_button">Rwy\'n deall</string>
@@ -406,7 +381,6 @@
     <string name="preferences_list_calendar_summary_invisible">Dyw digwyddiadau ddim yn cael eu dangos</string>
     <string name="preferences_list_general">Gosodiadau cyffredinol</string>
     <string name="preferences_list_add_remote">Ychwanegu calendr CalDAV</string>
-    <string name="preferences_list_add_remote_etesync">Ychwanegu calendr EteSync</string>
     <string name="preferences_list_add_offline">Ychwanegu calendr all-lein</string>
     <string name="preferences_list_add_offline_title">Ychwanegu calendr all-lein</string>
     <string name="preferences_list_add_offline_error_empty">Rhowch enw calendr!</string>
@@ -427,8 +401,6 @@
     <string name="no_results_found">Heb ganfod canlyniad</string>
     <string name="palestine_display_name">Palesteina</string>
     <string name="more_string">+<xliff:g id="count"> %1$d</xliff:g></string>
-    <string name="copy_email">Copïo cyfeiriad e-bost</string>
-    <string name="copy_number">Copïo rhif ffôn</string>
     <string name="action_label">Dychwelyd</string>
     <string name="accessbility_suggestion_dropdown_opened">Awgrymiadau cyswllt wedi\'u hagor</string>
     <string name="accessbility_suggestion_dropdown_closed">Dim awgrymiadau ar gael</string>

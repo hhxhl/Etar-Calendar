@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Menu actions added dynamically by the event and task editors. -->
+    <item type="id" name="info_action_delete" />
+    <item type="id" name="info_action_duplicate" />
+    <item type="id" name="info_action_share_event" />
+    <item type="id" name="info_action_export" />
+</resources>

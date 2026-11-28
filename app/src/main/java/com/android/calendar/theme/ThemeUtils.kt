@@ -1,7 +1,6 @@
 package com.android.calendar.theme
 
 import android.content.Context
-import android.os.Build
 import com.android.calendar.Utils
 import com.android.calendar.theme.model.Theme
 import kotlin.text.lowercase
@@ -18,7 +17,7 @@ object ThemeUtils {
         val theme = Utils.getSharedPreference(
             context,
             THEME_PREF,
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) Theme.SYSTEM.name else Theme.LIGHT.name
+            Theme.SYSTEM.name
         )
         return Theme.valueOf(theme.uppercase())
     }

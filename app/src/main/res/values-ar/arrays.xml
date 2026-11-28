@@ -38,16 +38,6 @@
     <item msgid="1536401639805370405">"هذا الحدث والأحداث المستقبلية"</item>
     <item msgid="7833229563617435430">"جميع الأحداث"</item>
   </string-array>
-  <string-array name="change_response_labels">
-    <item msgid="3466644709343519437">"هذا الحدث فقط"</item>
-    <item msgid="140670561403965380">"جميع الأحداث في سلسلة الأحداث"</item>
-  </string-array>
-  <string-array name="buttons_list">
-    <item msgid="5917946202321434335">"يوم"</item>
-    <item msgid="6248480754959562740">"أسبوع"</item>
-    <item msgid="4298472806133153766">"شهر"</item>
-    <item msgid="5033084974413793845">"أجندة"</item>
-  </string-array>
   <string-array name="preferences_skip_reminders_labels">
     <item msgid="2285927842308686988">"في حالة الرفض فقط"</item>
     <item msgid="6367412240524984286">"في حالة الرفض أو عدم الرد"</item>

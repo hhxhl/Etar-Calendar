@@ -30,7 +30,6 @@ import android.content.pm.ResolveInfo;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.PowerManager;
@@ -236,10 +235,7 @@ public class AlertReceiver extends BroadcastReceiver {
         notificationBuilder.setContentIntent(clickIntent);
         notificationBuilder.setDeleteIntent(deleteIntent);
 
-        // Add setting channel ID for Oreo or later
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            notificationBuilder.setChannelId(UtilsKt.channelId(calendarId));
-        }
+        notificationBuilder.setChannelId(UtilsKt.channelId(calendarId));
 
         PendingIntent mapIntent = null, callIntent = null, snoozeIntent = null, emailIntent = null;
         if (addActionButtons) {
@@ -288,12 +284,12 @@ public class AlertReceiver extends BroadcastReceiver {
             numActions++;
         }
         if (emailIntent != null && numActions < MAX_NOTIF_ACTIONS) {
-            notificationBuilder.addAction(R.drawable.ic_menu_email_holo_dark,
+            notificationBuilder.addAction(R.drawable.ic_notification_email,
                     resources.getString(R.string.email_guests_label), emailIntent);
             numActions++;
         }
         if (snoozeIntent != null && numActions < MAX_NOTIF_ACTIONS) {
-            notificationBuilder.addAction(R.drawable.ic_alarm_holo_dark,
+            notificationBuilder.addAction(R.drawable.ic_notification_snooze,
                     resources.getString(R.string.snooze_label), snoozeIntent);
             numActions++;
         }
@@ -375,9 +371,7 @@ public class AlertReceiver extends BroadcastReceiver {
         }
 
         Notification.Builder notificationBuilder = new Notification.Builder(context);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            notificationBuilder.setChannelId(UtilsKt.channelId(notificationInfos.get(0).calendarId));
-        }
+        notificationBuilder.setChannelId(UtilsKt.channelId(notificationInfos.get(0).calendarId));
         notificationBuilder.setContentText(digestTitle);
         notificationBuilder.setSmallIcon(R.drawable.stat_notify_calendar_multiple);
         notificationBuilder.setContentIntent(pendingClickIntent);
@@ -527,7 +521,7 @@ public class AlertReceiver extends BroadcastReceiver {
      */
     static Intent createEmailIntent(Context context, long eventId, String body) {
         // TODO: Refactor to move query part into Utils.createEmailAttendeeIntent, to
-        // be shared with EventInfoFragment.
+        // be shared with the event editor.
 
         // Query for the owner account(s).
         String ownerAccount = null;
@@ -639,14 +633,12 @@ public class AlertReceiver extends BroadcastReceiver {
                 geoIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 // If this intent cannot be handled, do not create the map action
                 if (isResolveIntent(context, geoIntent)) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        TaskStackBuilder taskStackBuilder = TaskStackBuilder.create(context);
-                        geoIntent = createMapActivityIntent(context, urlSpans);
-                        if (geoIntent != null) {
-                            taskStackBuilder.addNextIntentWithParentStack(geoIntent);
-                            return taskStackBuilder.getPendingIntent(0,
-                                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-                        }
+                    TaskStackBuilder taskStackBuilder = TaskStackBuilder.create(context);
+                    geoIntent = createMapActivityIntent(context, urlSpans);
+                    if (geoIntent != null) {
+                        taskStackBuilder.addNextIntentWithParentStack(geoIntent);
+                        return taskStackBuilder.getPendingIntent(0,
+                                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
                     }
                     Intent broadcastIntent = new Intent(MAP_ACTION);
                     broadcastIntent.setClass(context, AlertReceiver.class);
@@ -763,7 +755,7 @@ public class AlertReceiver extends BroadcastReceiver {
                                 context.getString(R.string.no_map),
                                 Toast.LENGTH_SHORT).show();
                     }
-                    closeNotificationShade(context);
+
                 } else {
                     // No location was found, so update all notifications.
                     // Our alert service does not currently allow us to specify only one
@@ -782,7 +774,7 @@ public class AlertReceiver extends BroadcastReceiver {
                 if (callIntent != null) {
                     // Call location was successfully found, so dismiss the shade and start dialer.
                     context.startActivity(callIntent);
-                    closeNotificationShade(context);
+
                 } else {
                     // No call location was found, so update all notifications.
                     // Our alert service does not currently allow us to specify only one
@@ -791,7 +783,7 @@ public class AlertReceiver extends BroadcastReceiver {
                 }
             }
         } else if (MAIL_ACTION.equals(intent.getAction())) {
-            closeNotificationShade(context);
+
 
             // Now start the email intent.
             final long eventId = intent.getLongExtra(EXTRA_EVENT_ID, -1);
@@ -806,11 +798,5 @@ public class AlertReceiver extends BroadcastReceiver {
         }
     }
 
-    private void closeNotificationShade(Context context) {
-        // https://developer.android.com/about/versions/12/behavior-changes-all#close-system-dialogs
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-            Intent closeNotificationShadeIntent = new Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS);
-            context.sendBroadcast(closeNotificationShadeIntent);
-        }
-    }
+
 }

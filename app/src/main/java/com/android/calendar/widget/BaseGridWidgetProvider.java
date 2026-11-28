@@ -25,9 +25,6 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.CalendarContract;
-import android.provider.CalendarContract.Attendees;
-import android.provider.CalendarContract.Calendars;
-import android.provider.CalendarContract.Instances;
 import android.util.TypedValue;
 import android.widget.RemoteViews;
 
@@ -43,19 +40,8 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
     public static final String EXTRA_GRID_AVAILABLE_HEIGHT_PX =
             "com.android.calendar.GRID_HEIGHT_PX";
 
-    public static final String SELECTION_VISIBLE = Calendars.VISIBLE + "=1";
-    public static final String SELECTION_HIDE_DECLINED = Calendars.VISIBLE + "=1 AND "
-            + Instances.SELF_ATTENDEE_STATUS + "!="
-            + Attendees.ATTENDEE_STATUS_DECLINED;
-
     static final int HEADER_HEIGHT_DP = 40;
     static final int DOW_ROW_HEIGHT_DP = 24;
-
-    static String getInstancesSelection(Context context) {
-        return Utils.getHideDeclinedEvents(context)
-                ? SELECTION_HIDE_DECLINED
-                : SELECTION_VISIBLE;
-    }
 
     static int getDayOfWeekOffset(int dayOfWeek, int firstDayOfWeek) {
         return (dayOfWeek - firstDayOfWeek + DAYS_PER_WEEK) % DAYS_PER_WEEK;
@@ -69,11 +55,31 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
     }
 
     protected PendingIntent getUpdateIntent(Context context) {
+        return getUpdateIntent(context, AppWidgetManager.INVALID_APPWIDGET_ID);
+    }
+
+    private PendingIntent getUpdateIntent(Context context, int widgetId) {
         Intent intent = new Intent(getScheduledUpdateAction());
         intent.setClass(context, getClass());
+        intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
         intent.setDataAndType(CalendarContract.CONTENT_URI, Utils.APPWIDGET_DATA_TYPE);
-        return PendingIntent.getBroadcast(context, 0, intent,
+        return PendingIntent.getBroadcast(context,
+                widgetId == AppWidgetManager.INVALID_APPWIDGET_ID ? 0 : widgetId, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    void scheduleStateUpdate(Context context, int widgetId, long next) {
+        if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return;
+        AppWidgetManager manager = AppWidgetManager.getInstance(context);
+        boolean active = false;
+        for (int id : manager.getAppWidgetIds(getComponentName(context))) {
+            if (id == widgetId) { active = true; break; }
+        }
+        if (!active) return;
+        AlarmManager alarm = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        PendingIntent intent = getUpdateIntent(context, widgetId);
+        if (next == Long.MAX_VALUE) alarm.cancel(intent);
+        else alarm.set(AlarmManager.RTC, next, intent);
     }
     protected abstract int getWidgetLayoutId();
     protected abstract Class<?> getServiceClass();
@@ -106,15 +112,7 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
     protected abstract String computeTitle(Context context, long nowMillis);
 
     static PendingIntent getLaunchPendingIntentTemplate(Context context) {
-        Intent launchIntent = new Intent();
-        launchIntent.setAction(Intent.ACTION_VIEW);
-        launchIntent.setPackage(context.getPackageName());
-        launchIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
-                | Intent.FLAG_ACTIVITY_CLEAR_TASK
-                | Intent.FLAG_ACTIVITY_TASK_ON_HOME
-                | Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        return PendingIntent.getActivity(context, 0, launchIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE);
+        return WidgetClickActivity.launchTemplate(context);
     }
 
     static int calculateGridHeightPx(Context context, int widgetHeightDp) {
@@ -151,6 +149,13 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
         return calculateGridHeightPx(context, widgetHeightDp);
     }
 
+    static int resolveGridHeight(Context context, int widgetId, int fallback) {
+        if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return fallback;
+        int height = calculateGridHeightPxFromOptions(context,
+                AppWidgetManager.getInstance(context).getAppWidgetOptions(widgetId));
+        return height > 0 ? height : fallback;
+    }
+
     static int[] calculateMaxVisibleEvents(int cellHeightPx, float density,
             int dayNumberHeightDp, int eventRowHeightDp, int overflowHeightDp, int maxSlots) {
         int cellHeightDp = (int) (cellHeightPx / density);
@@ -165,6 +170,17 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
     @Override
     public void onReceive(Context context, Intent intent) {
         final String action = intent.getAction();
+        if (getScheduledUpdateAction().equals(action)) {
+            int requested = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,
+                    AppWidgetManager.INVALID_APPWIDGET_ID);
+            if (requested != AppWidgetManager.INVALID_APPWIDGET_ID) {
+                AppWidgetManager manager = AppWidgetManager.getInstance(context);
+                for (int id : manager.getAppWidgetIds(getComponentName(context))) {
+                    if (id == requested) manager.notifyAppWidgetViewDataChanged(id, getGridViewId());
+                }
+                return;
+            }
+        }
         if (getUpdateAction().equals(action)
                 || getScheduledUpdateAction().equals(action)
                 || Intent.ACTION_TIMEZONE_CHANGED.equals(action)
@@ -205,6 +221,8 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
     public void onDeleted(Context context, int[] appWidgetIds) {
         super.onDeleted(context, appWidgetIds);
         for (int appWidgetId : appWidgetIds) {
+            ((AlarmManager) context.getSystemService(Context.ALARM_SERVICE))
+                    .cancel(getUpdateIntent(context, appWidgetId));
             WidgetUtils.INSTANCE.deleteWidgetCalendarIds(context, appWidgetId);
         }
     }
@@ -217,7 +235,7 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
 
     @Override
     public void onEnabled(Context context) {
-        Utils.scheduleMidnightUpdate(context, getUpdateIntent(context));
+        WidgetHeaderUtils.scheduleMidnight(context, getUpdateIntent(context), java.time.ZoneId.of(Utils.getTimeZone(context, null)));
     }
 
     @Override
@@ -270,12 +288,8 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
             if (WidgetUtils.usesLiveTheme(context)) {
                 views.setColorStateList(R.id.grid_widget_settings, "setImageTintList", R.color.widget_live_text);
             } else {
-                if (android.os.Build.VERSION.SDK_INT >= 31) {
-                    views.setColorStateList(R.id.grid_widget_settings, "setImageTintList",
-                            android.content.res.ColorStateList.valueOf(headerTextColor));
-                } else {
-                    views.setInt(R.id.grid_widget_settings, "setColorFilter", headerTextColor);
-                }
+                views.setColorStateList(R.id.grid_widget_settings, "setImageTintList",
+                        android.content.res.ColorStateList.valueOf(headerTextColor));
             }
             WidgetUtils.applyWidgetBackground(context, views, getBackgroundViewId(), appWidgetId);
 
@@ -299,6 +313,6 @@ abstract class BaseGridWidgetProvider extends AppWidgetProvider {
             appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId, getGridViewId());
         }
 
-        Utils.scheduleMidnightUpdate(context, getUpdateIntent(context));
+        WidgetHeaderUtils.scheduleMidnight(context, getUpdateIntent(context), java.time.ZoneId.of(Utils.getTimeZone(context, null)));
     }
 }

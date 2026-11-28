@@ -300,8 +300,8 @@ public class CreateEventDialogFragment extends DialogFragment implements TextWat
 
         mCalendarId = cursor.getLong(calendarIdIndex);
         mCalendarOwner = cursor.getString(calendarOwnerIndex);
-        mColor.setBackgroundColor(Utils.getDisplayColorFromColor(getActivity(), cursor
-                .getInt(colorIndex)));
+        mColor.setBackgroundColor(cursor
+                .getInt(colorIndex));
         String accountName = cursor.getString(accountNameIndex);
         String calendarName = cursor.getString(calendarNameIndex);
         mCalendarName.setText(calendarName);

@@ -24,8 +24,6 @@ import android.appwidget.AppWidgetManager;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
-import android.net.Uri;
-import android.os.Bundle;
 import android.provider.CalendarContract.Instances;
 import android.util.Log;
 import android.view.View;
@@ -34,7 +32,6 @@ import android.widget.RemoteViewsService;
 
 import com.android.calendar.Utils;
 import com.android.calendar.calendarcommon2.Time;
-import com.android.calendar.theme.DynamicThemeKt;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -65,6 +62,10 @@ public class MonthAppWidgetService extends RemoteViewsService {
                 Instances.TITLE,
                 Instances.END_DAY,
                 Instances.ALL_DAY,
+                Instances.START_MINUTE,
+                Instances.EVENT_ID,
+                Instances.BEGIN,
+                Instances.END,
         };
         private static final int INDEX_START_DAY = 0;
         private static final int INDEX_DISPLAY_COLOR = 1;
@@ -140,48 +141,18 @@ public class MonthAppWidgetService extends RemoteViewsService {
                     android.graphics.Color.TRANSPARENT);
 
             // Grid line borders
-            int gridLineColor = DynamicThemeKt.getColor(mContext, "month_grid_lines");
             int totalCells = mModel.mCells.size();
-            boolean lastColumn = (position % BaseGridWidgetProvider.DAYS_PER_WEEK == BaseGridWidgetProvider.DAYS_PER_WEEK - 1);
-            boolean lastRow = (position >= totalCells - BaseGridWidgetProvider.DAYS_PER_WEEK);
-
-            if (lastColumn) {
-                views.setViewVisibility(R.id.month_cell_border_right, View.GONE);
-            } else {
-                views.setViewVisibility(R.id.month_cell_border_right, View.VISIBLE);
-                WidgetUtils.setThemeLine(mContext, views, R.id.month_cell_border_right, R.color.widget_live_grid, gridLineColor);
-            }
-
-            if (lastRow) {
-                views.setViewVisibility(R.id.month_cell_border_bottom, View.GONE);
-            } else {
-                views.setViewVisibility(R.id.month_cell_border_bottom, View.VISIBLE);
-                WidgetUtils.setThemeLine(mContext, views, R.id.month_cell_border_bottom, R.color.widget_live_grid, gridLineColor);
-            }
+            boolean lastColumn = position % BaseGridWidgetProvider.DAYS_PER_WEEK == BaseGridWidgetProvider.DAYS_PER_WEEK - 1;
+            boolean lastRow = position >= totalCells - BaseGridWidgetProvider.DAYS_PER_WEEK;
+            WidgetHeaderUtils.bindGridBorder(mContext, views, R.id.month_cell_border_right, !lastColumn);
+            WidgetHeaderUtils.bindGridBorder(mContext, views, R.id.month_cell_border_bottom, !lastRow);
 
             // Set cell height to fill available grid space
             views.setInt(R.id.month_cell_root, "setMinimumHeight", mCellHeightPx);
 
-            // Set day number
-            views.setTextViewText(R.id.month_cell_day, String.valueOf(cell.dayNumber));
-            LocalDate localDate = Instant.ofEpochMilli(cell.timeMillis).atZone(ZoneId.systemDefault()).toLocalDate();
-            String localLabel = LocalizedDay.combined(mContext, localDate);
-            views.setTextViewText(R.id.month_cell_localized, localLabel);
-            views.setViewVisibility(R.id.month_cell_localized, localLabel.isEmpty() ? View.GONE : View.VISIBLE);
-            WidgetUtils.setThemeText(mContext, views, R.id.month_cell_localized, R.color.widget_live_text, DynamicThemeKt.getColor(mContext, "month_day_number"));
-
-            // Set text color based on current month / today status
-            if (cell.isToday) {
-                WidgetUtils.setThemeText(mContext, views, R.id.month_cell_day, R.color.widget_live_on_primary, DynamicThemeKt.getColor(mContext, "month_widget_today_text"));
-                views.setInt(R.id.month_cell_day, "setBackgroundResource", WidgetUtils.usesLiveTheme(mContext)
-                        ? R.drawable.widget_today_live : DynamicThemeKt.getDrawableId(mContext, "month_widget_today_circle"));
-            } else if (cell.isCurrentMonth) {
-                WidgetUtils.setThemeText(mContext, views, R.id.month_cell_day, R.color.widget_live_text, DynamicThemeKt.getColor(mContext, "month_day_number"));
-                views.setInt(R.id.month_cell_day, "setBackgroundResource", 0);
-            } else {
-                WidgetUtils.setThemeText(mContext, views, R.id.month_cell_day, R.color.widget_live_secondary, DynamicThemeKt.getColor(mContext, "month_day_number_other"));
-                views.setInt(R.id.month_cell_day, "setBackgroundResource", 0);
-            }
+            WidgetHeaderUtils.bindGridDate(mContext, views, R.id.month_cell_day, R.id.month_cell_localized,
+                    Instant.ofEpochMilli(cell.timeMillis).atZone(ZoneId.of(Utils.getTimeZone(mContext, null))).toLocalDate(),
+                    cell.isToday, cell.isCurrentMonth);
 
             // Event chip row/bar/text IDs
             int[] rowIds = {
@@ -194,6 +165,11 @@ public class MonthAppWidgetService extends RemoteViewsService {
                     R.id.month_cell_event_bar_2,
                     R.id.month_cell_event_bar_3,
             };
+            int[] surfaceIds = {
+                    R.id.month_cell_event_surface_1,
+                    R.id.month_cell_event_surface_2,
+                    R.id.month_cell_event_surface_3,
+            };
             int[] textIds = {
                     R.id.month_cell_event_text_1,
                     R.id.month_cell_event_text_2,
@@ -204,74 +180,30 @@ public class MonthAppWidgetService extends RemoteViewsService {
             boolean showOverflow = totalEvents > mMaxEventsWithoutOverflow;
             int visibleLimit = showOverflow ? mMaxEventsWithOverflow : mMaxEventsWithoutOverflow;
             int visibleCount = Math.min(totalEvents, visibleLimit);
-            int dayTextColor = DynamicThemeKt.getColor(mContext, "month_day_number");
-            int eventTextColor = DynamicThemeKt.getColor(mContext, "calendar_event_text_color");
             int pad = mEventRowPaddingPx;
 
             for (int i = 0; i < rowIds.length; i++) {
                 if (i < visibleCount) {
                     MonthAppWidgetModel.EventChip chip = cell.eventChips.get(i);
                     views.setViewVisibility(rowIds[i], View.VISIBLE);
+                    views.setOnClickFillInIntent(rowIds[i],
+                            WidgetClickActivity.itemIntent(chip.taskId, cell.timeMillis));
 
-                    if (chip.isAllDay) {
-                        // Spanning event: hide color bar, color the row background
-                        views.setViewVisibility(barIds[i], View.GONE);
-                        views.setInt(rowIds[i], "setBackgroundColor", chip.color);
-                        views.setTextColor(textIds[i], eventTextColor);
-
-                        // Show title only on START/SINGLE
-                        if (chip.spanType == MonthAppWidgetModel.EventChip.SPAN_START
-                                || chip.spanType == MonthAppWidgetModel.EventChip.SPAN_SINGLE) {
-                            views.setTextViewText(textIds[i], chip.title);
-                        } else {
-                            views.setTextViewText(textIds[i], "");
-                        }
-
-                        // Adjust padding based on span type for visual continuity
-                        switch (chip.spanType) {
-                            case MonthAppWidgetModel.EventChip.SPAN_START:
-                                views.setViewPadding(rowIds[i], pad, 0, 0, 0);
-                                break;
-                            case MonthAppWidgetModel.EventChip.SPAN_MIDDLE:
-                                views.setViewPadding(rowIds[i], 0, 0, 0, 0);
-                                break;
-                            case MonthAppWidgetModel.EventChip.SPAN_END:
-                                views.setViewPadding(rowIds[i], 0, 0, pad, 0);
-                                break;
-                            default: // SPAN_SINGLE
-                                views.setViewPadding(rowIds[i], pad, 0, pad, 0);
-                                break;
-                        }
-                    } else {
-                        // Timed event: show color bar, no row background
-                        views.setViewVisibility(barIds[i], View.VISIBLE);
-                        views.setInt(barIds[i], "setBackgroundColor", chip.color);
-                        views.setInt(rowIds[i], "setBackgroundColor", 0);
-                        views.setTextViewText(textIds[i], chip.title);
-                        WidgetUtils.setThemeText(mContext, views, textIds[i], R.color.widget_live_text, dayTextColor);
-                        views.setViewPadding(rowIds[i], pad, 0, pad, 0);
-                    }
+                    com.android.calendar.ItemAppearance.bindWidget(mContext, views, chip.color,
+                            surfaceIds[i], barIds[i], textIds[i]);
+                    boolean showTitle = !chip.isAllDay || chip.spanType == MonthAppWidgetModel.EventChip.SPAN_START
+                            || chip.spanType == MonthAppWidgetModel.EventChip.SPAN_SINGLE;
+                    views.setViewVisibility(barIds[i], showTitle ? View.VISIBLE : View.GONE);
+                    views.setTextViewText(textIds[i], showTitle ? chip.title : "");
+                    views.setViewPadding(rowIds[i], pad, 0, pad, 0);
                 } else {
                     views.setViewVisibility(rowIds[i], View.GONE);
                 }
             }
 
-            // Show overflow indicator if more events than we can display
-            if (totalEvents > visibleCount) {
-                int extra = totalEvents - visibleCount;
-                views.setTextViewText(R.id.month_cell_overflow,
-                        mContext.getString(R.string.widget_event_overflow, extra));
-                WidgetUtils.setThemeText(mContext, views, R.id.month_cell_overflow, R.color.widget_live_text, DynamicThemeKt.getColor(mContext, "month_day_number"));
-                views.setViewVisibility(R.id.month_cell_overflow, View.VISIBLE);
-            } else {
-                views.setViewVisibility(R.id.month_cell_overflow, View.GONE);
-            }
-
-            // Set click fill-in intent for this day
-            Intent fillInIntent = new Intent();
-            fillInIntent.setData(Uri.parse("content://com.android.calendar/time/"
-                    + cell.timeMillis));
-            views.setOnClickFillInIntent(R.id.month_cell_root, fillInIntent);
+            WidgetHeaderUtils.bindOverflow(mContext, views, R.id.month_cell_overflow, totalEvents - visibleCount);
+            views.setOnClickFillInIntent(R.id.month_cell_root,
+                    WidgetClickActivity.itemIntent(0, cell.timeMillis));
 
             return views;
         }
@@ -298,16 +230,9 @@ public class MonthAppWidgetService extends RemoteViewsService {
         }
 
         private void loadData() {
-            if (mAppWidgetId != android.appwidget.AppWidgetManager.INVALID_APPWIDGET_ID) {
-                AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(mContext);
-                Bundle options = appWidgetManager.getAppWidgetOptions(mAppWidgetId);
-                int dynamicGridHeightPx = BaseGridWidgetProvider.calculateGridHeightPxFromOptions(mContext, options);
-                if (dynamicGridHeightPx > 0) {
-                    mGridHeightPx = dynamicGridHeightPx;
-                }
-            }
+            mGridHeightPx = BaseGridWidgetProvider.resolveGridHeight(mContext, mAppWidgetId, mGridHeightPx);
 
-            Calendar now = Calendar.getInstance();
+            Calendar now = Calendar.getInstance(java.util.TimeZone.getTimeZone(Utils.getTimeZone(mContext, null)));
             int year = now.get(Calendar.YEAR);
             int month = now.get(Calendar.MONTH);
             int todayDay = now.get(Calendar.DAY_OF_MONTH);
@@ -319,7 +244,7 @@ public class MonthAppWidgetService extends RemoteViewsService {
             // year/month passed twice: displayed month = current month
             // (separated to support future month navigation)
             mModel = MonthAppWidgetModel.buildFromCalendar(year, month,
-                    year, month, todayDay, firstDayOfWeek, eventsByDay);
+                    year, month, todayDay, firstDayOfWeek, eventsByDay, now.getTimeZone());
 
             // Calculate cell height to fill available grid space
             if (mGridHeightPx > 0 && mModel.mCells.size() > 0) {
@@ -345,12 +270,8 @@ public class MonthAppWidgetService extends RemoteViewsService {
                 int year, int month, int firstDayOfWeek) {
             Map<Integer, List<MonthAppWidgetModel.EventChip>> eventsByDay = new HashMap<>();
 
-            if (!Utils.isCalendarPermissionGranted(mContext, false)) {
-                return eventsByDay;
-            }
-
             // Compute the time range for the month
-            Calendar start = Calendar.getInstance();
+            Calendar start = Calendar.getInstance(java.util.TimeZone.getTimeZone(Utils.getTimeZone(mContext, null)));
             start.clear();
             start.set(Calendar.YEAR, year);
             start.set(Calendar.MONTH, month);
@@ -377,15 +298,9 @@ public class MonthAppWidgetService extends RemoteViewsService {
             int offset = BaseGridWidgetProvider.getDayOfWeekOffset(firstDow, firstDayOfWeek);
             int gridStartJulianDay = monthStartJulianDay - offset;
 
-            String selection = WidgetUtils.getWidgetSelection(mContext, mAppWidgetId);
-
-            Uri uri = Uri.withAppendedPath(Instances.CONTENT_URI,
-                    Long.toString(startMillis) + "/" + Long.toString(endMillis));
-
-            Cursor cursor = null;
-            try {
-                cursor = mContext.getContentResolver().query(uri, INSTANCES_PROJECTION,
-                        selection, null, SORT_ORDER);
+            try (Cursor cursor = WidgetTaskRows.queryGrid(mContext, mAppWidgetId,
+                    startMillis, endMillis, INSTANCES_PROJECTION, SORT_ORDER,
+                    monthStartJulianDay, monthEndJulianDay, new MonthAppWidgetProvider())) {
                 if (cursor != null) {
                     while (cursor.moveToNext()) {
                         int eventStartDay = cursor.getInt(INDEX_START_DAY);
@@ -396,8 +311,10 @@ public class MonthAppWidgetService extends RemoteViewsService {
                         }
 
                         int color = cursor.getInt(INDEX_DISPLAY_COLOR);
-                        int displayColor = Utils.getDisplayColorFromColor(mContext, color);
+                        int displayColor = color;
                         int allDay = cursor.getInt(INDEX_ALL_DAY);
+                        long displayId = cursor.getLong(cursor.getColumnIndexOrThrow(Instances.EVENT_ID));
+                        long taskId = displayId < -1 ? -displayId - 1 : 0;
 
                         // Determine if this is a spanning event
                         boolean isSpanning = allDay == 1 || eventEndDay > eventStartDay;
@@ -438,16 +355,12 @@ public class MonthAppWidgetService extends RemoteViewsService {
                                 eventsByDay.put(dayOfMonth, chips);
                             }
                             chips.add(new MonthAppWidgetModel.EventChip(
-                                    title, displayColor, isSpanning, spanType));
+                                    title, displayColor, isSpanning, spanType, taskId));
                         }
                     }
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Error querying calendar instances", e);
-            } finally {
-                if (cursor != null) {
-                    cursor.close();
-                }
             }
 
             return eventsByDay;

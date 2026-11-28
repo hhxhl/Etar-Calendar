@@ -1230,7 +1230,14 @@ public class RecipientEditTextView extends AppCompatMultiAutoCompleteTextView im
             mChipTextEndPadding = overridePadding;
         }
 
-        mDefaultContactPhoto = BitmapFactory.decodeResource(r, R.drawable.ic_contact_picture);
+        Drawable defaultContact = ContextCompat.getDrawable(context, R.drawable.ic_contact_picture);
+        if (defaultContact != null) {
+            int width = Math.max(1, defaultContact.getIntrinsicWidth());
+            int height = Math.max(1, defaultContact.getIntrinsicHeight());
+            mDefaultContactPhoto = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+            defaultContact.setBounds(0, 0, width, height);
+            defaultContact.draw(new Canvas(mDefaultContactPhoto));
+        }
 
         mMoreItem = (TextView) LayoutInflater.from(getContext()).inflate(R.layout.more_item, null);
 

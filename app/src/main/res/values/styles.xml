@@ -19,31 +19,11 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android">
 
 
-    <!-- Application theme. -->
-    <style name="CalendarAppThemeWithActionBar" parent="Base.CalendarAppThemeWithActionBar">
-
-    </style>
-
-    <style name="Base.CalendarAppThemeWithActionBar" parent="Theme.AppCompat.Light.DarkActionBar">
-        <item name="colorPrimary">@color/colorPrimary</item>
-        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
-        <item name="colorAccent">@color/colorAccent</item>
-    </style>
-
-    <style name="Widget.CalendarAppTheme.ActionBar" parent="Widget.AppCompat.ActionBar">
-        <item name="android:theme">@style/ThemeOverlay.CalendarAppTheme.ActionBar</item>
-        <item name="popupTheme">@style/ThemeOverlay.AppCompat.Light</item>
-    </style>
-
-    <style name="ThemeOverlay.CalendarAppTheme.ActionBar" parent="ThemeOverlay.AppCompat.ActionBar">
-        <item name="android:textColorPrimary">@color/titleTextColor</item>
-    </style>
 
 
-    <style name="actionbar_cursor" parent="Widget.AppCompat.AutoCompleteTextView">
-        <item name="android:textCursorDrawable">@drawable/actionbar_cursor</item>
-    </style>
-    <!-- END Application theme -->
+
+
+
 
     <style name="MinusButton">
         <item name="android:background">?android:attr/selectableItemBackground</item>
@@ -79,19 +59,6 @@
         <item name="android:textColor">@color/month_day_names_color</item>
     </style>
 
-    <style name="TextAppearance.EditEvent_Label">
-        <item name="android:textAppearance">?android:attr/textAppearanceSmall</item>
-        <item name="android:minHeight">48dip</item>
-        <item name="android:layout_width">wrap_content</item>
-        <item name="android:layout_marginLeft">16dip</item>
-        <item name="android:layout_marginRight">-16dip</item>
-        <item name="android:paddingLeft">8dip</item>
-        <item name="android:paddingRight">8dip</item>
-        <item name="android:gravity">center_vertical</item>
-        <item name="android:layout_gravity">top|left</item>
-        <item name="android:textSize">18sp</item>
-        <item name="android:textColor">#FFAAAAAA</item>
-    </style>
 
     <style name="TextAppearance.EditEvent_LabelSmall" parent="TextAppearance.EditEvent_Small">
         <item name="android:minHeight">24dip</item>
@@ -134,23 +101,9 @@
         <item name="android:textColor">@color/calendar_date_range_color</item>
     </style>
 
-    <style name="CalendarTheme.WithoutActionBar" parent="CalendarAppThemeLightTeal">
-        <item name="android:endYear">2036</item>
-        <item name="android:startYear">1970</item>
-        <item name="android:windowBackground">@color/bg_black</item>
-    </style>
-
-    <style name="CalendarTheme.WithActionBar" parent="CalendarAppThemeWithActionBar">
-        <item name="android:endYear">2036</item>
-        <item name="android:startYear">1970</item>
-    </style>
 
 
-    <style name="CalendarTheme.WithActionBarWallpaper" parent="CalendarTheme.WithoutActionBar">
-        <item name="android:windowBackground">@android:color/transparent</item>
-        <item name="android:colorBackgroundCacheHint">@null</item>
-        <item name="android:windowShowWallpaper">true</item>
-    </style>
+
 
 
     <style name="EditEventSeparator">
@@ -177,27 +130,11 @@
         <item name="cornerSize">22dp</item>
     </style>
 
-    <style name="WidgetDayOfWeekStyle">
-        <item name="android:layout_width">wrap_content</item>
-        <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginBottom">4dip</item>
-        <item name="android:textSize">12sp</item>
-        <item name="android:gravity">start</item>
-        <item name="android:maxLines">1</item>
-    </style>
 
-    <style name="WidgetDateStyle">
-        <item name="android:layout_width">wrap_content</item>
-        <item name="android:layout_height">wrap_content</item>
-        <item name="android:textSize">24sp</item>
-        <item name="android:gravity">left</item>
-        <item name="android:layout_marginTop">-6dp</item>
-        <item name="android:maxLines">1</item>
-    </style>
 
     <style name="NotificationPrimaryText" parent="@android:style/TextAppearance.StatusBar.EventContent.Title" />
 
-    <style name="NotificationSecondaryText" parent="@android:style/TextAppearance.Holo">
+    <style name="NotificationSecondaryText" parent="@android:style/TextAppearance.Material.Body2">
         <item name="android:textColor">?android:attr/textColorSecondary</item>
     </style>
 

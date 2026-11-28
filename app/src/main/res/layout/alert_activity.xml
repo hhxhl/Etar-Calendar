@@ -34,12 +34,12 @@
         android:layout_height="wrap_content"
         style="?android:attr/buttonBarStyle">
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/dismiss_all"
             android:layout_width="0dip"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            style="?android:attr/buttonBarButtonStyle"
+            style="@style/Widget.Material3.Button.TextButton"
             android:text="@string/dismiss_all_label" />
     </LinearLayout>
 </LinearLayout>

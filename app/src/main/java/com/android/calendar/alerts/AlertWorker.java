@@ -3,7 +3,6 @@ package com.android.calendar.alerts;
 import android.app.Notification;
 import android.content.Context;
 import android.content.pm.ServiceInfo;
-import android.os.Build;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -58,13 +57,8 @@ public class AlertWorker extends ListenableWorker {
                             AlertService.FOREGROUND_CHANNEL_ID
                     );
                     Log.d(TAG, "Foreground info created successfully.");
-                    int foregroundServiceTypeForInfo;
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                        foregroundServiceTypeForInfo = ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED;
-                    } else {
-                        foregroundServiceTypeForInfo = 0;
-                    }
-                    completer.set(new ForegroundInfo(FOREGROUND_NOTIFICATION_ID, notification, foregroundServiceTypeForInfo));
+                    completer.set(new ForegroundInfo(FOREGROUND_NOTIFICATION_ID, notification,
+                            ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED));
 
                 } catch (Exception e) {
                     // Log the full exception that occurred during notification/channel creation

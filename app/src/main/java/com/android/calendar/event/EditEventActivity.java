@@ -52,7 +52,21 @@ public class EditEventActivity extends AbstractCalendarActivity {
     private static final boolean DEBUG = false;
     private static final String BUNDLE_KEY_EVENT_ID = "key_event_id";
 
-    private static boolean mIsMultipane;
+    private boolean mIsMultipane;
+
+    public static void openEvent(android.content.Context context, long id, long start, long end, int response) {
+        Intent intent = new Intent(Intent.ACTION_EDIT,
+                android.content.ContentUris.withAppendedId(Events.CONTENT_URI, id),
+                context, EditEventActivity.class);
+        intent.putExtra(EXTRA_EVENT_BEGIN_TIME, start);
+        intent.putExtra(EXTRA_EVENT_END_TIME, end);
+        intent.putExtra(android.provider.CalendarContract.Attendees.ATTENDEE_STATUS, response);
+        intent.putExtra(CalendarController.EVENT_EDIT_ON_LAUNCH, true);
+        if (!(context instanceof android.app.Activity)) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        context.startActivity(intent);
+    }
+
+    public boolean isExistingEvent() { return mEventInfo != null && mEventInfo.id > 0; }
     private EditEventFragment mEditFragment;
 
     private ArrayList<ReminderEntry> mReminders;
@@ -66,9 +80,16 @@ public class EditEventActivity extends AbstractCalendarActivity {
     @Override
     protected void onCreate(Bundle icicle) {
         DynamicThemeKt.applyTheme(this);
-        super.onCreate(icicle);
-
+        // Restored fragments attach during super.onCreate(), so initialize the
+        // event identity first to keep the same toolbar and permission mode.
         mEventInfo = getEventInfoFromIntent(icicle);
+        super.onCreate(icicle);
+        if (icicle == null && isExistingEvent()) {
+            int notificationId = getIntent().getIntExtra(
+                    com.android.calendar.alerts.AlertUtils.NOTIFICATION_ID_KEY, -1);
+            if (notificationId != -1) com.android.calendar.alerts.AlertUtils.dismissNotificationAndFiredAlarm(
+                    this, mEventInfo.id, notificationId);
+        }
         mReminders = getReminderEntriesFromIntent();
         mEventColorInitialized = getIntent().hasExtra(EXTRA_EVENT_COLOR);
         mEventColor = getIntent().getIntExtra(EXTRA_EVENT_COLOR, -1);
@@ -81,9 +102,9 @@ public class EditEventActivity extends AbstractCalendarActivity {
 
         mIsMultipane = Utils.getConfigBool(this, R.bool.multiple_pane_config);
 
-        if (mIsMultipane) {
+        if (mIsMultipane || isExistingEvent()) {
             getSupportActionBar().setDisplayOptions(
-                    ActionBar.DISPLAY_SHOW_TITLE,
+                    ActionBar.DISPLAY_SHOW_TITLE | ActionBar.DISPLAY_HOME_AS_UP,
                     ActionBar.DISPLAY_HOME_AS_UP | ActionBar.DISPLAY_SHOW_HOME
                             | ActionBar.DISPLAY_SHOW_TITLE);
             getSupportActionBar().setTitle(
@@ -106,8 +127,8 @@ public class EditEventActivity extends AbstractCalendarActivity {
             mEditFragment = new EditEventFragment(mEventInfo, mReminders, mEventColorInitialized,
                     mEventColor, readOnly, intent);
 
-            mEditFragment.mShowModifyDialogOnLaunch = getIntent().getBooleanExtra(
-                    CalendarController.EVENT_EDIT_ON_LAUNCH, false);
+            mEditFragment.mShowModifyDialogOnLaunch = isExistingEvent()
+                    || getIntent().getBooleanExtra(CalendarController.EVENT_EDIT_ON_LAUNCH, false);
 
             FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
             ft.replace(R.id.body_frame, mEditFragment);
@@ -140,9 +161,17 @@ public class EditEventActivity extends AbstractCalendarActivity {
         long eventId = -1;
         Intent intent = getIntent();
         Uri data = intent.getData();
+        long linkedBegin = -1, linkedEnd = -1;
         if (data != null) {
             try {
-                eventId = Long.parseLong(data.getLastPathSegment());
+                java.util.List<String> parts = data.getPathSegments();
+                if (parts.size() >= 5 && "events".equals(parts.get(0)) && "EventTime".equals(parts.get(2))) {
+                    eventId = Long.parseLong(parts.get(1));
+                    linkedBegin = Long.parseLong(parts.get(3));
+                    linkedEnd = Long.parseLong(parts.get(4));
+                } else {
+                    eventId = Long.parseLong(data.getLastPathSegment());
+                }
             } catch (NumberFormatException e) {
                 if (DEBUG) {
                     Log.d(TAG, "Create new event");
@@ -154,8 +183,10 @@ public class EditEventActivity extends AbstractCalendarActivity {
 
         boolean allDay = intent.getBooleanExtra(EXTRA_EVENT_ALL_DAY, false);
 
-        long begin = intent.getLongExtra(EXTRA_EVENT_BEGIN_TIME, -1);
-        long end = intent.getLongExtra(EXTRA_EVENT_END_TIME, -1);
+        long begin = intent.getLongExtra(EXTRA_EVENT_BEGIN_TIME, linkedBegin);
+        long end = intent.getLongExtra(EXTRA_EVENT_END_TIME, linkedEnd);
+        if (begin == 0) begin = linkedBegin;
+        if (end == 0) end = linkedEnd;
         if (end != -1) {
             info.endTime = new Time();
             if (allDay) {

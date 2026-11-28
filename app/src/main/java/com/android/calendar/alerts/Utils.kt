@@ -4,9 +4,7 @@ import android.app.NotificationChannel
 import android.app.NotificationChannelGroup
 import android.app.NotificationManager
 import android.content.Context
-import android.os.Build
 import android.provider.CalendarContract
-import androidx.annotation.RequiresApi
 import androidx.core.database.getStringOrNull
 import com.android.calendar.Utils
 import com.android.calendar.alerts.AlertService.ALERT_CHANNEL_GROUP_ID
@@ -22,7 +20,6 @@ data class CalendarChannel(val id: Long, val displayName: String?)
 
 fun channelId(id: Long) = "calendar$id"
 
-@RequiresApi(Build.VERSION_CODES.O)
 fun createPerCalendarChannels(context: Context, nm: NotificationManager) {
     val calendars: MutableList<CalendarChannel> = mutableListOf()
 

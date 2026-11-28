@@ -31,11 +31,9 @@ import com.android.calendar.AsyncQueryService
 import com.android.calendar.Utils
 import com.android.calendar.colorpicker.ColorPickerDialog
 import com.android.calendar.colorpicker.ColorPickerSwatch.OnColorSelectedListener
-import com.android.calendar.colorpicker.HsvColorComparator
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import ws.xsoh.etar.R
 import java.util.ArrayList
-import java.util.Arrays
 
 
 /**
@@ -62,6 +60,7 @@ class CalendarColorPickerDialogX : ColorPickerDialog() {
     }
 
     private fun saveColorKeys(outState: Bundle) {
+        if (mColors == null) return
         val colorKeys = IntArray(mColors.size)
         for (i in mColors.indices) {
             colorKeys[i] = colorKeyMap.get(mColors[i])
@@ -157,7 +156,7 @@ class CalendarColorPickerDialogX : ColorPickerDialog() {
                         dismiss()
                         return
                     }
-                    mSelectedColor = Utils.getDisplayColorFromColor(activity, cursor.getInt(CALENDARS_INDEX_CALENDAR_COLOR))
+                    mSelectedColor = cursor.getInt(CALENDARS_INDEX_CALENDAR_COLOR)
                     val account = Account(cursor.getString(CALENDARS_INDEX_ACCOUNT_NAME),
                             cursor.getString(CALENDARS_INDEX_ACCOUNT_TYPE))
                     cursor.close()
@@ -185,7 +184,7 @@ class CalendarColorPickerDialogX : ColorPickerDialog() {
         do {
             val colorKey = cursor.getInt(COLORS_INDEX_COLOR_KEY)
             val rawColor = cursor.getInt(COLORS_INDEX_COLOR)
-            val displayColor = Utils.getDisplayColorFromColor(activity, rawColor)
+            val displayColor = rawColor
             colorKeyMap.put(displayColor, colorKey)
             colors.add(displayColor)
         } while (cursor.moveToNext())
@@ -203,17 +202,12 @@ class CalendarColorPickerDialogX : ColorPickerDialog() {
                 }
                 .create()
         warningDialog.show()
-        val defaultColors: IntArray = resources.getIntArray(R.array.defaultCalendarColors)
-        setColorPalette(defaultColors.toTypedArray())
+        mColors = ColorPickerDialog.defaultColors(requireContext(), mSelectedColor)
         showPaletteView()
     }
 
     private fun setColorPalette(colorsToSort: Array<Int>) {
-        Arrays.sort(colorsToSort, HsvColorComparator())
-        mColors = IntArray(colorsToSort.size)
-        for (i in mColors.indices) {
-            mColors[i] = colorsToSort[i]
-        }
+        mColors = ColorPickerDialog.sortedColors(colorsToSort.toIntArray())
     }
 
     private inner class ThisOnColorSelectedListener : OnColorSelectedListener {
@@ -231,17 +225,17 @@ class CalendarColorPickerDialogX : ColorPickerDialog() {
             }
             queryService!!.startUpdate(queryService!!.nextToken, null, ContentUris.withAppendedId(
                     Calendars.CONTENT_URI, calendarId), values, null, null, Utils.UNDO_DELAY)
-            calendarColorListener!!.onColorSelected(color)
+            calendarColorListener?.onColorSelected(color)
         }
     }
 
     companion object {
 
-        fun newInstance(calendarId: Long, isTablet: Boolean, newListener: OnCalendarColorSelectedListener): CalendarColorPickerDialogX {
+        fun newInstance(calendarId: Long, isTablet: Boolean, newListener: OnCalendarColorSelectedListener? = null): CalendarColorPickerDialogX {
             val fragment = CalendarColorPickerDialogX()
             fragment.setArguments(R.string.calendar_color_picker_dialog_title, NUM_COLUMNS, if (isTablet) SIZE_LARGE else SIZE_SMALL)
             fragment.setCalendarId(calendarId)
-            fragment.setCalendarColorListener(newListener)
+            if (newListener != null) fragment.setCalendarColorListener(newListener)
             return fragment
         }
 

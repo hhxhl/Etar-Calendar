@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="item_corner_radius">4dp</dimen>
+    <dimen name="item_color_bar_width">2dp</dimen>
+    <dimen name="item_list_title_size">18sp</dimen>
+    <dimen name="item_list_marker_size">18sp</dimen>
+    <dimen name="item_list_detail_size">14sp</dimen>
+    <dimen name="item_list_countdown_size">12sp</dimen>
+    <dimen name="item_list_min_height">64dp</dimen>
+    <dimen name="item_list_leading_size">48dp</dimen>
+    <dimen name="item_list_end_padding">16dp</dimen>
+    <dimen name="item_list_detail_padding">8dp</dimen>
+    <dimen name="item_list_accessory_gap">8dp</dimen>
+    <dimen name="item_list_accessory_size">24dp</dimen>
+    <dimen name="item_list_status_vertical_padding">20dp</dimen>
+    <dimen name="item_list_section_vertical_padding">14dp</dimen>
+    <dimen name="item_list_bottom_padding">80dp</dimen>
+</resources>

@@ -38,16 +38,6 @@
     <item msgid="1536401639805370405">"Šis ir būsimi įvykiai"</item>
     <item msgid="7833229563617435430">"Visi įvykiai"</item>
   </string-array>
-  <string-array name="change_response_labels">
-    <item msgid="3466644709343519437">"Tik šis įvykis"</item>
-    <item msgid="140670561403965380">"Visi sekos įvykiai"</item>
-  </string-array>
-  <string-array name="buttons_list">
-    <item msgid="5917946202321434335">"Diena"</item>
-    <item msgid="6248480754959562740">"Savaitė"</item>
-    <item msgid="4298472806133153766">"Mėnuo"</item>
-    <item msgid="5033084974413793845">"Darbotvarkė"</item>
-  </string-array>
   <string-array name="preferences_skip_reminders_labels">
     <item msgid="2285927842308686988">"Tik jei atmesta"</item>
     <item msgid="6367412240524984286">"Jei atmesta ar neatsakyta"</item>

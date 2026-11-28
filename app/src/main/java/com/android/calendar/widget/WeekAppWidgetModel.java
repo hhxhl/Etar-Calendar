@@ -46,8 +46,13 @@ class WeekAppWidgetModel {
      */
     static WeekAppWidgetModel buildWeek(int todayYear, int todayMonth, int todayDay,
             int firstDayOfWeek) {
+        return buildWeek(todayYear, todayMonth, todayDay, firstDayOfWeek, java.util.TimeZone.getDefault());
+    }
 
-        Calendar cal = Calendar.getInstance();
+    static WeekAppWidgetModel buildWeek(int todayYear, int todayMonth, int todayDay,
+            int firstDayOfWeek, java.util.TimeZone zone) {
+
+        Calendar cal = Calendar.getInstance(zone);
         cal.clear();
         cal.set(Calendar.YEAR, todayYear);
         cal.set(Calendar.MONTH, todayMonth);
@@ -80,8 +85,14 @@ class WeekAppWidgetModel {
         final boolean isAllDay;
         final int startMinute;
         final String timeLabel;
+        final long taskId;
 
         EventInfo(String title, int color, boolean isAllDay, int startMinute, String timeLabel) {
+            this(title, color, isAllDay, startMinute, timeLabel, 0);
+        }
+
+        EventInfo(String title, int color, boolean isAllDay, int startMinute, String timeLabel, long taskId) {
+            this.taskId = taskId;
             this.title = title;
             this.color = color;
             this.isAllDay = isAllDay;

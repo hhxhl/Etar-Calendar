@@ -1,13 +1,18 @@
 package com.android.calendar.widget;
 
 import android.content.Context;
-import android.os.Build;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
+import android.view.View;
+import android.widget.RemoteViews;
+import java.time.ZoneId;
 
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.ColorUtils;
 
 import com.android.calendar.LocalizationSettings;
 import com.android.calendar.LunarUtils;
+import com.android.calendar.LocalizedDay;
 import com.android.calendar.theme.DynamicThemeKt;
 
 import java.time.LocalDate;
@@ -25,11 +30,8 @@ final class WidgetHeaderUtils {
 
     static int accentColor(Context context) {
         boolean dark = ColorUtils.calculateLuminance(background(context)) < 0.5;
-        if (Build.VERSION.SDK_INT >= 31) {
-            return ContextCompat.getColor(context, dark ? R.color.etar_primary_dark
-                    : R.color.etar_primary_light);
-        }
-        return ContextCompat.getColor(context, R.color.colorPrimaryDark);
+        return ContextCompat.getColor(context, dark ? R.color.etar_primary_dark
+                : R.color.etar_primary_light);
     }
 
     static int secondaryColor(Context context) {
@@ -42,6 +44,48 @@ final class WidgetHeaderUtils {
                 DynamicThemeKt.getColor(context, "widget_text"), 0.28f);
     }
 
+    static void scheduleMidnight(Context context, PendingIntent intent, ZoneId zone) {
+        long midnight = LocalDate.now(zone).plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli();
+        AlarmManager alarm = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        alarm.set(AlarmManager.RTC, midnight, intent);
+    }
+
+    static void bindGridDate(Context context, RemoteViews views, int dayId, int labelId,
+            LocalDate date, boolean today, boolean currentMonth) {
+        views.setTextViewText(dayId, String.valueOf(date.getDayOfMonth()));
+        String label = LocalizedDay.combined(context, date);
+        views.setTextViewText(labelId, label);
+        views.setViewVisibility(labelId, label.isEmpty() ? View.GONE : View.VISIBLE);
+        WidgetUtils.setThemeText(context, views, labelId, R.color.widget_live_text,
+                DynamicThemeKt.getColor(context, "month_day_number"));
+        if (today) {
+            WidgetUtils.setThemeText(context, views, dayId, R.color.widget_live_on_primary,
+                    DynamicThemeKt.getColor(context, "month_widget_today_text"));
+            views.setInt(dayId, "setBackgroundResource", WidgetUtils.usesLiveTheme(context)
+                    ? R.drawable.widget_today_live : DynamicThemeKt.getDrawableId(context, "month_widget_today_circle"));
+        } else {
+            WidgetUtils.setThemeText(context, views, dayId,
+                    currentMonth ? R.color.widget_live_text : R.color.widget_live_secondary,
+                    DynamicThemeKt.getColor(context, currentMonth ? "month_day_number" : "month_day_number_other"));
+            views.setInt(dayId, "setBackgroundResource", 0);
+        }
+    }
+
+    static void bindGridBorder(Context context, RemoteViews views, int id, boolean visible) {
+        views.setViewVisibility(id, visible ? View.VISIBLE : View.GONE);
+        if (visible) WidgetUtils.setThemeLine(context, views, id, R.color.widget_live_grid,
+                DynamicThemeKt.getColor(context, "month_grid_lines"));
+    }
+
+    static void bindOverflow(Context context, RemoteViews views, int id, int extra) {
+        views.setViewVisibility(id, extra > 0 ? View.VISIBLE : View.GONE);
+        if (extra > 0) {
+            views.setTextViewText(id, context.getString(R.string.widget_event_overflow, extra));
+            WidgetUtils.setThemeText(context, views, id, R.color.widget_live_text,
+                    DynamicThemeKt.getColor(context, "month_day_number"));
+        }
+    }
+
     static String vertical(String value) {
         StringBuilder text = new StringBuilder();
         for (int i = 0; i < value.length(); i++) {
@@ -52,12 +96,11 @@ final class WidgetHeaderUtils {
     }
 
     static int festivalColor(Context context) {
-        return ColorUtils.calculateLuminance(background(context)) < 0.5
-                ? 0xffffb78b : 0xffa04419;
+        return LocalizedDay.festivalColor(background(context));
     }
 
     static int markerColor(String marker) {
-        return "休".equals(marker) ? 0xffd84343 : 0xff39865a;
+        return LocalizedDay.markerColor(marker);
     }
 
     static final class SpecialDates {

@@ -17,7 +17,6 @@
 package com.android.calendar.alerts;
 
 import android.Manifest;
-import android.annotation.TargetApi;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -163,17 +162,6 @@ public class AlertService {
             return false;
         }
 
-
-        if (!prefs.getBoolean(GeneralPreferences.KEY_ALERTS, true) && !Utils.isOreoOrLater()) {
-            if (DEBUG) {
-                Log.d(TAG, "alert preference is OFF");
-            }
-
-            // If we shouldn't be showing notifications cancel any existing ones
-            // and return.
-            nm.cancelAll();
-            return true;
-        }
 
         Cursor alertCursor = cr.query(CalendarAlerts.CONTENT_URI, ALERT_PROJECTION,
                 (ACTIVE_ALERTS_SELECTION + currentTime), ACTIVE_ALERTS_SELECTION_ARGS,
@@ -906,23 +894,21 @@ public class AlertService {
     }
 
     public static void createChannels(Context context) {
-        if (Utils.isOreoOrLater()) {
-            NotificationManager nm =
-                    (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        NotificationManager nm =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
 
-            // Create a channel per calendar (so that the user can turn it off with granularity)
-            UtilsKt.createPerCalendarChannels(context, nm);
+        // Create a channel per calendar (so that the user can turn it off with granularity)
+        UtilsKt.createPerCalendarChannels(context, nm);
 
-            // Create a "Background tasks" channel to keep the app alive
-            NotificationChannel foregroundChannel = new NotificationChannel(
-                    FOREGROUND_CHANNEL_ID,
-                    context.getString(R.string.foreground_notification_channel_name),
-                    NotificationManager.IMPORTANCE_LOW);
-            foregroundChannel.setDescription(
-                    context.getString(R.string.foreground_notification_channel_description));
+        // Create a "Background tasks" channel to keep the app alive
+        NotificationChannel foregroundChannel = new NotificationChannel(
+                FOREGROUND_CHANNEL_ID,
+                context.getString(R.string.foreground_notification_channel_name),
+                NotificationManager.IMPORTANCE_LOW);
+        foregroundChannel.setDescription(
+                context.getString(R.string.foreground_notification_channel_description));
 
-            nm.createNotificationChannel(foregroundChannel);
-        }
+        nm.createNotificationChannel(foregroundChannel);
     }
 
     // Added wrapper for testing
@@ -968,7 +954,6 @@ public class AlertService {
             mNm.cancel(id);
         }
 
-        @TargetApi(Build.VERSION_CODES.O)
         @Override
         public void createNotificationChannel(NotificationChannel channel) {
             mNm.createNotificationChannel(channel);

@@ -38,16 +38,6 @@
     <item msgid="1536401639805370405">"이번 및 향후 일정"</item>
     <item msgid="7833229563617435430">"모든 일정"</item>
   </string-array>
-  <string-array name="change_response_labels">
-    <item msgid="3466644709343519437">"이번 일정만"</item>
-    <item msgid="140670561403965380">"모든 반복 일정"</item>
-  </string-array>
-  <string-array name="buttons_list">
-    <item msgid="5917946202321434335">"일"</item>
-    <item msgid="6248480754959562740">"주"</item>
-    <item msgid="4298472806133153766">"월"</item>
-    <item msgid="5033084974413793845">"일정목록"</item>
-  </string-array>
   <string-array name="preferences_skip_reminders_labels">
     <item msgid="2285927842308686988">"거부한 경우에만 해당"</item>
     <item msgid="6367412240524984286">"거부했거나 응답이 없는 경우만 해당"</item>

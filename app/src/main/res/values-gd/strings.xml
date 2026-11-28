@@ -46,7 +46,6 @@
         <item quantity="few">Gach <xliff:g id="count">%d</xliff:g> latha</item>
         <item quantity="other">Gach <xliff:g id="count">%d</xliff:g> latha</item>
     </plurals>
-    <string name="acessibility_selected_marker_description">Chaidh an tachartas a thaghadh</string>
     <plurals name="N_remaining_events">
         <item quantity="one">+<xliff:g id="count">%d</xliff:g> tachartas</item>
         <item quantity="two">+<xliff:g id="count">%d</xliff:g> thachartas</item>
@@ -60,11 +59,9 @@
         <item quantity="other"><xliff:g id="count">%d</xliff:g> tachartas</item>
     </plurals>
     <string name="template_announce_item_index">Tachartas <xliff:g id="item_index">%1$s</xliff:g> à <xliff:g id="item_count">%2$s</xliff:g>.</string>
-    <string name="day_view_new_event_hint">+ Tachartas ùr</string>
     <string name="accessibility_reminder_privacy">Prìobhaideachd</string>
     <string name="accessibility_reminder_showmeas">Seall mi mar</string>
     <string name="accessibility_reminder_type">Seòrsa a’ chuimhneachain</string>
-    <string name="accessibility_reminder_time">Àm a’ chuimhneachain</string>
     <string name="accessibility_all_day">Tachartas fad an latha</string>
     <string name="accessibility_add_attendee">Cuir freastalaiche ris</string>
     <string name="accessibility_remove_reminder">Thoir an cuimhneachan air falbh</string>
@@ -103,9 +100,6 @@
     <string name="preferences_default_reminder_default">10</string>
     <string name="preferences_default_reminder_dialog">Àm cuimhneachaidh bunaiteach</string>
     <string name="preferences_default_reminder_title">Àm cuimhneachaidh bunaiteach</string>
-    <string name="preferences_alerts_popup_title">Brath priob-uinneige</string>
-    <string name="preferences_alerts_ringtone_title">Fuaim</string>
-    <string name="preferences_alerts_vibrateWhen_title">Crith</string>
     <string name="preferences_alerts_title">Brathan</string>
     <string name="search_history_cleared">Chaidh eachdraidh nan lorg fhalamhachadh.</string>
     <string name="preferences_clear_search_history_summary">Thoir air falbh gach lorg a rinn thu roimhe</string>
@@ -123,8 +117,6 @@
     <string name="default_start_title">An sealladh bunaiteach</string>
     <string name="preferences_hide_declined_title">Falaich tachartasan a chaidh a dhiùltadh</string>
     <string name="preferences_reminder_title">Brathan ⁊ cuimhneachain</string>
-    <string name="preferences_color_pick">Prìomh-dhath</string>
-    <string name="preferences_black_theme">Dubh</string>
     <string name="preferences_dark_theme">Dorcha</string>
     <string name="preferences_light_theme">Soilleir</string>
     <string name="preferences_theme">Ùrlar</string>
@@ -135,7 +127,6 @@
     <string name="change_response_title">Atharraich an fhreagairt</string>
     <string name="delete_recurring_event_title">A bheil thu airson <xliff:g id="eventtitle">%s</xliff:g> a sguabadh às\?</string>
     <string name="delete_this_event_title">A bheil thu airson an tachartas seo a sguabadh às\?</string>
-    <string name="new_event_dialog_option">Tachartas ùr</string>
     <string name="new_event_dialog_label">Tachartas ùr</string>
     <string name="modify_all_following">Atharraich seo ’s gach tachartas ’na dhèidh</string>
     <string name="modify_all">Atharraich gach tachartas san t-sreath</string>
@@ -172,11 +163,7 @@
     <string name="edit_label">Deasaich</string>
     <string name="edit_event_label">Mion-fhiosrachadh</string>
     <string name="search_title">Lorg sna mìosachain agam</string>
-    <string name="show_newer_events">Suath ris a dh’fhaicinn tachartasan an dèidh <xliff:g id="newest_search_range">%1$s</xliff:g></string>
-    <string name="show_older_events">Suath ris a dh’fhaicinn tachartasan ron <xliff:g id="oldest_search_range">%1$s</xliff:g></string>
     <string name="loading">’Ga luchdadh…</string>
-    <string name="event_info_reminders_label">Cuimhneachain</string>
-    <string name="event_info_organizer">Eagraiche:</string>
     <string name="quick_response_custom_msg">Sgrìobh teachdaireachd agad fhèin…</string>
     <string name="quick_response_email_failed">Cha do lorg sinn prògram puist-d</string>
     <string name="quick_response_dialog_title">Tagh grad-fhreagairt</string>
@@ -188,7 +175,6 @@
     <string name="map_label">Mapa</string>
     <string name="event_not_found">Cha deach an tachartas a lorg.</string>
     <string name="email_picker_label">Cuir post-d le</string>
-    <string name="email_organizer_label">Cuir post-d gun eagraiche</string>
     <string name="email_guests_label">Cuir post-d dha na h-aoighean</string>
     <string name="response_no">Cha bhi</string>
     <string name="response_maybe">Gun chinnt</string>
@@ -200,14 +186,12 @@
     <string name="event_color_picker_dialog_title">Dath an tachartais</string>
     <string name="choose_event_color_label">Tagh dath an tachartais</string>
     <string name="view_event_organizer_label">Eagraiche:</string>
-    <string name="view_event_calendar_label">Mìosachan:</string>
     <string name="no_syncable_calendars">Chan eil mìosachan ann</string>
     <string name="reminders_label">Cuir cuimhneachan ris</string>
     <string name="privacy_label">Prìobhaideachd</string>
     <string name="presence_label">Seall mi mar</string>
     <string name="edit_event_calendar_label">Mìosachan</string>
     <string name="edit_event_all_day_label">Fad an latha</string>
-    <string name="event_info_title_invite">Cuireadh coinneimh</string>
     <string name="event_info_title">Seall an tachartas</string>
     <string name="alert_title">Brathan a’ mhìosachain</string>
     <string name="create_event_dialog_save">Sàbhail</string>
@@ -284,7 +268,6 @@
 \n
 \nGabhaidh “Stiùirich dathan a’ mhìosachian” DAVx⁵ a chur à comas airson seo a sheachnadh.</string>
     <string name="preferences_calendar_color_warning_title">Rabhadh</string>
-    <string name="preferences_calendar_synchronize">Sioncronaich am mìosachan seo</string>
     <string name="preferences_calendar_visible">Seall na tachartasan</string>
     <string name="preferences_calendar_color">Dath</string>
     <string name="preferences_calendar_display_name">Atharraich an t-ainm</string>
@@ -297,9 +280,6 @@
     <string name="show_time_start_end">Àm tòiseachaidh ’s crìochnachaidh</string>
     <string name="show_time_start">Àm tòiseachaidh a-mhàin</string>
     <string name="show_time_no">Na seall an t-àm</string>
-    <string name="cal_pick_ics">Tagh faidhle airson ion-phortadh</string>
-    <string name="cal_import_error_date_msg">Cha tuig sinn an ceann-latha a chaidh a thoirt seachad: %s</string>
-    <string name="cal_import_error_time_zone_msg">Cha tuig sinn an roinn-tìde a chaidh a thoirt seachad: %s</string>
     <string name="cal_import_error_msg">Dh’fhàillig ion-phortadh a’ mhìosachain</string>
     <string name="cal_nothing_to_import">Chan eil dad ri ion-phortadh</string>
     <string name="cal_import_menu_title">Ion-phortaich tachartas</string>

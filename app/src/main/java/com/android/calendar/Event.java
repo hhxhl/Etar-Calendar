@@ -123,6 +123,9 @@ public class Event implements Cloneable {
 
 
     public long id;
+    public long taskId; // zero for Android calendar events
+    public boolean taskCompleted;
+    public boolean taskCountdown;
     public int color;
     public CharSequence title;
     public CharSequence location;
@@ -239,6 +242,7 @@ public class Event implements Cloneable {
 
             buildEventsFromCursor(events, cEvents, context, startDay, endDay);
             buildEventsFromCursor(events, cAllday, context, startDay, endDay);
+            com.android.calendar.tasks.TaskCalendarUi.append(context, events, startDay, endDay);
 
         } finally {
             if (cEvents != null) {
@@ -354,7 +358,7 @@ public class Event implements Cloneable {
 
         if (!cEvents.isNull(PROJECTION_COLOR_INDEX)) {
             // Read the color from the database
-            e.color = Utils.getDisplayColorFromColor(context, cEvents.getInt(PROJECTION_COLOR_INDEX));
+            e.color = cEvents.getInt(PROJECTION_COLOR_INDEX);
         } else {
             e.color = mNoColorColor;
         }
@@ -799,6 +803,10 @@ public class Event implements Cloneable {
         super.clone();
         Event e = new Event();
 
+        e.id = id;
+        e.taskId = taskId;
+        e.taskCompleted = taskCompleted;
+        e.taskCountdown = taskCountdown;
         e.title = title;
         e.color = color;
         e.location = location;
@@ -821,6 +829,9 @@ public class Event implements Cloneable {
 
     public final void copyTo(Event dest) {
         dest.id = id;
+        dest.taskId = taskId;
+        dest.taskCompleted = taskCompleted;
+        dest.taskCountdown = taskCountdown;
         dest.title = title;
         dest.color = color;
         dest.location = location;

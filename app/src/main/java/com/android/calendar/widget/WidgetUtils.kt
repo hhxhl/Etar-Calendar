@@ -20,7 +20,6 @@ import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import com.android.calendar.theme.ThemeUtils
 import com.android.calendar.theme.ThemeUtils.isPureBlackModeEnabled
 import com.android.calendar.theme.model.Theme
@@ -40,6 +39,21 @@ object WidgetUtils {
 
     private const val PREF_KEY_PREFIX = "widget_calendars_"
     private const val OPACITY_KEY_PREFIX = "widget_background_opacity_"
+    private const val TASK_LIST_KEY_PREFIX = "widget_task_lists_"
+
+    @JvmStatic
+    fun getWidgetTaskListIds(context: Context, appWidgetId: Int): Set<String>? {
+        if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return null
+        val prefs = CalendarUtils.getSharedPreferences(context, Utils.SHARED_PREFS_NAME)
+        return prefs.getStringSet(TASK_LIST_KEY_PREFIX + appWidgetId, null)
+    }
+
+    fun saveWidgetTaskListIds(context: Context, appWidgetId: Int, ids: Set<String>) {
+        if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return
+        CalendarUtils.getSharedPreferences(context, Utils.SHARED_PREFS_NAME).edit {
+            putStringSet(TASK_LIST_KEY_PREFIX + appWidgetId, ids)
+        }
+    }
 
     fun getWidgetCalendarIds(context: Context, appWidgetId: Int): Set<String>? {
         if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
@@ -65,6 +79,7 @@ object WidgetUtils {
         prefs.edit {
             remove(PREF_KEY_PREFIX + appWidgetId)
             remove(OPACITY_KEY_PREFIX + appWidgetId)
+            remove(TASK_LIST_KEY_PREFIX + appWidgetId)
         }
     }
 
@@ -83,9 +98,10 @@ object WidgetUtils {
 
     @JvmStatic
     fun usesLiveTheme(context: Context): Boolean =
-        Build.VERSION.SDK_INT >= 31 && ThemeUtils.getTheme(context) == Theme.SYSTEM
+        ThemeUtils.getTheme(context) == Theme.SYSTEM
 
     // Use the same background shape and host-resolved color for every widget.
+    @Suppress("UNUSED_PARAMETER")
     @JvmStatic
     fun applyWidgetBackground(context: Context, views: android.widget.RemoteViews,
                               rootId: Int, appWidgetId: Int) {
@@ -98,14 +114,10 @@ object WidgetUtils {
             Theme.BLACK -> R.color.bg_black
         }
         val id = R.id.widget_background_image
-        views.setInt(rootId, "setBackgroundResource", 0)
-        views.setImageViewResource(id, R.drawable.widget_surface)
-        if (Build.VERSION.SDK_INT >= 31) {
-            // Resolve at RemoteViews application time in the host, not the provider.
-            views.setColorStateList(id, "setImageTintList", color)
-        } else {
-            views.setInt(id, "setColorFilter", context.getColor(color))
-        }
+        // The rounded surface is already declared in each widget layout.
+        // Replacing the white source drawable on every update can flash before tint is applied.
+        // Resolve at RemoteViews application time in the host, not the provider.
+        views.setColorStateList(id, "setImageTintList", color)
         applyOpacity(views, id, getBackgroundOpacity(context, appWidgetId))
     }
 
@@ -146,11 +158,12 @@ object WidgetUtils {
         }
 
         val calendarIds = getWidgetCalendarIds(context, appWidgetId)
-        return if (!calendarIds.isNullOrEmpty()) {
-            val ids = calendarIds.joinToString(",")
-            "$baseSelection AND ${Instances.CALENDAR_ID} IN ($ids)"
-        } else {
+        return if (calendarIds == null) {
             baseSelection
+        } else {
+            val ids = calendarIds.mapNotNull { it.toLongOrNull() }.joinToString(",")
+            if (ids.isEmpty()) "$baseSelection AND 0=1"
+            else "$baseSelection AND ${Instances.CALENDAR_ID} IN ($ids)"
         }
     }
 
@@ -182,6 +195,17 @@ object WidgetUtils {
         putExtra(CalendarContract.EXTRA_EVENT_ALL_DAY, false)
         putExtra(CalendarContract.Events.CALENDAR_ID, -1L)
     }
+
+    fun getAddReminderIntent(context: Context): Intent =
+        getAddTaskIntent(context).apply {
+            putExtra("new_reminder", true)
+            putExtra("calendar_zone", com.android.calendar.Utils.getTimeZone(context, null))
+        }
+
+    fun getAddTaskIntent(context: Context): Intent =
+        Intent(context, com.android.calendar.tasks.TaskListActivity::class.java).apply {
+            putExtra("new_task", true)
+        }
 
     @JvmStatic
     fun getMenuPendingIntent(context: Context, appWidgetId: Int): PendingIntent {

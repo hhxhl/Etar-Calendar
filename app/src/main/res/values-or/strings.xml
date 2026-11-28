@@ -19,8 +19,6 @@
     <string name="palestine_display_name" msgid="3485026339977302148">"ପାଲେଷ୍ଟାଇନ୍‌"</string>
 
     <string name="more_string" msgid="643992135011109762">"+<xliff:g id="COUNT">%1$d</xliff:g>"</string>
-    <string name="copy_email" msgid="1084563757174121331">"ଇମେଲ୍ ଠିକଣା କପି କରନ୍ତୁ"</string>
-    <string name="copy_number" msgid="8860802152973030914">"ଫୋନ୍‍ ନମ୍ବର କପି କରନ୍ତୁ"</string>
     <string name="action_label" msgid="7172664623795021857">"ଫେରନ୍ତୁ"</string>
     <string name="accessbility_suggestion_dropdown_opened" msgid="9015267358421989409">"କଣ୍ଟାକ୍ଟ ପରାମର୍ଶ ଖୋଲାଗଲା"</string>
     <string name="accessbility_suggestion_dropdown_closed" msgid="91481373431329121">"କୌଣସି ପରାମର୍ଶ ଉପଲବ୍ଧ ନାହିଁ"</string>

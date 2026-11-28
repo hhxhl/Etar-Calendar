@@ -5,7 +5,6 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
-import androidx.preference.SwitchPreference
 import com.android.calendar.HolidayManager
 import com.android.calendar.LocalizationSettings
 import com.android.calendar.Utils
@@ -34,7 +33,7 @@ class LocalizationPreferences : PreferenceFragmentCompat() {
             "local_terms" to R.string.localization_terms,
             "local_holidays" to R.string.localization_holidays).forEach { (id, label) ->
             val initial = LocalizationSettings.enabled(context, id)
-            preferenceScreen.addPreference(SwitchPreference(context).apply {
+            preferenceScreen.addPreference(MaterialSwitchPreference(context).apply {
                 key = id
                 setTitle(label)
                 setDefaultValue(initial)

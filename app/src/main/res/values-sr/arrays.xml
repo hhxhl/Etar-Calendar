@@ -38,16 +38,6 @@
     <item msgid="1536401639805370405">"Овај и будући догађаји"</item>
     <item msgid="7833229563617435430">"Сви догађаји"</item>
   </string-array>
-  <string-array name="change_response_labels">
-    <item msgid="3466644709343519437">"Само овај догађај"</item>
-    <item msgid="140670561403965380">"Сви догађаји у овом низу"</item>
-  </string-array>
-  <string-array name="buttons_list">
-    <item msgid="5917946202321434335">"Дан"</item>
-    <item msgid="6248480754959562740">"Недеља"</item>
-    <item msgid="4298472806133153766">"Месец"</item>
-    <item msgid="5033084974413793845">"Распоред"</item>
-  </string-array>
   <string-array name="preferences_skip_reminders_labels">
     <item msgid="2285927842308686988">"Само за одбијања"</item>
     <item msgid="6367412240524984286">"За одбијања или догађаје без одговора"</item>

@@ -94,10 +94,12 @@ public class CalendarToolbarHandler {
         updateTitle();
     }
 
-    /** Day/agenda place the short weekday next to the Gregorian date. */
+    /** Day, agenda and tasks place the short weekday next to the Gregorian date. */
     private void updateTitle() {
         String secondary;
         switch (mCurrentViewType) {
+            case CalendarController.ViewType.TASKS:
+            case CalendarController.ViewType.REMINDERS:
             case CalendarController.ViewType.DAY:
             case CalendarController.ViewType.AGENDA:
                 mToolbar.setTitle(appendShortWeekday(mContext, buildFullDate(), mMilliTime, mTimeZone));

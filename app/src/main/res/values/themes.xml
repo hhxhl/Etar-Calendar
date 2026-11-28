@@ -3,7 +3,7 @@
 <resources>
 
     <!-- Base application theme. -->
-    <style name="BaseTheme" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="BaseTheme" parent="Theme.Material3Expressive.DayNight.NoActionBar">
         <item name="colorAccent">@color/colorAccent</item>
         <item name="colorPrimary">@color/colorAccent</item>
         <item name="colorSecondaryContainer">@color/colorSecondaryContainer</item>
@@ -14,34 +14,26 @@
     <!-- Inherit base theme to allow overriding Light Theme as per API levels -->
     <style name="Theme.Etar" parent="BaseTheme">
         <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
     </style>
 
-    <style name="CalendarAppThemeLightTeal" parent="Theme.AppCompat.Light.NoActionBar">
-        <item name="colorPrimary">@color/colorPrimary</item>
-        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
-        <item name="colorAccent">@color/colorAccent</item>
-        <item name="android:itemBackground">@android:color/white</item>
-        <item name="autoCompleteTextViewStyle">@style/actionbar_cursor</item>
-        <item name="calendarSpinnerDisabledTextColor">@color/calendar_item_disabled</item>
-    </style>
-
-    <style name="CalendarAppThemeDarkTeal" parent="Theme.AppCompat.NoActionBar">
-        <item name="colorPrimary">@color/colorPrimary</item>
-        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
-        <item name="colorAccent">@color/colorAccent</item>
-        <item name="android:windowBackground">@color/bg_dark</item>
-        <item name="actionBarPopupTheme">@style/ThemeOverlay.AppCompat.Dark</item>
-        <item name="android:itemBackground">@color/bg_dark</item>
-        <item name="calendarSpinnerDisabledTextColor">@color/calendar_item_disabled_dark</item>
-    </style>
-
-    <style name="CalendarAppThemeBlackTeal" parent="Theme.AppCompat.NoActionBar">
-        <item name="colorPrimary">@color/colorPrimary</item>
-        <item name="colorPrimaryDark">@color/bg_black</item>
-        <item name="colorAccent">@color/colorAccent</item>
-        <item name="android:windowBackground">@color/bg_black</item>
-        <item name="android:itemBackground">@color/bg_black</item>
-        <item name="calendarSpinnerDisabledTextColor">@color/calendar_item_disabled_black</item>
+    <!-- Floating activities used by notification actions. -->
+    <style name="Theme.Etar.AlertDialog" parent="Theme.Material3.DayNight.Dialog">
+        <item name="colorAccent">@color/etar_primary</item>
+        <item name="android:colorAccent">@color/etar_primary</item>
+        <item name="colorPrimary">@color/etar_primary</item>
+        <item name="colorOnPrimary">@color/etar_on_primary</item>
+        <item name="colorPrimaryContainer">@color/etar_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/etar_on_primary_container</item>
+        <item name="colorSecondaryContainer">@color/etar_secondary_container</item>
+        <item name="colorOnSecondaryContainer">@color/etar_on_secondary_container</item>
+        <item name="colorSurface">@color/etar_surface</item>
+        <item name="colorOnSurface">@color/etar_on_surface</item>
+        <item name="colorOnSurfaceVariant">@color/etar_on_surface_variant</item>
+        <item name="colorSurfaceContainer">@color/etar_container</item>
+        <item name="colorSurfaceContainerHigh">@color/etar_container_high</item>
+        <item name="colorOutline">@color/etar_outline</item>
+        <item name="colorOutlineVariant">@color/etar_outline_variant</item>
     </style>
 
     <style name="Theme.Etar.WidgetMenu" parent="Theme.Etar">
@@ -53,5 +45,6 @@
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
+
 
 </resources>

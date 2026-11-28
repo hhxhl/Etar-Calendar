@@ -67,8 +67,6 @@
     <string name="palestine_display_name" msgid="3485026339977302148">"പലസ്‌തീൻ"</string>
 
     <string name="more_string" msgid="643992135011109762">"<xliff:g id="COUNT">%1$d</xliff:g> എണ്ണം കൂടി"</string>
-    <string name="copy_email" msgid="1084563757174121331">"ഇമെയിൽ വിലാസം പകർത്തുക"</string>
-    <string name="copy_number" msgid="8860802152973030914">"ഫോൺ നമ്പർ പകർത്തുക"</string>
     <string name="action_label" msgid="7172664623795021857">"മടങ്ങുക"</string>
     <string name="accessbility_suggestion_dropdown_opened" msgid="9015267358421989409">"കോൺടാക്‌റ്റ് നിർദ്ദേശങ്ങൾ ലഭ്യമാണ്"</string>
     <string name="accessbility_suggestion_dropdown_closed" msgid="91481373431329121">"നിർദ്ദേശങ്ങളൊന്നും ലഭ്യമല്ല"</string>

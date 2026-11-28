@@ -89,14 +89,12 @@
     <string name="create_event_dialog_save" msgid="1080859798521717414">"حفظ"</string>
     <string name="alert_title" msgid="7869592820853066853">"إعلامات التقاويم"</string>
     <string name="event_info_title" msgid="56024222340421620">"عرض الحدث"</string>
-    <string name="event_info_title_invite" msgid="9160326363769403865">"دعوة اجتماع"</string>
     <string name="edit_event_all_day_label" msgid="6200181113992136073">اليوم بأكمله</string>
     <string name="edit_event_calendar_label" msgid="4556498359505856900">"التقويم"</string>
     <string name="presence_label" msgid="6169724148441175862">"حالتي المعروضة هي"</string>
     <string name="privacy_label" msgid="9215031965259597335">"الخصوصية"</string>
     <string name="reminders_label" msgid="7292389181815525676">"إضافة تذكير"</string>
     <string name="no_syncable_calendars" msgid="7019488867045436129">"بلا تقاويم"</string>
-    <string name="view_event_calendar_label" msgid="6126231656338241140">"التقويم:"</string>
     <string name="view_event_organizer_label" msgid="2753151795647402277">"المنظِّم:"</string>
     <string name="choose_event_color_label" msgid="2192923501857428854">"اختيار لون الحدث"</string>
     <string name="event_color_picker_dialog_title" msgid="4631938661655159511">"لون الحدث"</string>
@@ -108,7 +106,6 @@
     <string name="response_maybe" msgid="7791500973627841695">"ربما"</string>
     <string name="response_no" msgid="561911691884148136">"لا"</string>
     <string name="email_guests_label" msgid="8772030932155305903">"إرسال بريد إلكتروني إلى المدعوين"</string>
-    <string name="email_organizer_label" msgid="7178059542798074813">إرسال بريد إلكترونى الى المنظم</string>
     <string name="email_picker_label" msgid="4808253965057791781">"إرسال رسالة إلكترونية إلى"</string>
     <string name="event_not_found" msgid="8356864185947582727">"لم يتم العثور على الحدث."</string>
     <string name="map_label" msgid="8795383535586556038">"خريطة"</string>
@@ -125,14 +122,10 @@
         <item msgid="8036557974294987511">"عذرًا، لا يمكنني الحضور. علينا إعادة الجدولة."</item>
     </string-array>
     <string name="quick_response_custom_msg" msgid="8792374208224108798">"اكتب ردك…"</string>
-    <string name="event_info_organizer" msgid="9138683335394832629">"المنظِّم:"</string>
-    <string name="event_info_reminders_label" msgid="8913097552956388972">"تذكيرات"</string>
     <string name="agenda_today" msgid="5965841338467422191">"اليوم، <xliff:g id="DATE">%1$s</xliff:g>"</string>
     <string name="agenda_yesterday" msgid="4170964206728599693">"أمس، <xliff:g id="DATE">%1$s</xliff:g>"</string>
     <string name="agenda_tomorrow" msgid="3893625470780723605">"غدًا، <xliff:g id="DATE">%1$s</xliff:g>"</string>
     <string name="loading" msgid="3772533493214331230">"جارٍ التحميل…"</string>
-    <string name="show_older_events" msgid="5140647493681439926">"يمكنك اللمس لمشاهدة الأحداث قبل <xliff:g id="OLDEST_SEARCH_RANGE">%1$s</xliff:g>"</string>
-    <string name="show_newer_events" msgid="2604638815440163080">"يمكنك اللمس لمشاهدة الأحداث بعد <xliff:g id="NEWEST_SEARCH_RANGE">%1$s</xliff:g>"</string>
     <string name="search_title" msgid="8898015280250716254">"البحث تقاويمي"</string>
     <string name="edit_event_label" msgid="7413222956349977161">"التفاصيل"</string>
     <string name="edit_label" msgid="8934331258435656534">"تعديل"</string>
@@ -175,7 +168,6 @@
     <string name="modify_all" msgid="4421657265864209041">"تغيير جميع الأحداث في سلسلة الأحداث"</string>
     <string name="modify_all_following" msgid="3017428541066390380">"تغيير هذا الحدث وجميع الأحداث المستقبلية"</string>
     <string name="new_event_dialog_label" msgid="7553105224561147916">"حدث جديد"</string>
-    <string name="new_event_dialog_option" msgid="6154657379574669371">"حدث جديد"</string>
     <string name="delete_this_event_title" msgid="518402946676919384">"هل تريد حذف هذا الحدث؟"</string>
     <string name="delete_recurring_event_title" msgid="5609046778422180206">"هل تريد حذف <xliff:g id="EVENTTITLE">%s</xliff:g>؟"</string>
     <string name="change_response_title" msgid="7704714776070974984">"تغيير الرد"</string>
@@ -189,9 +181,6 @@
     <string name="preferences_clear_search_history_summary" msgid="7864674093455778158">"إزالة جميع عمليات البحث التي أجريتها"</string>
     <string name="search_history_cleared" msgid="1536707558435227567">"تم محو سجل البحث."</string>
     <string name="preferences_alerts_title" msgid="6636088008103904020">"التنبيهات"</string>
-    <string name="preferences_alerts_vibrateWhen_title" msgid="8731372580674292759">"اهتزاز"</string>
-    <string name="preferences_alerts_ringtone_title" msgid="1849706055052358346">"الصوت"</string>
-    <string name="preferences_alerts_popup_title" msgid="6643468203670475296">"التنبيه المنبثق"</string>
     <string name="preferences_default_reminder_title" msgid="5188861433342733905">"وقت التذكير الافتراضي"</string>
     <string name="preferences_default_reminder_dialog" msgid="2490348857239323412">"وقت التذكير الافتراضي"</string>
     <string name="preferences_default_reminder_default" msgid="2903884416749959435">"10"</string>
@@ -225,11 +214,9 @@
     <string name="accessibility_remove_reminder" msgid="5261609343259665139">"إزالة التذكير"</string>
     <string name="accessibility_add_attendee" msgid="5654014177472600916">"إضافة أحد الحضور"</string>
     <string name="accessibility_all_day" msgid="4146955438811915282">حدث لليوم بأكمله</string>
-    <string name="accessibility_reminder_time" msgid="3594100545814579575">"وقت التذكير"</string>
     <string name="accessibility_reminder_type" msgid="5339120699701437227">"نوع التذكير"</string>
     <string name="accessibility_reminder_showmeas" msgid="6669129015980006570">"حالتي المعروضة هي"</string>
     <string name="accessibility_reminder_privacy" msgid="8669288484484022771">"الخصوصية"</string>
-    <string name="day_view_new_event_hint" msgid="2131483437911536229">"+ حدث جديد"</string>
     <string name="template_announce_item_index" msgid="4067877800670753110">"الحدث <xliff:g id="ITEM_INDEX">%1$s</xliff:g> من <xliff:g id="ITEM_COUNT">%2$s</xliff:g>."</string>
     <plurals name="Nevents">
         <item quantity="zero">٠ حدث</item>
@@ -247,7 +234,6 @@
         <item quantity="many">+<xliff:g id="count">%d</xliff:g> حدث</item>
         <item quantity="other">+<xliff:g id="count">%d</xliff:g> حدث</item>
     </plurals>
-    <string name="acessibility_selected_marker_description" msgid="3010149843148810768">"حدث محدد"</string>
     <plurals name="recurrence_interval_daily">
         <item quantity="zero">كل <xliff:g id="count">%d</xliff:g> يوم</item>
         <item quantity="one">كل <xliff:g id="COUNT">%d</xliff:g> يوم</item>
@@ -307,9 +293,6 @@
     <string name="preferences_theme">المظهر</string>
     <string name="preferences_light_theme">فاتح</string>
     <string name="preferences_dark_theme">داكن</string>
-    <string name="preferences_black_theme">أسود</string>
-    <string name="preferences_color">اللون الأساسي</string>
-    <string name="preferences_color_pick">اللون الأساسي</string>
     <string name="preferences_days_per_week_title">أيام في الأسبوع</string>
     <string name="preferences_days_per_week_dialog">أيام في الأسبوع</string>
     <string name="preferences_default_event_duration_title">مدة الحدث الافتراضية</string>
@@ -333,7 +316,6 @@
     <string name="preferences_calendar_color_warning_message">قد يتم التراجع عن تغيير اللون عند مزامنة التقويم مرة أخرى.
 \n
 \nفي DAVx⁵ يمكن تعطيل \"إدارة ألوان التقويم\" لمنع ذلك.</string>
-    <string name="cal_export_succ_msg">تم تصدير الحدث بنجاح: %1$s</string>
     <string name="changelog">التغييرات</string>
     <string name="authors">المطورون</string>
     <string name="app_copyright">© 2015-<xliff:g>%1$s</xliff:g> مشروع إيتار. أجزاء © 2005-<xliff:g>%1$s</xliff:g> مشروع Android مفتوح المصدر.</string>
@@ -346,7 +328,6 @@
     <string name="preferences_list_add_offline_name">اسم</string>
     <string name="preferences_list_add_offline_button">أضف التقويم</string>
     <string name="preferences_list_add_offline_message">لا تتم مزامنة التقويمات غير المتصلة بالإنترنت مع خدمة سحابية وهي متوفرة فقط على هاتفك.</string>
-    <string name="preferences_list_add_remote_etesync">أضف تقويم EteSync</string>
     <string name="preferences_list_add_remote">أضف تقويم CalDAV</string>
     <string name="preferences_list_general">الإعدادات العامة</string>
     <string name="preferences_list_calendar_summary_invisible">الأحداث غير معروضة</string>
@@ -356,7 +337,6 @@
     <string name="preferences_calendar_delete_message">هل تريد حقًا حذف هذا التقويم؟</string>
     <string name="preferences_calendar_color_warning_button">عُلِم</string>
     <string name="preferences_calendar_color_warning_title">تحذير</string>
-    <string name="preferences_calendar_synchronize">مزامنة هذا التقويم</string>
     <string name="preferences_calendar_visible">عرض الأحداث</string>
     <string name="preferences_calendar_color">اللون</string>
     <string name="preferences_calendar_info_category">معلومات التقويم</string>
@@ -370,9 +350,6 @@
     <string name="show_time_start_end_below">وقت البدء والانتهاء أسفل الحدث</string>
     <string name="show_time_start_end">وقت البدء والانتهاء</string>
     <string name="show_time_start">فقط وقت البدء</string>
-    <string name="cal_pick_ics">اختر ملفًا لاستيراده</string>
-    <string name="cal_import_error_date_msg">تعذر فهم التاريخ المحدد: %s</string>
-    <string name="cal_import_error_time_zone_msg">تعذر فهم الوقت المحدد: %s</string>
     <string name="cal_import_error_msg">فشل الاستيراد إلى التقويم</string>
     <string name="cal_export_event_title">تصدير إلى بطاقة SD</string>
     <string name="cal_share_intent_title">أرسل الحدث إلى:</string>
@@ -423,14 +400,11 @@
         <item quantity="other"><xliff:g id="count">%d</xliff:g> أسبوع</item>
     </plurals>
     <string name="menu_info">المعلومات</string>
-    <string name="preferences_real_event_colors">إستعمل لون الحدث الحقيقي</string>
     <string name="hint_time_zone_search" msgid="804776560897143016">"أدخِل اسم البلد"</string>
     <string name="searchview_description_clear" msgid="1603860069305867810">"محو طلب البحث"</string>
     <string name="no_results_found" msgid="5475293015394772651">"لم يتم العثور على نتائج"</string>
     <string name="palestine_display_name" msgid="3485026339977302148">"فلسطين"</string>
     <string name="more_string" msgid="643992135011109762">"<xliff:g id="COUNT">%1$d</xliff:g>+"</string>
-    <string name="copy_email" msgid="1084563757174121331">"نسخ عنوان البريد الإلكتروني"</string>
-    <string name="copy_number" msgid="8860802152973030914">"نسخ رقم الهاتف"</string>
     <string name="action_label" msgid="7172664623795021857">"رجوع"</string>
     <string name="accessbility_suggestion_dropdown_opened" msgid="9015267358421989409">"اقتراحات جهات الاتصال التي تم فتحها"</string>
     <string name="accessbility_suggestion_dropdown_closed" msgid="91481373431329121">"لا تتوفر أي اقتراحات"</string>

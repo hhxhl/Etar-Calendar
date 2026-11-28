@@ -19,6 +19,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.res.Resources;
 import android.provider.CalendarContract.Reminders;
+import android.provider.CalendarContract.Attendees;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -48,6 +49,39 @@ public class EventViewUtils {
 
     private EventViewUtils() {
     }
+
+    public static int getResponseFromButtonId(int buttonId) {
+        int response;
+        if (buttonId == R.id.response_yes) {
+            response = Attendees.ATTENDEE_STATUS_ACCEPTED;
+        } else if (buttonId == R.id.response_maybe) {
+            response = Attendees.ATTENDEE_STATUS_TENTATIVE;
+        } else if (buttonId == R.id.response_no) {
+            response = Attendees.ATTENDEE_STATUS_DECLINED;
+        } else {
+            response = Attendees.ATTENDEE_STATUS_NONE;
+        }
+        return response;
+    }
+
+    public static int findButtonIdForResponse(int response) {
+        int buttonId;
+        switch (response) {
+            case Attendees.ATTENDEE_STATUS_ACCEPTED:
+                buttonId = R.id.response_yes;
+                break;
+            case Attendees.ATTENDEE_STATUS_TENTATIVE:
+                buttonId = R.id.response_maybe;
+                break;
+            case Attendees.ATTENDEE_STATUS_DECLINED:
+                buttonId = R.id.response_no;
+                break;
+            default:
+                buttonId = -1;
+        }
+        return buttonId;
+    }
+
 
     // Constructs a label given an arbitrary number of minutes. For example,
     // if the given minutes is 63, then this returns the string "63 minutes".

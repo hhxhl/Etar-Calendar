@@ -13,7 +13,6 @@
     <string name="yearly_plain">ஆண்டு</string>
     <string name="custom" product="default">தனிப்பயன் (தொலைபேசியில் தனிப்பயனாக்க முடியாது)</string>
     <string name="new_event_dialog_label">புதிய நிகழ்வு</string>
-    <string name="preferences_color_pick">முதன்மை நிறம்</string>
     <string name="preferences_pure_black_night_mode">தூய கருப்பு இரவு முறை</string>
     <string name="maximum_number_of_lines">நிகழ்வில் அதிகபட்ச வரிகளின் எண்ணிக்கை</string>
     <string name="authors">ஆசிரியர்கள்</string>
@@ -92,7 +91,6 @@
     <string name="foreground_notification_channel_name">பின்னணி பணிகள்</string>
     <string name="foreground_notification_channel_description">உள் ஒத்திசைவுக்கு அறிவிப்புகள் தேவை. இந்த சேனலை நீங்கள் பாதுகாப்பாக மறைக்க முடியும்.</string>
     <string name="event_info_title">நிகழ்வைக் காண்க</string>
-    <string name="event_info_title_invite">அழைப்பை சந்தித்தல்</string>
     <string name="edit_event_all_day_label">நாள் முழுவதும்</string>
     <string name="edit_event_calendar_label">நாட்காட்டி</string>
     <string name="presence_label">என்னைக் காட்டு</string>
@@ -101,7 +99,6 @@
     <string name="no_syncable_calendars">காலெண்டர்கள் இல்லை</string>
     <string name="no_calendars_found">நீங்கள் ஒரு நிகழ்வைச் சேர்ப்பதற்கு முன், உங்கள் சாதனத்தில் குறைந்தது ஒரு காலெண்டரைச் சேர்க்க வேண்டும்</string>
     <string name="add_calendar">காலெண்டரைச் சேர்க்கவும்</string>
-    <string name="view_event_calendar_label">காலண்டர்:</string>
     <string name="view_event_organizer_label">அமைப்பாளர்:</string>
     <string name="choose_event_color_label">நிகழ்வு நிறத்தைத் தேர்வுசெய்க</string>
     <string name="event_color_picker_dialog_title">நிகழ்வு நிறம்</string>
@@ -115,7 +112,6 @@
     <string name="response_maybe">ஒருவேளை</string>
     <string name="response_no">இல்லை</string>
     <string name="email_guests_label">விருந்தினர்களுக்கு மின்னஞ்சல் அனுப்புங்கள்</string>
-    <string name="email_organizer_label">மின்னஞ்சல் அமைப்பாளர்</string>
     <string name="email_picker_label">உடன் மின்னஞ்சல்</string>
     <string name="event_not_found">நிகழ்வு கிடைக்கவில்லை.</string>
     <string name="map_label">வரைபடம்</string>
@@ -125,14 +121,10 @@
     <string name="quick_response_email_failed">மின்னஞ்சல் நிரலைக் கண்டுபிடிப்பதில் தோல்வி</string>
     <string name="quick_response_custom_msg">உங்கள் சொந்தமாக எழுதுங்கள்…</string>
     <string name="every_weekday">ஒவ்வொரு வாரமும் (திங்கள் -வெள்ளி)</string>
-    <string name="event_info_organizer">அமைப்பாளர்:</string>
-    <string name="event_info_reminders_label">நினைவூட்டல்கள்</string>
     <string name="agenda_today">இன்று, &lt;xliff: g ஐடி = \"தேதி\"&gt;%1$s &lt;/xliff: g&gt;</string>
     <string name="agenda_yesterday">நேற்று, &lt;xliff: g ஐடி = \"தேதி\"&gt;%1$s &lt;/xliff: g&gt;</string>
     <string name="agenda_tomorrow">நாளை, &lt;xliff: g ஐடி = \"தேதி\"&gt;%1$s &lt;/xliff: g&gt;</string>
     <string name="loading">ஏற்றுகிறது…</string>
-    <string name="show_older_events">&lt;Xliff க்கு முன் நிகழ்வுகளைப் பார்க்கத் தொடவும்: g ஐடி = \"goldest_search_range\"&gt;%1$s &lt;/xliff: g&gt;</string>
-    <string name="show_newer_events">&lt;Xliff: g ஐடி = \"bewest_search_range\"&gt;%1$s &lt;/xliff: g&gt; க்குப் பிறகு நிகழ்வுகளைப் பார்க்கத் தொடவும்</string>
     <string name="search_title">எனது காலெண்டர்களைத் தேடுங்கள்</string>
     <string name="edit_event_label">விவரங்கள்</string>
     <string name="edit_label">தொகு</string>
@@ -157,7 +149,6 @@
     <string name="modify_event">இந்த நிகழ்வை மட்டுமே மாற்றவும்</string>
     <string name="modify_all">தொடரின் அனைத்து நிகழ்வுகளையும் மாற்றவும்</string>
     <string name="modify_all_following">இதையும் எதிர்கால நிகழ்வுகளையும் மாற்றவும்</string>
-    <string name="new_event_dialog_option">புதிய நிகழ்வு</string>
     <string name="delete_this_event_title">இந்த நிகழ்வை நீக்கவா?</string>
     <string name="delete_recurring_event_title">&lt;XLIFF: G ஐடி = \"EventTitle\"&gt;%s &lt;/xliff: g&gt;?</string>
     <string name="change_response_title">பதிலை மாற்றவும்</string>
@@ -169,9 +160,6 @@
     <string name="preferences_system_theme">கணினி இயல்புநிலை</string>
     <string name="preferences_light_theme">ஒளி</string>
     <string name="preferences_dark_theme">இருண்ட</string>
-    <string name="preferences_black_theme">கருப்பு</string>
-    <string name="preferences_color">முதன்மை நிறம்</string>
-    <string name="preferences_real_event_colors">உண்மையான நிகழ்வு வண்ணங்களைப் பயன்படுத்துங்கள்</string>
     <string name="preferences_reminder_title">அறிவிப்புகள் மற்றும் நினைவூட்டல்கள்</string>
     <string name="preferences_hide_declined_title">மறுக்கப்பட்ட நிகழ்வுகளை மறைக்கவும்</string>
     <string name="default_start_title">இயல்புநிலை பார்வை</string>
@@ -192,9 +180,6 @@
     <string name="preferences_clear_search_history_summary">நீங்கள் செய்த அனைத்து தேடல்களையும் அகற்றவும்</string>
     <string name="search_history_cleared">தேடல் வரலாறு அழிக்கப்பட்டது.</string>
     <string name="preferences_alerts_title">அறிவிப்புகள்</string>
-    <string name="preferences_alerts_vibrateWhen_title">அதிர்வு</string>
-    <string name="preferences_alerts_ringtone_title">ஒலி</string>
-    <string name="preferences_alerts_popup_title">பாப்-அப் அறிவிப்பு</string>
     <string name="preferences_use_home_tz_descrip">பயணம் செய்யும் போது உங்கள் வீட்டு நேர மண்டலத்தில் காலெண்டர் மற்றும் நிகழ்வு நேரங்களைக் காண்பி</string>
     <string name="preferences_home_tz_title">வீட்டு நேர மண்டலம்</string>
     <string name="preferences_show_week_num_title">வார எண்ணைக் காட்டு</string>
@@ -226,13 +211,10 @@
     <string name="accessibility_pick_end_date">இறுதி தேதி</string>
     <string name="accessibility_pick_time_zone">நேர மண்டலம்</string>
     <string name="accessibility_pick_recurrence">நிகழ்வு மீண்டும்</string>
-    <string name="accessibility_reminder_time">நினைவூட்டல் நேரம்</string>
     <string name="accessibility_reminder_type">நினைவூட்டல் வகை</string>
     <string name="accessibility_reminder_showmeas">என்னைக் காட்டு</string>
     <string name="accessibility_reminder_privacy">தனியுரிமை</string>
-    <string name="day_view_new_event_hint">+ புதிய நிகழ்வு</string>
     <string name="template_announce_item_index">நிகழ்வு &lt;xliff: g ஐடி = \"item_index\"&gt;%1$s &lt;/xliff: g&gt; of &lt;xliff: g ஐடி = \"item_count\"&gt;%2$s &lt;/xliff: g&gt;.</string>
-    <string name="acessibility_selected_marker_description">தேர்ந்தெடுக்கப்பட்ட நிகழ்வு</string>
     <plurals name="recurrence_interval_daily">
         <item quantity="one">ஒவ்வொரு <xliff:g id="count">%d</xliff:g> நாளுக்கும்</item>
         <item quantity="other">ஒவ்வொரு <xliff:g id="count">%d</xliff:g> நாட்களுக்கும்</item>
@@ -289,13 +271,9 @@
     <string name="error_generating_ics">நிகழ்வைப் பகிரும்போது சிக்கல்கள் ஏற்பட்டன</string>
     <string name="cal_share_intent_title">நிகழ்வை இதற்கு அனுப்பவும்:</string>
     <string name="cal_export_event_title">எச்டி கார்டுக்கு ஏற்றுமதி</string>
-    <string name="cal_export_succ_msg">நிகழ்வு வெற்றிகரமாக ஏற்றுமதி செய்யப்பட்டது</string>
     <string name="cal_import_menu_title">இறக்குமதி நிகழ்வு</string>
     <string name="cal_nothing_to_import">இறக்குமதி செய்ய எதுவும் இல்லை</string>
     <string name="cal_import_error_msg">காலெண்டருக்கு இறக்குமதி செய்வது தோல்வியடைந்தது</string>
-    <string name="cal_import_error_time_zone_msg">கொடுக்கப்பட்ட நேர மண்டலத்தை புரிந்து கொள்ள முடியவில்லை: %s</string>
-    <string name="cal_import_error_date_msg">கொடுக்கப்பட்ட தேதியை புரிந்து கொள்ள முடியவில்லை: %s</string>
-    <string name="cal_pick_ics">இறக்குமதி செய்ய கோப்பைத் தேர்ந்தெடுக்கவும்</string>
     <string name="show_time_start_end">தொடக்க மற்றும் இறுதி நேரம்</string>
     <string name="show_time_start_end_below">நிகழ்வுக்கு கீழே தொடக்க மற்றும் இறுதி நேரம்</string>
     <string name="preferences_calendar_no_display_name">பெயரிடப்படாத காலண்டர்</string>
@@ -306,7 +284,6 @@
     <string name="preferences_calendar_color">நிறம்</string>
     <string name="preferences_calendar_visible">நிகழ்வுகளைக் காண்பி</string>
     <string name="preferences_manage_notifications">அறிவிப்புகளை நிர்வகிக்கவும்</string>
-    <string name="preferences_calendar_synchronize">இந்த காலெண்டரை ஒத்திசைக்கவும்</string>
     <string name="preferences_calendar_color_warning_title">எச்சரிக்கை</string>
     <string name="preferences_calendar_configure_account">காலெண்டரை %1$s இல் உள்ளமைக்கவும்</string>
     <string name="preferences_calendar_color_warning_message">காலெண்டர் மீண்டும் ஒத்திசைக்கப்படும்போது நிறத்தை மாற்றலாம்.\n\n இதைத் தடுக்க DAVX⁵ \'காலெண்டர் வண்ணங்களை நிர்வகிக்கவும்\' முடக்கப்படலாம்.</string>
@@ -316,7 +293,6 @@
     <string name="preferences_list_calendar_summary_invisible">நிகழ்வுகள் காட்டப்படவில்லை</string>
     <string name="preferences_list_general">பொது அமைப்புகள்</string>
     <string name="preferences_list_add_remote">விளம்பர கல்பிடப் காலெண்டர்</string>
-    <string name="preferences_list_add_remote_etesync">ETESYNC காலெண்டரைச் சேர்க்கவும்</string>
     <string name="preferences_list_add_offline">இணைப்பில்லாத காலெண்டரைச் சேர்க்கவும்</string>
     <string name="preferences_list_add_offline_title">இணைப்பில்லாத காலெண்டரைச் சேர்க்கவும்</string>
     <string name="preferences_list_add_offline_cancel">ரத்துசெய்</string>
@@ -339,8 +315,6 @@
     <string name="no_results_found" msgid="5475293015394772651">"முடிவுகள் ஏதுமில்லை"</string>
     <string name="palestine_display_name" msgid="3485026339977302148">"பாலஸ்தீனம்"</string>
     <string name="more_string" msgid="643992135011109762">"+<xliff:g id="COUNT">%1$d</xliff:g>"</string>
-    <string name="copy_email" msgid="1084563757174121331">"மின்னஞ்சல் முகவரியை நகலெடு"</string>
-    <string name="copy_number" msgid="8860802152973030914">"மொபைல் எண்ணை நகலெடு"</string>
     <string name="action_label" msgid="7172664623795021857">"திரும்பு"</string>
     <string name="accessbility_suggestion_dropdown_opened" msgid="9015267358421989409">"திறந்துள்ள தொடர்புப் பரிந்துரைகள்"</string>
     <string name="accessbility_suggestion_dropdown_closed" msgid="91481373431329121">"பரிந்துரைகள் இல்லை"</string>

@@ -38,16 +38,6 @@
     <item msgid="1536401639805370405">"Гэта і будучыя мерапрыемствы"</item>
     <item msgid="7833229563617435430">"Усе падзеі"</item>
   </string-array>
-  <string-array name="change_response_labels">
-    <item msgid="3466644709343519437">"Толькі гэта мерапрыемства"</item>
-    <item msgid="140670561403965380">"Усе падзеі ў серыі"</item>
-  </string-array>
-  <string-array name="buttons_list">
-    <item msgid="5917946202321434335">"Дзень"</item>
-    <item msgid="6248480754959562740">"Тыдзень"</item>
-    <item msgid="4298472806133153766">"Месяц"</item>
-    <item msgid="5033084974413793845">"Парадак дня"</item>
-  </string-array>
   <string-array name="preferences_skip_reminders_labels">
     <item msgid="2285927842308686988">"Толькі калі адмоўлена"</item>
     <item msgid="6367412240524984286">"Калі адмоўлена або адказу няма"</item>

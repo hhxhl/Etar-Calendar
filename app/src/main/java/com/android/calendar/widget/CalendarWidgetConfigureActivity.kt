@@ -48,7 +48,8 @@ class CalendarWidgetConfigureActivity : AppCompatActivity() {
         val name: String,
         val account: String,
         val color: Int,
-        var isChecked: Boolean
+        var isChecked: Boolean,
+        val isTaskList: Boolean = false
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -147,7 +148,7 @@ class CalendarWidgetConfigureActivity : AppCompatActivity() {
                     val name = cursor.getString(nameCol) ?: ""
                     val account = cursor.getString(accountCol) ?: ""
                     val rawColor = cursor.getInt(colorCol)
-                    val displayColor = Utils.getDisplayColorFromColor(this, rawColor)
+                    val displayColor = rawColor
                     val visible = cursor.getInt(visibleCol) == 1
 
                     val isChecked = if (savedIds != null) {
@@ -164,12 +165,24 @@ class CalendarWidgetConfigureActivity : AppCompatActivity() {
         } finally {
             cursor?.close()
         }
+
+        val selectedTasks = WidgetUtils.getWidgetTaskListIds(this, appWidgetId)
+        for (list in com.android.calendar.tasks.TaskStore.get(this).lists()) {
+            val name = list.name.ifEmpty { getString(R.string.tasks_default_list) }
+            val color = if (list.color == 0) getColor(R.color.event_center)
+                else list.color
+            calendarItems.add(CalendarItem(list.id, name, getString(R.string.reminders_title),
+                color, selectedTasks?.contains(list.id.toString()) ?: true, true))
+        }
     }
 
     private fun saveAndFinish() {
-        val selectedIds = calendarItems.filter { it.isChecked }.map { it.id.toString() }.toSet()
+        val selectedIds = calendarItems.filter { it.isChecked && !it.isTaskList }.map { it.id.toString() }.toSet()
+        val selectedTasks = calendarItems.filter { it.isChecked && it.isTaskList }.map { it.id.toString() }.toSet()
         val previousIds = WidgetUtils.getWidgetCalendarIds(this, appWidgetId)
+        val previousTasks = WidgetUtils.getWidgetTaskListIds(this, appWidgetId)
         WidgetUtils.saveWidgetCalendarIds(this, appWidgetId, selectedIds)
+        WidgetUtils.saveWidgetTaskListIds(this, appWidgetId, selectedTasks)
         WidgetUtils.saveBackgroundOpacity(this, appWidgetId,
             findViewById<SeekBar>(R.id.widget_opacity_slider).progress)
 
@@ -188,7 +201,7 @@ class CalendarWidgetConfigureActivity : AppCompatActivity() {
             WeekAppWidgetProvider::class.java.name -> R.layout.week_appwidget
             else -> 0
         }
-        if (provider != null && previousIds == selectedIds && layoutId != 0) {
+        if (provider != null && previousIds == selectedIds && previousTasks == selectedTasks && layoutId != 0) {
             // Only opacity changed: leave the collection adapter and current layout intact.
             WidgetUtils.updateBackgroundOpacity(this, appWidgetId, layoutId)
         } else if (provider != null) {
@@ -207,7 +220,7 @@ class CalendarWidgetConfigureActivity : AppCompatActivity() {
     private inner class CalendarAdapter : BaseAdapter() {
         override fun getCount(): Int = calendarItems.size
         override fun getItem(position: Int): CalendarItem = calendarItems[position]
-        override fun getItemId(position: Int): Long = calendarItems[position].id
+        override fun getItemId(position: Int): Long = getItem(position).let { if (it.isTaskList) -it.id - 1 else it.id }
 
         override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
             val view = convertView ?: LayoutInflater.from(this@CalendarWidgetConfigureActivity)

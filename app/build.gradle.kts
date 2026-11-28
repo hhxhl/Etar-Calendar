@@ -17,7 +17,7 @@ android {
 	compileSdk = 37
 
 	defaultConfig {
-		minSdk = 24
+		minSdk = 31
 		targetSdk = 37
 		versionCode = 58
 		versionName = "1.0.58"
@@ -27,8 +27,12 @@ android {
 
 	buildTypes {
 		release {
-			// TODO: could be enabled for ProGuard minimization
-			isMinifyEnabled = false
+			isMinifyEnabled = true
+			isShrinkResources = true
+			proguardFiles(
+				getDefaultProguardFile("proguard-android-optimize.txt"),
+				"proguard-rules.pro"
+			)
 			resValue(
 				"string",
 				"search_authority",

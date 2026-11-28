@@ -26,7 +26,6 @@ import android.content.Context;
 import android.database.Cursor;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
-import android.os.Build;
 import android.provider.CalendarContract;
 import android.provider.CalendarContract.Attendees;
 import android.provider.CalendarContract.Calendars;
@@ -813,8 +812,8 @@ public class EditEventHelper {
         ops.add(ContentProviderOperation.newDelete(
             ContentUris.withAppendedId(Events.CONTENT_URI, eventId)).build());
 
-        // if syncId is not provided, or api level is < 30, return here before trying to move exceptions
-        if (TextUtils.isEmpty(syncId) || Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+        // If syncId is not provided, return before trying to move exceptions.
+        if (TextUtils.isEmpty(syncId)) {
             return ops;
         }
 
@@ -1364,7 +1363,7 @@ public class EditEventHelper {
         } else {
             rawEventColor = cursor.getInt(EVENT_INDEX_EVENT_COLOR);
         }
-        model.setEventColor(Utils.getDisplayColorFromColor(context, rawEventColor));
+        model.setEventColor(rawEventColor);
 
         model.mAccessLevel = accessLevel;
         model.mEventStatus = cursor.getInt(EVENT_INDEX_EVENT_STATUS);
@@ -1408,8 +1407,7 @@ public class EditEventHelper {
 
             model.mCalendarAccessLevel = cursor.getInt(CALENDARS_INDEX_ACCESS_LEVEL);
             model.mCalendarDisplayName = cursor.getString(CALENDARS_INDEX_DISPLAY_NAME);
-            model.setCalendarColor(Utils.getDisplayColorFromColor(context,
-                    cursor.getInt(CALENDARS_INDEX_COLOR)));
+            model.setCalendarColor(cursor.getInt(CALENDARS_INDEX_COLOR));
 
             model.mCalendarAccountName = cursor.getString(CALENDARS_INDEX_ACCOUNT_NAME);
             model.mCalendarAccountType = cursor.getString(CALENDARS_INDEX_ACCOUNT_TYPE);
@@ -1433,7 +1431,7 @@ public class EditEventHelper {
 
     public static boolean canModifyCalendar(CalendarEventModel model) {
         return model.mCalendarAccessLevel >= Calendars.CAL_ACCESS_CONTRIBUTOR
-                || model.mCalendarId == -1;
+                || (model.mId == -1 && model.mCalendarId == -1);
     }
 
     public static boolean canAddReminders(CalendarEventModel model) {
@@ -1453,6 +1451,9 @@ public class EditEventHelper {
         // for simplicity).
 
         if (!canModifyCalendar(model)) {
+            return false;
+        }
+        if (model.mId != -1 && (!model.mHasAttendeeData || model.mOwnerAttendeeId == -1)) {
             return false;
         }
 

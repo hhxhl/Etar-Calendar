@@ -55,11 +55,11 @@ public class WeekAppWidgetProvider extends BaseGridWidgetProvider {
     @Override
     protected String computeTitle(Context context, long nowMillis) {
         int firstDayOfWeek = Utils.getFirstDayOfWeekAsCalendar(context);
-        return buildWeekTitle(nowMillis, firstDayOfWeek);
+        return buildWeekTitle(nowMillis, firstDayOfWeek, java.util.TimeZone.getTimeZone(Utils.getTimeZone(context, null)));
     }
 
-    private String buildWeekTitle(long nowMillis, int firstDayOfWeek) {
-        Calendar cal = Calendar.getInstance();
+    private String buildWeekTitle(long nowMillis, int firstDayOfWeek, java.util.TimeZone zone) {
+        Calendar cal = Calendar.getInstance(zone);
         cal.setTimeInMillis(nowMillis);
 
         // Rewind to first day of week
@@ -72,6 +72,7 @@ public class WeekAppWidgetProvider extends BaseGridWidgetProvider {
         Calendar weekEnd = cal;
 
         SimpleDateFormat monthDay = new SimpleDateFormat("MMM d", Locale.getDefault());
+        monthDay.setTimeZone(zone);
 
         int startYear = weekStart.get(Calendar.YEAR);
         int endYear = weekEnd.get(Calendar.YEAR);
@@ -81,6 +82,7 @@ public class WeekAppWidgetProvider extends BaseGridWidgetProvider {
         if (startYear != endYear) {
             // Crosses year boundary: "Dec 29, 2025 - Jan 4, 2026"
             SimpleDateFormat full = new SimpleDateFormat("MMM d, yyyy", Locale.getDefault());
+            full.setTimeZone(zone);
             return full.format(weekStart.getTime()) + " - " + full.format(weekEnd.getTime());
         } else if (startMonth != endMonth) {
             // Same year, different months: "Jan 27 - Feb 2, 2026"

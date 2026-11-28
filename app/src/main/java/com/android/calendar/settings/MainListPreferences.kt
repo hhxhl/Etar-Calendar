@@ -18,6 +18,8 @@
 package com.android.calendar.settings
 
 import android.content.Intent
+import android.graphics.BlendMode
+import android.graphics.BlendModeColorFilter
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
@@ -31,6 +33,8 @@ import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceScreen
 import com.android.calendar.persistence.Calendar
+import com.android.calendar.tasks.TaskStore
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import ws.xsoh.etar.R
 
 
@@ -43,6 +47,7 @@ class MainListPreferences : PreferenceFragmentCompat() {
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         val context = preferenceManager.context
         val screen = preferenceManager.createPreferenceScreen(context)
+        currentCalendars.clear()
 
         addGeneralPreferences(screen)
 
@@ -52,6 +57,8 @@ class MainListPreferences : PreferenceFragmentCompat() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         activity?.title = getString(R.string.preferences_title)
+        parentFragmentManager.setFragmentResultListener(AddOfflineCalendarDialogFragment.TASK_LIST_CHANGED,
+                viewLifecycleOwner) { _, _ -> updateTaskListPreferences(preferenceScreen) }
 
         val factory = MainListViewModelFactory(requireActivity().application)
         mainListViewModel = ViewModelProvider(this, factory).get(MainListViewModel::class.java)
@@ -78,7 +85,7 @@ class MainListPreferences : PreferenceFragmentCompat() {
                     key = accountCategoryUniqueKey
                     title = calendar.accountName
                     icon = ContextCompat.getDrawable(requireContext(), R.drawable.outline_account_circle)
-                    order = if (calendar.isLocal) 10 else 11 // show offline calendar first
+                    order = if (calendar.isLocal) 10 else 12 // offline calendars, offline lists, remote accounts
                     isOrderingAsAdded = false // use alphabetic ordering for children
                 }
                 screen.addPreference(accountCategory)
@@ -146,7 +153,7 @@ class MainListPreferences : PreferenceFragmentCompat() {
             ContextCompat.getDrawable(requireContext(), R.drawable.circle_outline)
         }
 
-        icon!!.mutate().setColorFilter(color, Mode.SRC_IN)
+        icon!!.mutate().colorFilter = BlendModeColorFilter(color, BlendMode.SRC_IN)
         return icon
     }
 
@@ -164,14 +171,6 @@ class MainListPreferences : PreferenceFragmentCompat() {
             launchDavX5Login()
             true
         }
-        val addEtesyncPreference = Preference(requireContext()).apply {
-            title = getString(R.string.preferences_list_add_remote_etesync)
-            icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_add)
-        }
-        addEtesyncPreference.setOnPreferenceClickListener {
-            launchAddEtesync()
-            true
-        }
         val addOfflinePreference = Preference(requireContext()).apply {
             title = getString(R.string.preferences_list_add_offline)
             icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_add)
@@ -182,8 +181,58 @@ class MainListPreferences : PreferenceFragmentCompat() {
         }
         screen.addPreference(generalPreference)
         screen.addPreference(addCaldavPreference)
-        screen.addPreference(addEtesyncPreference)
+        screen.addPreference(Preference(requireContext()).apply {
+            title = getString(R.string.tasks_add_caldav_list)
+            icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_add)
+            setOnPreferenceClickListener {
+                MaterialAlertDialogBuilder(requireContext())
+                        .setTitle(R.string.tasks_add_caldav_list)
+                        .setMessage(R.string.tasks_caldav_list_unavailable)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show()
+                true
+            }
+        })
         screen.addPreference(addOfflinePreference)
+        screen.addPreference(Preference(requireContext()).apply {
+            title = getString(R.string.tasks_add_offline_list)
+            icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_add)
+            setOnPreferenceClickListener {
+                AddOfflineCalendarDialogFragment.forTaskList().show(parentFragmentManager, "addOfflineList")
+                true
+            }
+        })
+        updateTaskListPreferences(screen)
+    }
+
+    private fun updateTaskListPreferences(screen: PreferenceScreen) {
+        val categoryKey = "offline_task_lists"
+        val old = screen.findPreference<PreferenceCategory>(categoryKey)
+        if (old != null) screen.removePreference(old)
+        val lists = TaskStore.get(requireContext()).lists()
+        if (lists.isEmpty()) return
+        val category = PreferenceCategory(requireContext()).apply {
+            key = categoryKey
+            title = getString(R.string.tasks_offline_lists)
+            icon = ContextCompat.getDrawable(requireContext(), R.drawable.outline_account_circle)
+            order = 11
+            isOrderingAsAdded = false
+        }
+        // A PreferenceGroup must be attached to the screen before adding children,
+        // otherwise AndroidX has no PreferenceManager to allocate their IDs.
+        screen.addPreference(category)
+        for (list in lists) {
+            category.addPreference(Preference(requireContext()).apply {
+                key = "task_list_${list.id}"
+                title = list.name.ifBlank { getString(R.string.tasks_default_list) }
+                icon = getCalendarIcon(
+                        if (list.color == 0) requireContext().getColor(R.color.event_center) else list.color,
+                        list.visible, true)
+                summary = if (list.visible) "" else getString(R.string.tasks_list_hidden)
+                fragment = TaskListPreferences::class.java.name
+                extras.putLong(TaskListPreferences.ARG_LIST_ID, list.id)
+            })
+        }
     }
 
     private fun addOfflineCalendar() {
@@ -222,51 +271,10 @@ class MainListPreferences : PreferenceFragmentCompat() {
         }
     }
 
-    private fun launchAddEtesync() {
-        val packageManager = requireActivity().packageManager
-        val etesyncPackage = "com.etesync.syncadapter"
-        val etesyncIntent = packageManager.getLaunchIntentForPackage(etesyncPackage)
-
-        if (etesyncIntent != null) {
-            startActivity(etesyncIntent)
-        } else {
-            // EteSync is not installed
-            val installIntent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=${etesyncPackage}"))
-
-            // launch market
-            if (installIntent.resolveActivity(packageManager) != null) {
-                startActivity(installIntent)
-            } else {
-                // no f-droid market app or Play store installed -> launch browser for f-droid url
-                val downloadIntent = Intent(Intent.ACTION_VIEW,
-                        Uri.parse("https://f-droid.org/repository/browse/?fdid=${etesyncPackage}"))
-                if (downloadIntent.resolveActivity(packageManager) != null) {
-                    startActivity(downloadIntent)
-                } else {
-                    Toast.makeText(activity, "No browser available!", Toast.LENGTH_LONG).show()
-                }
-            }
-        }
-    }
-
     override fun onResume() {
         super.onResume()
-        val context = preferenceManager.context
-        val screen = preferenceManager.createPreferenceScreen(context)
-
-        addGeneralPreferences(screen)
-
-        preferenceScreen = screen
-
-        val factory = MainListViewModelFactory(requireActivity().application)
-        mainListViewModel = ViewModelProvider(this, factory).get(MainListViewModel::class.java)
-
-        // Add an observer on the LiveData returned by getCalendarsOrderedByAccount.
-        // The onChanged() method fires when the observed data changes and the activity is
-        // in the foreground.
-        mainListViewModel.getCalendarsOrderedByAccount().observe(viewLifecycleOwner, Observer<List<Calendar>> { calendars ->
-            updateCalendarPreferences(preferenceScreen, calendars)
-        })
+        activity?.title = getString(R.string.preferences_title)
+        updateTaskListPreferences(preferenceScreen)
     }
 
 }
