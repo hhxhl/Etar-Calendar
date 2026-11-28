@@ -7,6 +7,7 @@ import android.widget.CheckBox;
 import android.widget.Spinner;
 import android.widget.TextView;
 import com.android.calendar.ItemStateSymbols;
+import com.android.calendar.ItemStateIcons;
 import com.android.calendar.ItemAppearance;
 import com.android.calendar.EventCountdown;
 import android.text.format.DateUtils;
@@ -47,8 +48,7 @@ public final class TaskListUi {
     }
 
     private static String stateSymbol(TaskStore.Task task, boolean checked, ZoneId zone, long now) {
-        return task.due == null ? (checked ? ItemStateSymbols.TASK_DONE : ItemStateSymbols.TASK_PENDING)
-                : ItemStateSymbols.task(checked, task.due, task.allDay, zone, now);
+        return ItemStateSymbols.task(checked, task.inProgress, task.due, task.allDay, zone, now);
     }
 
     /** Read-only task presentation, shared by the reminders list and global search. */
@@ -57,7 +57,7 @@ public final class TaskListUi {
         int color = ItemAppearance.bindRow(root,
                 TaskCalendarUi.displayColor(root.getContext(), task), marker, title);
         ItemAppearance.setTextColor(color, details);
-        marker.setText(stateSymbol(task, task.done, zone, now));
+        ItemStateIcons.bindMarker(marker, stateSymbol(task, task.done, zone, now));
         ItemAppearance.bindTitle(title, task.title, !task.done, task.done);
         return color;
     }
@@ -138,7 +138,7 @@ public final class TaskListUi {
         int color = bindPresentation(root, done, title, task, zone, System.currentTimeMillis());
         done.setContentDescription(context.getString(R.string.tasks_complete) + " " + task.title);
         done.setOnCheckedChangeListener((button, checked) -> {
-            done.setText(stateSymbol(task, checked, zone, System.currentTimeMillis()));
+            ItemStateIcons.bindMarker(done, stateSymbol(task, checked, zone, System.currentTimeMillis()));
             store.complete(task.id, checked, task.displayTime());
             if (afterComplete != null) afterComplete.run();
         });

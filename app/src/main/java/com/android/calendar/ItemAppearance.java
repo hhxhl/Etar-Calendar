@@ -71,12 +71,19 @@ public final class ItemAppearance {
     /** Canvas text must keep spans during both measurement and drawing. */
     public static void drawCenteredLine(Canvas canvas, CharSequence value, Paint paint,
             float left, float right, float baseline) {
+        drawCenteredLine(canvas, value, paint, left, right, baseline, null, null);
+    }
+
+    public static void drawCenteredLine(Canvas canvas, CharSequence value, Paint paint,
+            float left, float right, float baseline, Context context, String state) {
         int width = (int) (right - left);
         if (width <= 0) return;
         TextPaint textPaint = new TextPaint(paint);
         textPaint.setTextAlign(Paint.Align.LEFT);
-        StaticLayout layout = StaticLayout.Builder.obtain(itemText(value), 0,
-                singleLine(value).length(), textPaint, width)
+        CharSequence styled = itemText(value);
+        if (state != null) styled = ItemStateIcons.prefix(context, state, styled);
+        StaticLayout layout = StaticLayout.Builder.obtain(styled, 0,
+                styled.length(), textPaint, width)
                 .setAlignment(Layout.Alignment.ALIGN_CENTER)
                 .setIncludePad(false).setMaxLines(1)
                 .setEllipsize(TextUtils.TruncateAt.END).build();
@@ -175,6 +182,17 @@ public final class ItemAppearance {
                 .getDrawable(R.drawable.item_rounded_surface).mutate();
         drawable.setColor(background(foreground));
         view.setBackground(drawable);
+    }
+
+    public static void tintWidgetIcon(Context context, RemoteViews views, int iconId, int displayColor) {
+        if (com.android.calendar.widget.WidgetUtils.usesLiveTheme(context)) {
+            views.setColorStateList(iconId, "setImageTintList",
+                    ColorStateList.valueOf(foreground(displayColor, false)),
+                    ColorStateList.valueOf(foreground(displayColor, true)));
+        } else {
+            views.setColorStateList(iconId, "setImageTintList",
+                    ColorStateList.valueOf(foreground(context, displayColor)));
+        }
     }
 
     public static void bindWidget(Context context, RemoteViews views, int displayColor,

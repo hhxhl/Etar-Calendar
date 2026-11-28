@@ -77,6 +77,7 @@ class CalendarAppWidgetModel {
         int dueColumn = cursor.getColumnIndex(WidgetTaskRows.TASK_DUE);
         int dueAllDayColumn = cursor.getColumnIndex(WidgetTaskRows.TASK_DUE_ALL_DAY);
         int rangeColumn = cursor.getColumnIndex(WidgetTaskRows.TASK_RANGE);
+        int stateColumn = cursor.getColumnIndex(WidgetTaskRows.ITEM_STATE);
         String tz = Utils.getTimeZone(mContext, null);
         while (cursor.moveToNext()) {
             final int rowId = cursor.getPosition();
@@ -137,6 +138,7 @@ class CalendarAppWidgetModel {
             int i = mEventInfos.size();
             EventInfo info = populateEventInfo(eventId, allDay, start, end, startDay, endDay, displayTitle,
                     location, color, selfStatus, taskRange);
+            info.itemState = stateColumn < 0 ? null : cursor.getString(stateColumn);
             info.taskCompleted = eventId < -1 && !pendingTask;
             info.taskHasDeadline = hasDeadline;
             info.taskDeadline = deadline;
@@ -304,7 +306,7 @@ class CalendarAppWidgetModel {
         int visibWhere; // Visibility value for Where textview (View.GONE or View.VISIBLE)
         String where;
         int visibTitle; // Visibility value for Title textview (View.GONE or View.VISIBLE)
-        String title;
+        String title, itemState;
         int status;
         int selfAttendeeStatus;
 

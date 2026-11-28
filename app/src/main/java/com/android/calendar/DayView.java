@@ -2749,14 +2749,16 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         // Check if we have already initialized the StaticLayout and that
         // the width hasn't changed (due to vertical resizing which causes
         // re-layout of events at min height)
-        String marker = ItemStateSymbols.forEvent(mContext, event, mCurrentTime.toMillis()) + " ";
+        String marker = ItemStateSymbols.forEvent(mContext, event, mCurrentTime.toMillis());
         if (layout == null || r.width() != layout.getWidth()
-                || !layout.getText().toString().startsWith(marker)) {
+                || !ItemStateIcons.hasState(layout.getText(), marker)) {
             TextPaint textPaint = new TextPaint(paint);
             textPaint.setTypeface(android.graphics.Typeface.DEFAULT);
-            SpannableStringBuilder bob = new SpannableStringBuilder(ItemAppearance.fitLine(
-                    marker + (event.title == null ? "" : drawTextSanitizer(event.title.toString(),
-                            MAX_EVENT_TEXT_LEN - marker.length())), textPaint, r.width()));
+            CharSequence title = ItemAppearance.itemText(event.title == null ? "" :
+                    drawTextSanitizer(event.title.toString(), MAX_EVENT_TEXT_LEN));
+            SpannableStringBuilder bob = new SpannableStringBuilder(TextUtils.ellipsize(
+                    ItemStateIcons.prefix(mContext, marker, title), textPaint,
+                    Math.max(0, r.width()), TextUtils.TruncateAt.END));
             if (event.location != null && event.location.length() > 0) {
                 bob.append('\n');
                 bob.append(ItemAppearance.fitLine(drawTextSanitizer(event.location.toString(),

@@ -82,6 +82,13 @@
                     android:paddingEnd="1dip"
                     android:visibility="gone" />
 
+                <ImageView
+                    android:id="@+id/week_cell_event_state_1"
+                    android:layout_width="9dp"
+                    android:layout_height="9dp"
+                    android:layout_gravity="center_vertical"
+                    android:visibility="gone" />
+
                 <TextView
                     android:id="@+id/week_cell_event_text_1"
                     android:layout_width="0dp"
@@ -131,6 +138,13 @@
                     android:gravity="center_vertical"
                     android:paddingStart="2dip"
                     android:paddingEnd="1dip"
+                    android:visibility="gone" />
+
+                <ImageView
+                    android:id="@+id/week_cell_event_state_2"
+                    android:layout_width="9dp"
+                    android:layout_height="9dp"
+                    android:layout_gravity="center_vertical"
                     android:visibility="gone" />
 
                 <TextView
@@ -184,6 +198,13 @@
                     android:paddingEnd="1dip"
                     android:visibility="gone" />
 
+                <ImageView
+                    android:id="@+id/week_cell_event_state_3"
+                    android:layout_width="9dp"
+                    android:layout_height="9dp"
+                    android:layout_gravity="center_vertical"
+                    android:visibility="gone" />
+
                 <TextView
                     android:id="@+id/week_cell_event_text_3"
                     android:layout_width="0dp"
@@ -235,6 +256,13 @@
                     android:paddingEnd="1dip"
                     android:visibility="gone" />
 
+                <ImageView
+                    android:id="@+id/week_cell_event_state_4"
+                    android:layout_width="9dp"
+                    android:layout_height="9dp"
+                    android:layout_gravity="center_vertical"
+                    android:visibility="gone" />
+
                 <TextView
                     android:id="@+id/week_cell_event_text_4"
                     android:layout_width="0dp"
@@ -284,6 +312,13 @@
                     android:gravity="center_vertical"
                     android:paddingStart="2dip"
                     android:paddingEnd="1dip"
+                    android:visibility="gone" />
+
+                <ImageView
+                    android:id="@+id/week_cell_event_state_5"
+                    android:layout_width="9dp"
+                    android:layout_height="9dp"
+                    android:layout_gravity="center_vertical"
                     android:visibility="gone" />
 
                 <TextView

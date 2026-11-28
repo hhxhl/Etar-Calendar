@@ -169,6 +169,11 @@ public class MonthAppWidgetService extends RemoteViewsService {
                     R.id.month_cell_event_surface_2,
                     R.id.month_cell_event_surface_3,
             };
+            int[] stateIds = {
+                    R.id.month_cell_event_state_1,
+                    R.id.month_cell_event_state_2,
+                    R.id.month_cell_event_state_3,
+            };
             int[] textIds = {
                     R.id.month_cell_event_text_1,
                     R.id.month_cell_event_text_2,
@@ -194,6 +199,8 @@ public class MonthAppWidgetService extends RemoteViewsService {
                             || chip.spanType == MonthAppWidgetModel.EventChip.SPAN_SINGLE;
                     views.setViewVisibility(barIds[i], showTitle ? View.VISIBLE : View.GONE);
                     views.setTextViewText(textIds[i], com.android.calendar.ItemAppearance.itemText(showTitle ? chip.title : ""));
+                    com.android.calendar.ItemStateIcons.bindWidget(views, stateIds[i], chip.itemState, showTitle);
+                    com.android.calendar.ItemAppearance.tintWidgetIcon(mContext, views, stateIds[i], chip.color);
                     views.setViewPadding(rowIds[i], pad, 0, pad, 0);
                 } else {
                     views.setViewVisibility(rowIds[i], View.GONE);
@@ -354,7 +361,8 @@ public class MonthAppWidgetService extends RemoteViewsService {
                                 eventsByDay.put(dayOfMonth, chips);
                             }
                             chips.add(new MonthAppWidgetModel.EventChip(
-                                    title, displayColor, isSpanning, spanType, taskId));
+                                    title, displayColor, isSpanning, spanType, taskId,
+                                    cursor.getString(cursor.getColumnIndexOrThrow(WidgetTaskRows.ITEM_STATE))));
                         }
                     }
                 }

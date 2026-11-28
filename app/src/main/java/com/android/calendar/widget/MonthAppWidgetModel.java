@@ -140,7 +140,7 @@ class MonthAppWidgetModel {
         static final int SPAN_MIDDLE = 2;
         static final int SPAN_END = 3;
 
-        final String title;
+        final String title, itemState;
         final int color;
         final boolean isAllDay;
         final int spanType;
@@ -151,6 +151,11 @@ class MonthAppWidgetModel {
         }
 
         EventChip(String title, int color, boolean isAllDay, int spanType, long taskId) {
+            this(title, color, isAllDay, spanType, taskId, null);
+        }
+
+        EventChip(String title, int color, boolean isAllDay, int spanType, long taskId, String itemState) {
+            this.itemState = itemState;
             this.taskId = taskId;
             this.title = title;
             this.color = color;

@@ -101,7 +101,7 @@ public final class TaskStore extends SQLiteOpenHelper {
         public String title = "", notes = "", url = "", rule, tz;
         public static final int ALARM_ABSOLUTE=0, ALARM_START=1, ALARM_DUE=2;
         public Long due, start, anchor, alarmAbsolute;
-        public boolean allDay, done, alarm, countdown;
+        public boolean allDay, done, alarm, countdown, inProgress;
         public boolean writable = true, local = true;
         boolean hasRecurrenceDates, hasRecurrenceExceptions;
         String revision;
@@ -186,7 +186,7 @@ public final class TaskStore extends SQLiteOpenHelper {
     private static Task read(Cursor c) {
         Task t = new Task(); t.id=c.getLong(0); t.listId=c.getLong(1); t.title=c.getString(2); t.notes=c.getString(3);
         t.due=c.isNull(4)?null:c.getLong(4); t.anchor=c.isNull(5)?null:c.getLong(5); t.allDay=c.getInt(6)!=0;
-        t.tz=c.getString(7); t.done=c.getInt(8)>=2; t.priority=c.getInt(9); t.rule=c.getString(10); t.alarm=!c.isNull(11);
+        t.tz=c.getString(7); t.done=c.getInt(8)>=2; t.inProgress=c.getInt(8)==1; t.priority=c.getInt(9); t.rule=c.getString(10); t.alarm=!c.isNull(11);
         t.repeatMinute=c.isNull(12)?null:c.getInt(12);
         t.color=c.getInt(13); t.url=c.getString(14); t.countdown=c.getInt(15)!=0;
         t.listColor=c.getInt(16); t.start=c.isNull(17)?null:c.getLong(17);
@@ -452,6 +452,7 @@ public final class TaskStore extends SQLiteOpenHelper {
             else v.putNull("completed");
             t.done = complete;
         }
+        t.inProgress = false;
         v.putNull("alarm_fired");
     }
 

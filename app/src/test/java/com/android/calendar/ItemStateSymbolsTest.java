@@ -20,6 +20,16 @@ public class ItemStateSymbolsTest {
                 ItemStateSymbols.task(false, due, false, zone, due + 1));
     }
 
+    @Test public void taskProgressIsDistinctFromOverdue() {
+        long due = millis("2027-01-01T00:00:00Z");
+        ZoneId zone = ZoneId.of("Asia/Tokyo");
+        assertEquals(ItemStateSymbols.TASK_PENDING, ItemStateSymbols.task(false, false, null, false, zone, due));
+        assertEquals(ItemStateSymbols.TASK_ACTIVE, ItemStateSymbols.task(false, true, null, false, zone, due));
+        assertEquals(ItemStateSymbols.TASK_ACTIVE, ItemStateSymbols.task(false, true, due, false, zone, due));
+        assertEquals(ItemStateSymbols.TASK_OVERDUE, ItemStateSymbols.task(false, true, due, false, zone, due + 1));
+        assertEquals(ItemStateSymbols.TASK_DONE, ItemStateSymbols.task(true, true, due, false, zone, due + 1));
+    }
+
     @Test public void allDayTaskUsesCalendarDateAcrossTimeZones() {
         long due = millis("2027-01-01T00:00:00Z");
         ZoneId tokyo = ZoneId.of("Asia/Tokyo");

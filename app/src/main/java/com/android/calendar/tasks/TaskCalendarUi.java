@@ -132,6 +132,7 @@ public final class TaskCalendarUi {
             Event item = Event.newInstance();
             item.taskId = task.id;
             item.taskCompleted = task.done;
+            item.taskInProgress = task.inProgress;
             item.taskNoDeadline = task.due == null;
             TaskTimePresentation times = TaskTimePresentation.of(task, mergeTimes);
             item.taskRange = times.range;

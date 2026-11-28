@@ -253,6 +253,10 @@ public class CalendarAppWidgetService extends RemoteViewsService {
                 String countdown = eventInfo.id < -1 ? "" : com.android.calendar.EventCountdown.widgetLabel(mContext, eventInfo.id, eventInfo.start);
                 String displayTitle = countdown.isEmpty() ? eventInfo.title : eventInfo.title + " · " + countdown;
                 updateTextView(views, R.id.title, eventInfo.visibTitle, displayTitle);
+                com.android.calendar.ItemStateIcons.bindWidget(views, R.id.widget_item_state,
+                        eventInfo.itemState, eventInfo.visibTitle == View.VISIBLE);
+                com.android.calendar.ItemAppearance.tintWidgetIcon(mContext, views,
+                        R.id.widget_item_state, displayColor);
 
                 views.setInt(R.id.title, "setPaintFlags", Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG
                         | (eventInfo.status == Events.STATUS_CANCELED ? Paint.STRIKE_THRU_TEXT_FLAG : 0));

@@ -1507,9 +1507,7 @@ public class MonthWeekEventsView extends SimpleWeekView {
                 baseText.append(getFormattedTime(preferences));
                 baseText.append(" ");
             }
-            baseText.append(com.android.calendar.ItemStateSymbols.prefix(
-                    com.android.calendar.ItemStateSymbols.forEvent(getContext(), mEvent,
-                            System.currentTimeMillis()), com.android.calendar.ItemAppearance.singleLine(mEvent.title)));
+            baseText.append(com.android.calendar.ItemAppearance.singleLine(mEvent.title));
             if (preferences.LOCATION_VISIBILITY && mEvent.location != null && mEvent.location.length() > 0) {
                 baseText.append("\n@ ");
                 baseText.append(com.android.calendar.ItemAppearance.singleLine(mEvent.location));
@@ -1539,7 +1537,9 @@ public class MonthWeekEventsView extends SimpleWeekView {
             }
             for (int i = 0; i < Math.min(linesNo, mTextLines.length); i++) {
                 com.android.calendar.ItemAppearance.drawCenteredLine(canvas, mTextLines[i], getTextPaint(),
-                        mBoundaries.getTextX(), mBoundaries.getTextRightEdge(span), mBoundaries.getTextY());
+                        mBoundaries.getTextX(), mBoundaries.getTextRightEdge(span), mBoundaries.getTextY(),
+                        getContext(), i == 0 ? com.android.calendar.ItemStateSymbols.forEvent(
+                                getContext(), mEvent, System.currentTimeMillis()) : null);
                 mBoundaries.moveLinesDown(1);
             }
         }

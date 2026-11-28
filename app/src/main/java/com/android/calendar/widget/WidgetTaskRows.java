@@ -23,6 +23,8 @@ final class WidgetTaskRows {
     static final String TASK_DUE = "etar_widget_task_due";
     static final String TASK_DUE_ALL_DAY = "etar_widget_task_due_all_day";
     static final String TASK_RANGE = "etar_widget_task_range";
+    static final String ITEM_STATE = "etar_widget_item_state";
+    private static final String TASK_IN_PROGRESS = "etar_widget_task_in_progress";
     private WidgetTaskRows() {}
 
     /** Shared grid query: the source cursor is closed before the merged snapshot is returned. */
@@ -94,13 +96,15 @@ final class WidgetTaskRows {
 
     static MatrixCursor merge(Context context, int widgetId, Cursor source, String[] projection,
             int firstDay, int lastDay, boolean allDayFirst, boolean includeOverdue) {
-        String[] columns = java.util.Arrays.copyOf(projection, projection.length + 6);
+        String[] columns = java.util.Arrays.copyOf(projection, projection.length + 8);
         columns[projection.length] = TASK_COMPLETED;
         columns[projection.length + 1] = TASK_COUNTDOWN;
         columns[projection.length + 2] = TASK_NO_DEADLINE;
         columns[projection.length + 3] = TASK_DUE;
         columns[projection.length + 4] = TASK_DUE_ALL_DAY;
         columns[projection.length + 5] = TASK_RANGE;
+        columns[projection.length + 6] = TASK_IN_PROGRESS;
+        columns[projection.length + 7] = ITEM_STATE;
         ArrayList<Object[]> rows = new ArrayList<>();
         if (source != null) {
             source.moveToPosition(-1);
@@ -129,6 +133,7 @@ final class WidgetTaskRows {
             row[projection.length + 3] = task.taskDue;
             row[projection.length + 4] = task.taskDueAllDay ? 1 : 0;
             row[projection.length + 5] = task.taskRange ? 1 : 0;
+            row[projection.length + 6] = task.taskInProgress ? 1 : 0;
             for (int i = 0; i < projection.length; i++) {
                 String field = projection[i];
                 if (Instances.ALL_DAY.equals(field)) row[i] = task.allDay ? 1 : 0;
@@ -166,14 +171,15 @@ final class WidgetTaskRows {
             if (title >= 0 && begin >= 0 && end >= 0 && id >= 0) {
                 boolean wholeDay = number(row, allDay) != 0;
                 String symbol = number(row, id) < -1
-                        ? (number(row, projection.length + 2) != 0
-                            ? (number(row, projection.length) != 0 ? ItemStateSymbols.TASK_DONE : ItemStateSymbols.TASK_PENDING)
-                            : ItemStateSymbols.task(number(row, projection.length) != 0,
-                                number(row, projection.length + 3), number(row, projection.length + 4) != 0, zone, now))
+                        ? ItemStateSymbols.task(number(row, projection.length) != 0,
+                                number(row, projection.length + 6) != 0,
+                                number(row, projection.length + 2) != 0 ? null : number(row, projection.length + 3),
+                                number(row, projection.length + 4) != 0, zone, now)
                         : ItemStateSymbols.event(number(row, begin), number(row, end), wholeDay, zone, now);
                 String label = row[title] == null || row[title].toString().isEmpty()
                         ? context.getString(R.string.no_title_label) : row[title].toString();
-                row[title] = ItemStateSymbols.prefix(symbol, label);
+                row[title] = label;
+                row[projection.length + 7] = symbol;
             }
             result.addRow(row);
         }

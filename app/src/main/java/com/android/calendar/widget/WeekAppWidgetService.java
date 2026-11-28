@@ -176,6 +176,13 @@ public class WeekAppWidgetService extends RemoteViewsService {
                     R.id.week_cell_event_surface_4,
                     R.id.week_cell_event_surface_5,
             };
+            int[] stateIds = {
+                    R.id.week_cell_event_state_1,
+                    R.id.week_cell_event_state_2,
+                    R.id.week_cell_event_state_3,
+                    R.id.week_cell_event_state_4,
+                    R.id.week_cell_event_state_5,
+            };
             int[] textIds = {
                     R.id.week_cell_event_text_1,
                     R.id.week_cell_event_text_2,
@@ -206,6 +213,8 @@ public class WeekAppWidgetService extends RemoteViewsService {
                         views.setViewVisibility(timeIds[i], View.GONE);
                     }
                     views.setTextViewText(textIds[i], com.android.calendar.ItemAppearance.itemText(event.title));
+                    com.android.calendar.ItemStateIcons.bindWidget(views, stateIds[i], event.itemState, true);
+                    com.android.calendar.ItemAppearance.tintWidgetIcon(mContext, views, stateIds[i], event.color);
                     int inset = com.android.calendar.ItemAppearance.widgetGridInset(mContext);
                     views.setViewPadding(rowIds[i], inset, 0, inset, 0);
                 } else {
@@ -334,7 +343,8 @@ public class WeekAppWidgetService extends RemoteViewsService {
                             // Show time label only on the start day
                             String label = (dayIdx == fromDayIndex) ? timeLabel : "";
                             eventsByDay[dayIdx].add(new WeekAppWidgetModel.EventInfo(
-                                    title, displayColor, isAllDay, startMinute, label, taskId));
+                                    title, displayColor, isAllDay, startMinute, label, taskId,
+                                    cursor.getString(cursor.getColumnIndexOrThrow(WidgetTaskRows.ITEM_STATE))));
                         }
                     }
                 }

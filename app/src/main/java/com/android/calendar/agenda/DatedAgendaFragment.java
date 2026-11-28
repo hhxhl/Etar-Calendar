@@ -30,6 +30,7 @@ import com.android.calendar.CalendarController.EventInfo;
 import com.android.calendar.CalendarController.EventType;
 import com.android.calendar.CalendarController.ViewType;
 import com.android.calendar.ItemStateSymbols;
+import com.android.calendar.ItemStateIcons;
 import com.android.calendar.DatedItemsRepository;
 import com.android.calendar.DatedItemsRepository.AgendaEntry;
 import com.android.calendar.DatedListUi;
@@ -636,7 +637,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
                     TextUtils.isEmpty(entry.title) ? context.getString(R.string.no_title_label) : entry.title,
                     !past, entry.status == Events.STATUS_CANCELED);
 
-            chip.setText(ItemStateSymbols.event(entry.begin, entry.end, entry.allDay,
+            ItemStateIcons.bindMarker(chip, ItemStateSymbols.event(entry.begin, entry.end, entry.allDay,
                     zone, System.currentTimeMillis()));
 
             String tz = entry.allDay ? "UTC" : zone.getId();
