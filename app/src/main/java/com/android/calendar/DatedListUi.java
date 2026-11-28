@@ -16,6 +16,7 @@ import android.widget.Spinner;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.ImageView;
 import com.android.calendar.calendarcommon2.Time;
 import com.android.calendar.theme.DynamicThemeKt;
 import java.time.LocalDate;
@@ -256,9 +257,10 @@ public final class DatedListUi {
             item.addView(view, params);
         }
 
-        public static TextView marker(Context context) {
-            TextView view = styledText(context, R.dimen.item_list_marker_size);
-            view.setGravity(Gravity.CENTER);
+        public static ImageView marker(Context context) {
+            ImageView view = new ImageView(context);
+            view.setScaleType(ImageView.ScaleType.CENTER);
+            view.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
             return view;
         }
 

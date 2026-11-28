@@ -22,6 +22,7 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.ImageView;
 
 import androidx.fragment.app.Fragment;
 
@@ -605,7 +606,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
      */
     private final class AgendaRowView {
         final LinearLayout root;
-        final TextView chip;
+        final ImageView chip;
         final TextView title, when, where, countdown;
 
         AgendaRowView(Context context) {
@@ -630,15 +631,14 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
             when.setVisibility(View.VISIBLE);
             boolean past = entry.allDay ? !row.day.isAfter(today)
                     : Math.max(entry.begin, millis(row.day)) <= System.currentTimeMillis();
-            com.android.calendar.ItemAppearance.bindRow(root,
-                    entry.color,
-                    title, countdown, when, where, chip);
+            int color = ItemAppearance.bindRow(root,
+                    entry.color, title, countdown, when, where);
             ItemAppearance.bindTitle(title,
                     TextUtils.isEmpty(entry.title) ? context.getString(R.string.no_title_label) : entry.title,
                     !past, entry.status == Events.STATUS_CANCELED);
 
             ItemStateIcons.bindMarker(chip, ItemStateSymbols.event(entry.begin, entry.end, entry.allDay,
-                    zone, System.currentTimeMillis()));
+                    zone, System.currentTimeMillis()), color);
 
             String tz = entry.allDay ? "UTC" : zone.getId();
             int flags = entry.allDay ? 0 : DateUtils.FORMAT_SHOW_TIME;

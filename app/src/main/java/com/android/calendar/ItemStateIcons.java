@@ -9,7 +9,9 @@ import android.text.Spanned;
 import android.text.style.ReplacementSpan;
 import android.view.View;
 import android.widget.RemoteViews;
-import android.widget.TextView;
+import android.widget.ImageView;
+import android.widget.CheckBox;
+import android.graphics.PorterDuff;
 import ws.xsoh.etar.R;
 
 /** The same vector artwork is used by Canvas text, list markers and RemoteViews. */
@@ -30,18 +32,46 @@ public final class ItemStateIcons {
         }
     }
 
-    /** A standalone list marker is a centered drawable, not a text span. */
-    public static void bindMarker(TextView view, String state) {
+    /** Lists use dedicated image content, independent of text and foreground drawing. */
+    public static void bindMarker(View view, String state, int color) {
         int id = resource(state);
-        view.setText(null);
-        view.setForegroundGravity(android.view.Gravity.CENTER);
-        if (id == 0) {
-            view.setForeground(null);
-            return;
+        Drawable icon = id == 0 ? null : view.getContext().getDrawable(id).mutate();
+        if (icon != null) icon.setColorFilter(color, PorterDuff.Mode.SRC_IN);
+        if (view instanceof ImageView) {
+            ((ImageView) view).setImageDrawable(icon);
+        } else if (view instanceof CompletionMarker) {
+            ((CompletionMarker) view).setMarker(icon);
+        } else {
+            throw new IllegalArgumentException("Unsupported item marker");
         }
-        Drawable icon = view.getContext().getDrawable(id).mutate();
-        icon.setTint(view.getCurrentTextColor());
-        view.setForeground(icon);
+    }
+
+    /** Retains native checkbox accessibility, click and checked state; draws only our icon. */
+    public static final class CompletionMarker extends CheckBox {
+        private Drawable marker;
+
+        public CompletionMarker(Context context) {
+            super(context);
+            setButtonDrawable((Drawable) null);
+            setPadding(0, 0, 0, 0);
+            setWillNotDraw(false);
+        }
+
+        private void setMarker(Drawable icon) {
+            marker = icon;
+            invalidate();
+        }
+
+        @Override protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            if (marker == null) return;
+            int size = Math.min(Math.min(getWidth(), getHeight()), marker.getIntrinsicWidth());
+            if (size <= 0) return;
+            int left = (getWidth() - size) / 2;
+            int top = (getHeight() - size) / 2;
+            marker.setBounds(left, top, left + size, top + size);
+            marker.draw(canvas);
+        }
     }
 
     public static CharSequence prefix(Context context, String state, CharSequence title) {

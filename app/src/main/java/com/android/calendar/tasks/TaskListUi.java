@@ -1,7 +1,6 @@
 package com.android.calendar.tasks;
 
 import android.content.Context;
-import android.view.Gravity;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.Spinner;
@@ -38,13 +37,7 @@ public final class TaskListUi {
     }
 
     static CheckBox completion(Context context) {
-        CheckBox box = new CheckBox(context);
-        box.setButtonDrawable((android.graphics.drawable.Drawable) null);
-        box.setPadding(0, 0, 0, 0);
-        box.setGravity(Gravity.CENTER);
-        DatedListUi.setTextSize(box, R.dimen.item_list_marker_size);
-        box.setSingleLine(true);
-        return box;
+        return new ItemStateIcons.CompletionMarker(context);
     }
 
     private static String stateSymbol(TaskStore.Task task, boolean checked, ZoneId zone, long now) {
@@ -52,12 +45,12 @@ public final class TaskListUi {
     }
 
     /** Read-only task presentation, shared by the reminders list and global search. */
-    public static int bindPresentation(View root, TextView marker, TextView title, TaskStore.Task task,
+    public static int bindPresentation(View root, View marker, TextView title, TaskStore.Task task,
             ZoneId zone, long now, TextView... details) {
         int color = ItemAppearance.bindRow(root,
-                TaskCalendarUi.displayColor(root.getContext(), task), marker, title);
+                TaskCalendarUi.displayColor(root.getContext(), task), title);
         ItemAppearance.setTextColor(color, details);
-        ItemStateIcons.bindMarker(marker, stateSymbol(task, task.done, zone, now));
+        ItemStateIcons.bindMarker(marker, stateSymbol(task, task.done, zone, now), color);
         ItemAppearance.bindTitle(title, task.title, !task.done, task.done);
         return color;
     }
@@ -138,7 +131,7 @@ public final class TaskListUi {
         int color = bindPresentation(root, done, title, task, zone, System.currentTimeMillis());
         done.setContentDescription(context.getString(R.string.tasks_complete) + " " + task.title);
         done.setOnCheckedChangeListener((button, checked) -> {
-            ItemStateIcons.bindMarker(done, stateSymbol(task, checked, zone, System.currentTimeMillis()));
+            ItemStateIcons.bindMarker(done, stateSymbol(task, checked, zone, System.currentTimeMillis()), color);
             store.complete(task.id, checked, task.displayTime());
             if (afterComplete != null) afterComplete.run();
         });
