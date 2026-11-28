@@ -74,4 +74,5 @@
     <string name="search_all_items">All items</string>
     <string name="search_calendar_source">Calendar: %1$s</string>
     <string name="search_list_source">List: %1$s</string>
+    <string name="reminders_no_date">No date</string>
 </resources>

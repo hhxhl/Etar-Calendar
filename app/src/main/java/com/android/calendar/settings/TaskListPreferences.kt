@@ -83,13 +83,10 @@ class TaskListPreferences : PreferenceFragmentCompat(), OnColorSelectedListener 
         val info = SourcePreferences.information(context, R.string.tasks_list_info)
         screen.addPreference(info)
         val items = store.tasks(listId)
-        val reminders = items.count { it.due != null }
-        val tasks = items.size - reminders
         fun addInfo(label: String) {
             info.addPreference(SourcePreferences.info(context, label))
         }
-        addInfo(resources.getQuantityString(R.plurals.tasks_list_reminder_count, reminders, reminders))
-        addInfo(resources.getQuantityString(R.plurals.tasks_list_task_count, tasks, tasks))
+        addInfo(resources.getQuantityString(R.plurals.tasks_list_reminder_count, items.size, items.size))
         addInfo(getString(R.string.tasks_offline_list))
         addInfo(getString(R.string.tasks_offline_list_message))
     }

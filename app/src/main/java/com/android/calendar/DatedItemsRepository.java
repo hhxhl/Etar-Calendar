@@ -141,15 +141,14 @@ public final class DatedItemsRepository {
 
     public static List<Item<TaskStore.Task>> reminders(TaskStore store, long listId, ZoneId zone) {
         ArrayList<Item<TaskStore.Task>> items = new ArrayList<>();
-        for (TaskStore.Task task : store.visibleReminders(listId)) {
-            if (task.due == null) continue;
-            LocalDate date = Instant.ofEpochMilli(task.due)
+        for (TaskStore.Task task : store.visibleTasks(listId)) {
+            LocalDate date = task.due == null ? null : Instant.ofEpochMilli(task.due)
                     .atZone(task.allDay ? ZoneOffset.UTC : zone).toLocalDate();
             items.add(new Item<>(date, task));
         }
-        items.sort(Comparator.comparing((Item<TaskStore.Task> item) -> item.day)
+        items.sort(Comparator.comparing((Item<TaskStore.Task> item) -> item.day, Comparator.nullsLast(Comparator.naturalOrder()))
                 .thenComparing(item -> !item.value.allDay)
-                .thenComparingLong(item -> item.value.due)
+                .thenComparing(item -> item.value.due, Comparator.nullsLast(Comparator.naturalOrder()))
                 .thenComparingLong(item -> item.value.id));
         return items;
     }

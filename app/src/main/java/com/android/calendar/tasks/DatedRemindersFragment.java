@@ -24,7 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import ws.xsoh.etar.R;
 
-/** Dated reminders only. Reuses the native agenda date header without querying CalendarProvider. */
+/** All VTODO items, grouped by date or shown in the undated section. */
 public final class DatedRemindersFragment extends Fragment implements CalendarController.EventHandler {
     private long listId;
     private boolean showCompleted;
@@ -150,8 +150,16 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
     }
 
     private void appendDays(List<DatedItemsRepository.Item<TaskStore.Task>> tasks, boolean includeToday) {
-        DatedListUi.appendDays(rows, tasks, includeToday ? LocalDate.now(zone()) : null,
+        List<DatedItemsRepository.Item<TaskStore.Task>> dated = new ArrayList<>(), undated = new ArrayList<>();
+        for (DatedItemsRepository.Item<TaskStore.Task> item : tasks)
+            (item.day == null ? undated : dated).add(item);
+        DatedListUi.appendDays(rows, dated, includeToday ? LocalDate.now(zone()) : null,
                 date -> new Row(date, null, -1), item -> new Row(item.day, item.value, -1));
+        if (!undated.isEmpty()) {
+            rows.add(new Row(null, null, -3));
+            for (DatedItemsRepository.Item<TaskStore.Task> item : undated)
+                rows.add(new Row(null, item.value, -1));
+        }
     }
 
     private void render(List<DatedItemsRepository.Item<TaskStore.Task>> items, boolean preservePosition) {
@@ -277,11 +285,16 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
         @Override public int getViewTypeCount(){return 4;}
         @Override public int getItemViewType(int position){
             Row row=rows.get(position);
-            return row.completedCount==-2?3:row.completedCount>=0?2:row.task==null?0:1;
+            return row.completedCount<=-2?3:row.completedCount>=0?2:row.task==null?0:1;
         }
         @Override public View getView(int position,View convertView,ViewGroup parent){
             Row row=rows.get(position);
             Context context=parent.getContext();
+            if(row.completedCount==-3){
+                TextView heading = DatedListUi.statusView(context, convertView, false);
+                heading.setText(R.string.reminders_no_date);
+                return heading;
+            }
             if(row.completedCount==-2){
                 TextView empty = DatedListUi.statusView(context, convertView, false);
                 empty.setText(R.string.reminders_empty);
