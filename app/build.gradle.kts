@@ -28,8 +28,7 @@ android {
 	buildTypes {
 		release {
 			isMinifyEnabled = true
-			// Test code shrinking independently of resource shrinking.
-			isShrinkResources = false
+			isShrinkResources = true
 			proguardFiles(
 				getDefaultProguardFile("proguard-android-optimize.txt"),
 				"proguard-rules.pro"
