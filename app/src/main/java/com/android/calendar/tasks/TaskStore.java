@@ -25,7 +25,7 @@ public final class TaskStore extends SQLiteOpenHelper {
     }
     private final Context appContext;
     private TaskStore(Context context) {
-        super(context, "reminders.db", null, 1);
+        super(context, "tasks.db", null, 1);
         appContext = context.getApplicationContext();
     }
     public static final String ACTION_TASKS_CHANGED = "com.android.calendar.tasks.CHANGED";
@@ -59,7 +59,7 @@ public final class TaskStore extends SQLiteOpenHelper {
     }
 
     @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        throw new IllegalStateException("Unsupported reminder database version: " + oldVersion);
+        throw new IllegalStateException("Unsupported task database version: " + oldVersion);
     }
 
     public static final class TaskList {
@@ -194,7 +194,7 @@ public final class TaskStore extends SQLiteOpenHelper {
     }
     private static final String DISPLAY_TIME = "COALESCE(t.due,t.dtstart,t.alarm_at)";
     private static final String DISPLAY_ALL_DAY = "CASE WHEN t.due IS NOT NULL THEN t.is_allday WHEN t.dtstart IS NOT NULL THEN t.start_all_day ELSE 0 END";
-    public List<Task> visibleUndatedReminders(long listId) {
+    public List<Task> visibleUndatedTasks(long listId) {
         return queryTasks(listId, true, true);
     }
     private List<Task> queryTasks(long listId, boolean visibleOnly, boolean undatedOnly) {

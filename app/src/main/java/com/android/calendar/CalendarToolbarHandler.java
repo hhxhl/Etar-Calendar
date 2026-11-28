@@ -98,7 +98,7 @@ public class CalendarToolbarHandler {
     private void updateTitle() {
         String secondary;
         switch (mCurrentViewType) {
-            case CalendarController.ViewType.REMINDERS:
+            case CalendarController.ViewType.TASKS:
             case CalendarController.ViewType.DAY:
             case CalendarController.ViewType.AGENDA:
                 mToolbar.setTitle(appendShortWeekday(mContext, buildFullDate(), mMilliTime, mTimeZone));

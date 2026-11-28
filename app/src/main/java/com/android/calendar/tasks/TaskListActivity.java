@@ -44,7 +44,7 @@ import java.util.ArrayList;
 import java.util.List;
 import ws.xsoh.etar.R;
 
-/** Local reminder editor. List management lives in Settings. */
+/** Local task editor. List management lives in Settings. */
 public final class TaskListActivity extends AppCompatActivity {
     private TaskStore store;
     private long listId=0;
@@ -91,7 +91,7 @@ public final class TaskListActivity extends AppCompatActivity {
         }
         if (finishAfterPermission || waitingForPermissionSettings) return;
         long id = getIntent().getLongExtra("task_id", 0);
-        TaskStore.Task task = id == 0 ? newReminder() : store.find(id);
+        TaskStore.Task task = id == 0 ? newTask() : store.find(id);
         if (task == null) { finish(); return; }
         // An explicit date means a new reminder from a selected calendar cell.
         // Otherwise open the same editor with all time switches off.
@@ -127,7 +127,7 @@ public final class TaskListActivity extends AppCompatActivity {
         }
     }
 
-    private TaskStore.Task newReminder(){TaskStore.Task t=new TaskStore.Task();t.listId=listId==0?1:listId;return t;}
+    private TaskStore.Task newTask(){TaskStore.Task t=new TaskStore.Task();t.listId=listId==0?1:listId;return t;}
     private ArrayAdapter<String> adapter(List<String> labels){ArrayAdapter<String> a=new ArrayAdapter<>(this,android.R.layout.simple_spinner_item,labels);a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);return a;}
     private static void hide(View root, int... ids) {
         for (int id : ids) root.findViewById(id).setVisibility(View.GONE);
@@ -159,7 +159,7 @@ public final class TaskListActivity extends AppCompatActivity {
         setSupportActionBar(binding.include.toolbar);
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle(task.id == 0 ? R.string.reminders_add : R.string.reminders_edit);
+            getSupportActionBar().setTitle(task.id == 0 ? R.string.tasks_add : R.string.tasks_edit);
         }
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
@@ -263,19 +263,19 @@ public final class TaskListActivity extends AppCompatActivity {
         repeatParams.topToBottom = times.getId();
         repeatIcon.setLayoutParams(repeatParams);
 
-        TimeField start = new TimeField(times, R.string.reminders_start_time, "start",
+        TimeField start = new TimeField(times, R.string.tasks_start_time, "start",
                 task.start, task.startAllDay, true, zone);
-        TimeField due = new TimeField(times, R.string.reminders_due_time, "due",
+        TimeField due = new TimeField(times, R.string.tasks_due_time, "due",
                 task.due, task.allDay, true, zone);
         CompoundButton alarm = new com.google.android.material.materialswitch.MaterialSwitch(this);
-        alarm.setText(R.string.reminders_alarm_time);
+        alarm.setText(R.string.tasks_alarm_time);
         alarm.setChecked(task.alarm);
         times.addView(alarm, new LinearLayout.LayoutParams(-1, -2));
         Button alarmMode = outlinedButton();
         times.addView(alarmMode, new LinearLayout.LayoutParams(-1, -2));
         int[] mode = {task.alarm ? task.alarmMode : TaskStore.Task.ALARM_ABSOLUTE};
         int[] offset = {task.alarmOffset};
-        TimeField absolute = new TimeField(times, R.string.reminders_alarm_absolute, "alarm",
+        TimeField absolute = new TimeField(times, R.string.tasks_alarm_absolute, "alarm",
                 task.alarmAbsolute, false, false, zone);
         absolute.enabled.setChecked(true);
         absolute.enabled.setVisibility(View.GONE);
@@ -284,8 +284,8 @@ public final class TaskListActivity extends AppCompatActivity {
         Button zoneButton = outlinedButton();
         times.addView(zoneButton, new LinearLayout.LayoutParams(-1, -2));
         TimeZonePickerUtils zoneLabels = new TimeZonePickerUtils(this);
-        int[] modeLabels = {R.string.reminders_alarm_absolute, R.string.reminders_alarm_start,
-                R.string.reminders_alarm_due};
+        int[] modeLabels = {R.string.tasks_alarm_absolute, R.string.tasks_alarm_start,
+                R.string.tasks_alarm_due};
 
         Button repeat = form.findViewById(R.id.rrule);
         String[] repeatOptions = getResources().getStringArray(R.array.tasks_repeat_options);
@@ -303,7 +303,7 @@ public final class TaskListActivity extends AppCompatActivity {
                 }).setNegativeButton(android.R.string.cancel, null).show());
 
         // Preserve the stored priority; it is not part of the simplified editor.
-        CheckBox completed = ReminderCompletion.create(this);
+        CheckBox completed = TaskCompletion.create(this);
         completed.setText(R.string.tasks_complete);
         completed.setChecked(task.done);
         if (task.id != 0) {
@@ -323,8 +323,8 @@ public final class TaskListActivity extends AppCompatActivity {
             absolute.refresh();
             offsetButton.setVisibility(hasAlarm && mode[0] != TaskStore.Task.ALARM_ABSOLUTE
                     ? View.VISIBLE : View.GONE);
-            offsetButton.setText(offset[0] == 0 ? getString(R.string.reminders_alarm_on_time)
-                    : getString(R.string.reminders_alarm_before_minutes, offset[0]));
+            offsetButton.setText(offset[0] == 0 ? getString(R.string.tasks_alarm_on_time)
+                    : getString(R.string.tasks_alarm_before_minutes, offset[0]));
             boolean any = start.enabled.isChecked() || due.enabled.isChecked() || hasAlarm;
             zoneButton.setVisibility(any ? View.VISIBLE : View.GONE);
             zoneButton.setText(zoneLabels.getGmtDisplayName(this, zone[0].getId(),
@@ -345,7 +345,7 @@ public final class TaskListActivity extends AppCompatActivity {
                 modes.add(i);
                 labels.add(getString(modeLabels[i]));
             }
-            new MaterialAlertDialogBuilder(this).setTitle(R.string.reminders_alarm_time)
+            new MaterialAlertDialogBuilder(this).setTitle(R.string.tasks_alarm_time)
                     .setSingleChoiceItems(labels.toArray(new String[0]), modes.indexOf(mode[0]), (d, which) -> {
                         mode[0] = modes.get(which);
                         update.run();
@@ -354,17 +354,17 @@ public final class TaskListActivity extends AppCompatActivity {
         });
         offsetButton.setOnClickListener(v -> {
             int[] choices = {0,5,15,30,60,1440,10080};
-            String[] labels = {getString(R.string.reminders_alarm_on_time),
-                    getString(R.string.reminders_alarm_before_minutes,5),
-                    getString(R.string.reminders_alarm_before_minutes,15),
-                    getString(R.string.reminders_alarm_before_minutes,30),
-                    getString(R.string.reminders_alarm_before_hour),
-                    getString(R.string.reminders_alarm_before_day),
-                    getString(R.string.reminders_alarm_before_week),
-                    getString(R.string.reminders_alarm_custom)};
+            String[] labels = {getString(R.string.tasks_alarm_on_time),
+                    getString(R.string.tasks_alarm_before_minutes,5),
+                    getString(R.string.tasks_alarm_before_minutes,15),
+                    getString(R.string.tasks_alarm_before_minutes,30),
+                    getString(R.string.tasks_alarm_before_hour),
+                    getString(R.string.tasks_alarm_before_day),
+                    getString(R.string.tasks_alarm_before_week),
+                    getString(R.string.tasks_alarm_custom)};
             int selected = choices.length;
             for (int i=0;i<choices.length;i++) if (choices[i]==offset[0]) selected=i;
-            new MaterialAlertDialogBuilder(this).setTitle(R.string.reminders_alarm_time)
+            new MaterialAlertDialogBuilder(this).setTitle(R.string.tasks_alarm_time)
                     .setSingleChoiceItems(labels, selected, (d, which) -> {
                         d.dismiss();
                         if (which < choices.length) {
@@ -373,9 +373,9 @@ public final class TaskListActivity extends AppCompatActivity {
                         EditText input = new EditText(this);
                         input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
                         input.setText(Integer.toString(offset[0]));
-                        input.setHint(R.string.reminders_alarm_custom);
+                        input.setHint(R.string.tasks_alarm_custom);
                         AlertDialog custom = new MaterialAlertDialogBuilder(this)
-                                .setTitle(R.string.reminders_alarm_custom).setView(input)
+                                .setTitle(R.string.tasks_alarm_custom).setView(input)
                                 .setNegativeButton(android.R.string.cancel,null)
                                 .setPositiveButton(android.R.string.ok,null).create();
                         custom.setOnShowListener(ignored -> custom.getButton(AlertDialog.BUTTON_POSITIVE)
@@ -450,7 +450,7 @@ public final class TaskListActivity extends AppCompatActivity {
         com.android.calendar.ItemDateTimePickers.restoreZone(getSupportFragmentManager(), ZONE_PICKER, zoneListener);
 
         if (task.id != 0) deleteEditor = () -> new MaterialAlertDialogBuilder(this)
-                .setMessage(R.string.reminders_delete_confirm)
+                .setMessage(R.string.tasks_delete_confirm)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(R.string.tasks_delete, (dialog, which) -> {
                     store.delete(task.id);
@@ -471,14 +471,14 @@ public final class TaskListActivity extends AppCompatActivity {
             if (newStart != null && newDue != null) {
                 long from = start.comparisonValue(false), until = due.comparisonValue(true);
                 if (from > until) {
-                    android.widget.Toast.makeText(this, R.string.reminders_invalid_range,
+                    android.widget.Toast.makeText(this, R.string.tasks_invalid_range,
                             android.widget.Toast.LENGTH_SHORT).show();
                     return;
                 }
             }
             if (alarm.isChecked() && ((mode[0] == TaskStore.Task.ALARM_START && newStart == null)
                     || (mode[0] == TaskStore.Task.ALARM_DUE && newDue == null))) {
-                android.widget.Toast.makeText(this, R.string.reminders_alarm_missing_date,
+                android.widget.Toast.makeText(this, R.string.tasks_alarm_missing_date,
                         android.widget.Toast.LENGTH_SHORT).show();
                 return;
             }

@@ -258,7 +258,7 @@ public class Utils {
     /** Validate the current set of selectable destinations, without legacy mappings. */
     private static int validStartView(int view) {
         return view == ViewType.DAY || view == ViewType.WEEK || view == ViewType.MONTH
-                || view == ViewType.AGENDA || view == ViewType.REMINDERS
+                || view == ViewType.AGENDA || view == ViewType.TASKS
                 ? view : GeneralPreferences.DEFAULT_START_VIEW;
     }
 

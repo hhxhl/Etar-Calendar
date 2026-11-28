@@ -25,11 +25,11 @@ public final class ViewNavigation {
             {R.id.week_menu_item, ViewType.WEEK},
             {R.id.month_menu_item, ViewType.MONTH},
             {R.id.agenda_menu_item, ViewType.AGENDA},
-            {R.id.reminders_menu_item, ViewType.REMINDERS}
+            {R.id.tasks_menu_item, ViewType.TASKS}
     };
 
-    public static boolean isReminderView(int view) {
-        return view == ViewType.REMINDERS;
+    public static boolean isTaskView(int view) {
+        return view == ViewType.TASKS;
     }
 
     public static int viewForItem(int id) {
@@ -82,7 +82,7 @@ public final class ViewNavigation {
         MenuItem today = toolbar.findItem(R.id.action_today);
         if (today != null) {
             today.setVisible(true);
-            today.setShowAsAction(show || isReminderView(currentView)
+            today.setShowAsAction(show || isTaskView(currentView)
                     ? MenuItem.SHOW_AS_ACTION_ALWAYS : MenuItem.SHOW_AS_ACTION_IF_ROOM);
         }
     }
@@ -118,6 +118,6 @@ public final class ViewNavigation {
         MenuItem search = menu.findItem(R.id.action_search);
         if (search != null) search.setVisible(true);
         MenuItem importItem = menu.findItem(R.id.action_import);
-        if (importItem != null) importItem.setVisible(!isReminderView(view));
+        if (importItem != null) importItem.setVisible(!isTaskView(view));
     }
 }

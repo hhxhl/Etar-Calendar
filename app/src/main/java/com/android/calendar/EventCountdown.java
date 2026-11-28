@@ -68,7 +68,7 @@ public final class EventCountdown {
     }
 
     /** Common reminder policy; completed reminders never display a countdown. */
-    public static String reminderLabel(Context context, boolean enabled, boolean done,
+    public static String taskLabel(Context context, boolean enabled, boolean done,
             Long due, boolean allDay) {
         return enabled && !done && due != null ? dateLabel(context, due, allDay) : "";
     }

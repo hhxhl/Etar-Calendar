@@ -47,8 +47,8 @@ public final class TaskListUi {
     }
 
     private static String stateSymbol(TaskStore.Task task, boolean checked, ZoneId zone, long now) {
-        return task.due == null ? (checked ? ItemStateSymbols.REMINDER_DONE : ItemStateSymbols.REMINDER_PENDING)
-                : ItemStateSymbols.reminder(checked, task.due, task.allDay, zone, now);
+        return task.due == null ? (checked ? ItemStateSymbols.TASK_DONE : ItemStateSymbols.TASK_PENDING)
+                : ItemStateSymbols.task(checked, task.due, task.allDay, zone, now);
     }
 
     /** Read-only task presentation, shared by the reminders list and global search. */
@@ -66,11 +66,11 @@ public final class TaskListUi {
         if (task.due == null) {
             Long display = task.displayTime();
             if (display == null) return "";
-            String label = context.getString(task.start != null ? R.string.reminders_start_time : R.string.reminders_alarm_time);
-            return label + " · " + (task.displayAllDay() ? context.getString(R.string.reminders_all_day)
+            String label = context.getString(task.start != null ? R.string.tasks_start_time : R.string.tasks_alarm_time);
+            return label + " · " + (task.displayAllDay() ? context.getString(R.string.tasks_all_day)
                     : Utils.formatDateRange(context, display, display, DateUtils.FORMAT_SHOW_TIME));
         }
-        String time = task.allDay ? context.getString(R.string.reminders_all_day)
+        String time = task.allDay ? context.getString(R.string.tasks_all_day)
                 : Utils.formatDateRange(context, task.due, task.due, DateUtils.FORMAT_SHOW_TIME);
         if (task.hasRange()) {
             int flags = DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_ABBREV_ALL;
@@ -82,12 +82,12 @@ public final class TaskListUi {
                     task.allDay ? "UTC" : zone.getId());
             time = startLabel + " – " + dueLabel;
         }
-        boolean overdue = ItemStateSymbols.isReminderOverdue(task.done, task.due, task.allDay, zone, now);
-        return overdue ? time + " · " + context.getString(R.string.reminders_overdue) : time;
+        boolean overdue = ItemStateSymbols.isTaskOverdue(task.done, task.due, task.allDay, zone, now);
+        return overdue ? time + " · " + context.getString(R.string.tasks_overdue) : time;
     }
 
     public static String countdownLabel(Context context, TaskStore.Task task) {
-        return EventCountdown.reminderLabel(context, task.countdown, task.done, task.due, task.allDay);
+        return EventCountdown.taskLabel(context, task.countdown, task.done, task.due, task.allDay);
     }
 
     static int bindRow(View root, CheckBox done, TextView title, TaskStore.Task task,

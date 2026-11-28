@@ -25,7 +25,7 @@ import java.util.List;
 import ws.xsoh.etar.R;
 
 /** All VTODO items, grouped by date or shown in the undated section. */
-public final class DatedRemindersFragment extends Fragment implements CalendarController.EventHandler {
+public final class DatedTasksFragment extends Fragment implements CalendarController.EventHandler {
     private long listId;
     private boolean showCompleted;
     private Spinner filter;
@@ -129,10 +129,10 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
     private void refresh(boolean preservePosition) {
         if (loader == null || list == null || !isAdded()) return;
         ZoneId queryZone = zone();
-        loader.request(listId, id -> DatedItemsRepository.reminders(store, id, queryZone), result -> {
+        loader.request(listId, id -> DatedItemsRepository.tasks(store, id, queryZone), result -> {
             if (list == null || !isAdded()) return;
             listId = result.selected;
-            TaskListUi.bindFilter(filter, result.lists, R.string.reminders_all, listId, selected -> {
+            TaskListUi.bindFilter(filter, result.lists, R.string.tasks_all, listId, selected -> {
                 if (listId != selected) {
                     listId = selected;
                     refresh(true);
@@ -218,7 +218,7 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
         if(list==null||!isAdded())return;
         topDay=date;
         list.post(()->{
-            if(list==null||!isAdded()||!date.equals(topDay)||controller.getViewType()!=CalendarController.ViewType.REMINDERS)return;
+            if(list==null||!isAdded()||!date.equals(topDay)||controller.getViewType()!=CalendarController.ViewType.TASKS)return;
             DatedListUi.publishDate(controller, this, zone(), date);
         });
     }
@@ -257,7 +257,7 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
 
             bell = new ImageView(context);
             bell.setImageResource(R.drawable.ic_reminder_outline);
-            bell.setContentDescription(getString(R.string.reminders_alarm_time));
+            bell.setContentDescription(getString(R.string.tasks_alarm_time));
             layout.addIcon(bell);
             root.setTag(this);
         }
@@ -292,17 +292,17 @@ public final class DatedRemindersFragment extends Fragment implements CalendarCo
             Context context=parent.getContext();
             if(row.completedCount==-3){
                 TextView heading = DatedListUi.statusView(context, convertView, false);
-                heading.setText(R.string.reminders_no_date);
+                heading.setText(R.string.tasks_no_date);
                 return heading;
             }
             if(row.completedCount==-2){
                 TextView empty = DatedListUi.statusView(context, convertView, false);
-                empty.setText(R.string.reminders_empty);
+                empty.setText(R.string.tasks_empty);
                 return empty;
             }
             if(row.completedCount>=0){
                 TextView heading = DatedListUi.statusView(context, convertView, true);
-                heading.setText((showCompleted?"▾ ":"▸ ")+getString(R.string.reminders_completed,row.completedCount));
+                heading.setText((showCompleted?"▾ ":"▸ ")+getString(R.string.tasks_completed,row.completedCount));
                 heading.setOnClickListener(v->{showCompleted=!showCompleted;render(loadedItems, true);});
                 return heading;
             }

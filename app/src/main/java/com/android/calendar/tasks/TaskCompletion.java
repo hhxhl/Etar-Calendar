@@ -6,8 +6,8 @@ import android.widget.CheckBox;
 import ws.xsoh.etar.R;
 
 /** A reminder remains an independently toggleable checkbox, with a round indicator. */
-final class ReminderCompletion {
-    private ReminderCompletion() {}
+final class TaskCompletion {
+    private TaskCompletion() {}
 
     static CheckBox create(Context context) {
         CheckBox box = new CheckBox(context);

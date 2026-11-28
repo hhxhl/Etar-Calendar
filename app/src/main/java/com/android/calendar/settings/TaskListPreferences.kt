@@ -86,7 +86,7 @@ class TaskListPreferences : PreferenceFragmentCompat(), OnColorSelectedListener 
         fun addInfo(label: String) {
             info.addPreference(SourcePreferences.info(context, label))
         }
-        addInfo(resources.getQuantityString(R.plurals.tasks_list_reminder_count, items.size, items.size))
+        addInfo(resources.getQuantityString(R.plurals.tasks_list_task_count, items.size, items.size))
         addInfo(getString(R.string.tasks_offline_list))
         addInfo(getString(R.string.tasks_offline_list_message))
     }

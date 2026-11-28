@@ -196,7 +196,7 @@ object WidgetUtils {
         putExtra(CalendarContract.Events.CALENDAR_ID, -1L)
     }
 
-    fun getAddReminderIntent(context: Context): Intent =
+    fun getAddTaskIntent(context: Context): Intent =
         Intent(context, com.android.calendar.tasks.TaskListActivity::class.java)
 
     @JvmStatic

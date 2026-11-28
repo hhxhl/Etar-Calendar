@@ -53,19 +53,19 @@ public final class TaskCalendarUi {
     public static void create(Context context, CalendarController controller, long millis,
             boolean allDay, boolean timedReminder, boolean reminder) {
         if (reminder) {
-            createReminder(context, millis, timedReminder && !allDay, 0);
+            createTask(context, millis, timedReminder && !allDay, 0);
         } else {
             controller.sendEventRelatedEventWithExtra(context, EventType.CREATE_EVENT, -1,
                     millis, 0, 0, 0, allDay ? CalendarController.EXTRA_CREATE_ALL_DAY : 0, -1);
         }
     }
 
-    public static void createReminder(Context context, long listId) {
+    public static void createTask(Context context, long listId) {
         context.startActivity(new Intent(context, TaskListActivity.class)
                 .putExtra("list_id", listId));
     }
 
-    public static void createReminder(Context context, long millis, boolean timed, long listId) {
+    public static void createTask(Context context, long millis, boolean timed, long listId) {
         context.startActivity(new Intent(context, TaskListActivity.class)
                 .putExtra("date", millis).putExtra("timed_task", timed)
                 .putExtra("list_id", listId).putExtra("calendar_zone", Utils.getTimeZone(context, null)));
@@ -76,7 +76,7 @@ public final class TaskCalendarUi {
         new MaterialAlertDialogBuilder(context)
                 .setTitle(R.string.tasks_new_item)
                 .setItems(new CharSequence[]{context.getString(R.string.tasks_create_event_type),
-                        context.getString(R.string.reminders_title)},
+                        context.getString(R.string.tasks_title)},
                         (dialog, which) -> create(context, controller, millis, allDay, timedReminder, which == 1))
                 .show();
     }

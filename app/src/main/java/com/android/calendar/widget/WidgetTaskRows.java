@@ -167,8 +167,8 @@ final class WidgetTaskRows {
                 boolean wholeDay = number(row, allDay) != 0;
                 String symbol = number(row, id) < -1
                         ? (number(row, projection.length + 2) != 0
-                            ? (number(row, projection.length) != 0 ? ItemStateSymbols.REMINDER_DONE : ItemStateSymbols.REMINDER_PENDING)
-                            : ItemStateSymbols.reminder(number(row, projection.length) != 0,
+                            ? (number(row, projection.length) != 0 ? ItemStateSymbols.TASK_DONE : ItemStateSymbols.TASK_PENDING)
+                            : ItemStateSymbols.task(number(row, projection.length) != 0,
                                 number(row, projection.length + 3), number(row, projection.length + 4) != 0, zone, now))
                         : ItemStateSymbols.event(number(row, begin), number(row, end), wholeDay, zone, now);
                 String label = row[title] == null || row[title].toString().isEmpty()

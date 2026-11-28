@@ -10,23 +10,23 @@ public class ItemStateSymbolsTest {
         return Instant.parse(value).toEpochMilli();
     }
 
-    @Test public void timedReminderChangesStateAfterDueInstant() {
+    @Test public void timedTaskChangesStateAfterDueInstant() {
         long due = millis("2027-01-01T00:00:00Z");
         ZoneId zone = ZoneId.of("Asia/Tokyo");
-        assertFalse(ItemStateSymbols.isReminderOverdue(false, due, false, zone, due));
-        assertTrue(ItemStateSymbols.isReminderOverdue(false, due, false, zone, due + 1));
-        assertFalse(ItemStateSymbols.isReminderOverdue(true, due, false, zone, due + 1));
-        assertEquals(ItemStateSymbols.REMINDER_OVERDUE,
-                ItemStateSymbols.reminder(false, due, false, zone, due + 1));
+        assertFalse(ItemStateSymbols.isTaskOverdue(false, due, false, zone, due));
+        assertTrue(ItemStateSymbols.isTaskOverdue(false, due, false, zone, due + 1));
+        assertFalse(ItemStateSymbols.isTaskOverdue(true, due, false, zone, due + 1));
+        assertEquals(ItemStateSymbols.TASK_OVERDUE,
+                ItemStateSymbols.task(false, due, false, zone, due + 1));
     }
 
-    @Test public void allDayReminderUsesCalendarDateAcrossTimeZones() {
+    @Test public void allDayTaskUsesCalendarDateAcrossTimeZones() {
         long due = millis("2027-01-01T00:00:00Z");
         ZoneId tokyo = ZoneId.of("Asia/Tokyo");
         ZoneId phoenix = ZoneId.of("America/Phoenix");
         long now = millis("2027-01-01T15:00:00Z");
-        assertTrue(ItemStateSymbols.isReminderOverdue(false, due, true, tokyo, now));
-        assertFalse(ItemStateSymbols.isReminderOverdue(false, due, true, phoenix, now));
-        assertFalse(ItemStateSymbols.isReminderOverdue(true, due, true, tokyo, now));
+        assertTrue(ItemStateSymbols.isTaskOverdue(false, due, true, tokyo, now));
+        assertFalse(ItemStateSymbols.isTaskOverdue(false, due, true, phoenix, now));
+        assertFalse(ItemStateSymbols.isTaskOverdue(true, due, true, tokyo, now));
     }
 }

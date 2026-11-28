@@ -120,7 +120,7 @@ class CalendarAppWidgetModel {
                 continue;
             }
             boolean overdue = pendingTask && hasDeadline
-                    && com.android.calendar.ItemStateSymbols.isReminderOverdue(
+                    && com.android.calendar.ItemStateSymbols.isTaskOverdue(
                     false, deadline, deadlineAllDay, java.time.ZoneId.of(tz), mNow);
             String displayTitle = title;
             if (overdue && endDay < mTodayJulianDay && allDay) {
@@ -128,7 +128,7 @@ class CalendarAppWidgetModel {
                         DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_ABBREV_ALL);
             }
             if (eventId < -1) {
-                String countdown = com.android.calendar.EventCountdown.reminderLabel(mContext,
+                String countdown = com.android.calendar.EventCountdown.taskLabel(mContext,
                         taskCountdownColumn >= 0 && cursor.getInt(taskCountdownColumn) != 0,
                         !pendingTask, hasDeadline ? deadline : null, deadlineAllDay);
                 if (!countdown.isEmpty()) displayTitle += " · " + countdown;

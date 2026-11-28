@@ -122,7 +122,7 @@ public final class DatedItemsRepository {
                 first.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
                 until.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli());
         signal.throwIfCanceled();
-        candidates.addAll(store.visibleUndatedReminders(listId));
+        candidates.addAll(store.visibleUndatedTasks(listId));
         for (TaskStore.Task task : candidates) {
             signal.throwIfCanceled();
             if (listId != 0 && task.listId != listId) continue;
@@ -141,7 +141,7 @@ public final class DatedItemsRepository {
         return value != null && value.toLowerCase(Locale.ROOT).contains(keyword);
     }
 
-    public static List<Item<TaskStore.Task>> reminders(TaskStore store, long listId, ZoneId zone) {
+    public static List<Item<TaskStore.Task>> tasks(TaskStore store, long listId, ZoneId zone) {
         ArrayList<Item<TaskStore.Task>> items = new ArrayList<>();
         for (TaskStore.Task task : store.visibleTasks(listId)) {
             LocalDate date = task.displayTime() == null ? null : Instant.ofEpochMilli(task.displayTime())

@@ -760,8 +760,8 @@ public class CalendarController {
         final int WEEK = 3;
         final int MONTH = 4;
         final int EDIT = 5;
-        final int REMINDERS = 6;
-        final int MAX_VALUE = REMINDERS;
+        final int TASKS = 6;
+        final int MAX_VALUE = TASKS;
     }
 
     public interface EventHandler {

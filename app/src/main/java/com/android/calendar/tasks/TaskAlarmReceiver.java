@@ -22,14 +22,14 @@ import ws.xsoh.etar.R;
 public final class TaskAlarmReceiver extends BroadcastReceiver {
     private static final String FIRE="com.android.calendar.tasks.FIRE";
     private static final String COMPLETE="com.android.calendar.tasks.COMPLETE";
-    public static final String CHANNEL="task_reminders";
+    public static final String CHANNEL="task_notifications";
     // Only system rescheduling broadcasts use this worker. It has no resident thread.
     private static final ThreadPoolExecutor RESCHEDULE_EXECUTOR = new ThreadPoolExecutor(
             0, 1, 10, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
     public static void ensureChannel(Context context) {
         NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         nm.createNotificationChannel(new NotificationChannel(CHANNEL,
-                context.getString(R.string.reminders_title), NotificationManager.IMPORTANCE_HIGH));
+                context.getString(R.string.tasks_title), NotificationManager.IMPORTANCE_HIGH));
     }
     private static PendingIntent alarm(Context c) {
         return PendingIntent.getBroadcast(c,0,new Intent(c,TaskAlarmReceiver.class).setAction(FIRE),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);

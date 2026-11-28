@@ -16,16 +16,16 @@
             android:title="@string/month_view" />
 
     </group>
-    <group android:id="@+id/reminders_navigation" android:checkableBehavior="none">
+    <group android:id="@+id/tasks_navigation" android:checkableBehavior="none">
         <item
             android:id="@+id/agenda_menu_item"
             android:checkable="true"
             android:icon="@drawable/outline_view_agenda"
             android:title="@string/agenda_view" />
-        <item android:id="@+id/reminders_menu_item"
+        <item android:id="@+id/tasks_menu_item"
             android:checkable="true"
             android:icon="@drawable/ic_reminder_outline"
-            android:title="@string/reminders_title" />
+            android:title="@string/tasks_title" />
     </group>
     <group android:id="@+id/navigation_subheader" android:checkableBehavior="none">
         <item

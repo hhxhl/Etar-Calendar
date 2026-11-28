@@ -683,7 +683,7 @@ public final class DatedAgendaFragment extends Fragment implements CalendarContr
             if (!row.isItem()) {
                 if (row.day != null) return DatedListUi.dateHeader(convertView, parent, row.day, zone);
                 TextView heading = DatedListUi.statusView(context, convertView, true);
-                heading.setText(R.string.reminders_no_date);
+                heading.setText(R.string.tasks_no_date);
                 return heading;
             }
 
