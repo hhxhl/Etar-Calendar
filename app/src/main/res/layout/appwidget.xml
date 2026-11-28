@@ -176,10 +176,13 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:paddingTop="2dp"
-        android:clipToPadding="false"
+        android:paddingStart="@dimen/item_widget_content_inset"
+        android:paddingEnd="@dimen/item_widget_content_inset"
+        android:paddingBottom="4dp"
+        android:clipToPadding="true"
         android:cacheColorHint="@null"
         android:divider="@null"
-        android:dividerHeight="4dp"
+        android:dividerHeight="@dimen/item_widget_row_gap"
         android:scrollbarThumbVertical="@color/appwidget_scrollbar"
         android:listSelector="@android:color/transparent" />
 
