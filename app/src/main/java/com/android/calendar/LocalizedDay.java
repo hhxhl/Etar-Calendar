@@ -44,6 +44,12 @@ public final class LocalizedDay {
     /** Keep the date centered and shrink the holiday marker only when required. */
     public static void drawMarker(Canvas canvas, Paint source, String marker,
             float right, float center, float dateWidth, float padding, float baseline, float size) {
+        drawMarker(canvas, source, marker, right, center, dateWidth, padding, baseline, size, null);
+    }
+
+    public static void drawMarker(Canvas canvas, Paint source, String marker,
+            float right, float center, float dateWidth, float padding, float baseline, float size,
+            TodayIndicator indicator) {
         if (marker.isEmpty()) return;
         TextPaint paint = new TextPaint(source);
         paint.setTextSize(size);
@@ -53,6 +59,8 @@ public final class LocalizedDay {
         paint.setTextSize(size * Math.min(1f, available / width));
         paint.setTextAlign(Paint.Align.RIGHT);
         paint.setColor(markerColor(marker));
+        if (indicator != null) indicator.protectText(marker, paint, right - padding, baseline,
+                center + dateWidth / 2f, right);
         canvas.drawText(marker, right - padding, baseline, paint);
     }
 
@@ -69,6 +77,13 @@ public final class LocalizedDay {
     public static void drawLabel(Context context, Canvas canvas, Paint source, LocalDate date,
             String label, float left, float right, float padding, float baseline, float size,
             int dateColor, int surfaceColor) {
+        drawLabel(context, canvas, source, date, label, left, right, padding, baseline, size,
+                dateColor, surfaceColor, null);
+    }
+
+    public static void drawLabel(Context context, Canvas canvas, Paint source, LocalDate date,
+            String label, float left, float right, float padding, float baseline, float size,
+            int dateColor, int surfaceColor, TodayIndicator indicator) {
         if (label.isEmpty()) return;
         TextPaint paint = new TextPaint(source);
         paint.setTextSize(size);
@@ -76,6 +91,8 @@ public final class LocalizedDay {
         paint.setColor(labelColor(context, date, label, dateColor, surfaceColor));
         CharSequence fitted = TextUtils.ellipsize(label, paint,
                 Math.max(0, right - left - 2 * padding), TextUtils.TruncateAt.END);
+        if (indicator != null) indicator.protectText(fitted.toString(), paint,
+                (left + right) / 2f, baseline, left, right);
         canvas.drawText(fitted.toString(), (left + right) / 2f, baseline, paint);
     }
 

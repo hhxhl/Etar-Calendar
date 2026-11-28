@@ -175,7 +175,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
     Time mBaseDate;
     private Time mCurrentTime;
     //Update the current time line every five minutes if the window is left open that long
-    private static final int UPDATE_CURRENT_TIME_DELAY = 300000;
+    private static final long UPDATE_CURRENT_TIME_DELAY = TodayIndicator.REFRESH_INTERVAL_MS;
     private final UpdateCurrentTime mUpdateCurrentTime = new UpdateCurrentTime();
     private int mTodayJulianDay;
 
@@ -2410,6 +2410,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         for (int day = 0; day < mNumDays; day++, cell++) {
             // TODO Wow, this needs cleanup. drawEvents loop through all the
             // events on every call.
+            mTodayIndicator.beginFrame(cell == mTodayJulianDay);
             drawEvents(cell, day, HOUR_GAP, canvas, p);
             // If this is today
             if (cell == mTodayJulianDay) {
@@ -3511,6 +3512,8 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         canvas.save();
       //  canvas.translate(rect.left, rect.top + (rect.bottom - rect.top / 2));
         int padding = center? (rect.bottom - rect.top - totalLineHeight) / 2 : 0;
+        if (!center) mTodayIndicator.protectLayout(eventLayout, rect.left, rect.top + padding,
+                width, totalLineHeight);
         canvas.translate(rect.left, rect.top + padding);
         rect.left = 0;
         rect.right = width;

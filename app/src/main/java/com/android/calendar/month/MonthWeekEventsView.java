@@ -468,13 +468,14 @@ public class MonthWeekEventsView extends SimpleWeekView {
 
     @Override
     protected void onDraw(Canvas canvas) {
+        updateToday(mToday.getTimezone());
+        mTodayIndicator.beginFrame(mHasToday);
         mEventHits.clear();
         drawBackground(canvas);
         drawWeekNums(canvas);
         drawDaySeparators(canvas);
         if (mShowDetailsInMonth) {
             drawEvents(canvas);
-            if (mHasToday) postInvalidateDelayed(60_000 - System.currentTimeMillis() % 60_000);
         } else {
             if (mDna == null && mUnsortedEvents != null) {
                 createDna(mUnsortedEvents);
@@ -484,13 +485,24 @@ public class MonthWeekEventsView extends SimpleWeekView {
         drawClick(canvas);
         if (mHasToday) {
             drawToday(canvas);
+            if (isShown() && getWindowVisibility() == android.view.View.VISIBLE) {
+                // Preserve existing minute updates for item state icons in detailed mode.
+                long interval = mShowDetailsInMonth ? 60_000L : TodayIndicator.REFRESH_INTERVAL_MS;
+                postInvalidateDelayed(interval - System.currentTimeMillis() % interval);
+            }
         }
     }
 
     protected void drawToday(Canvas canvas) {
-        mTodayIndicator.draw(canvas, computeDayLeftPosition(mTodayIndex) + mDaySeparatorInnerWidth,
-                computeDayLeftPosition(mTodayIndex + 1) - mDaySeparatorInnerWidth,
-                mDaySeparatorInnerWidth, mAnimateToday ? mAnimateTodayAlpha : 0);
+        float left = computeDayLeftPosition(mTodayIndex) + mDaySeparatorInnerWidth;
+        float right = computeDayLeftPosition(mTodayIndex + 1) - mDaySeparatorInnerWidth;
+        float top = mDaySeparatorInnerWidth;
+        float bottom = mHeight - mDaySeparatorInnerWidth;
+        float y = mTodayIndicator.position(top, bottom, mToday.getHour(), mToday.getMinute());
+        canvas.save();
+        canvas.clipRect(left, top, right, bottom);
+        mTodayIndicator.draw(canvas, left, right, y, mAnimateToday ? mAnimateTodayAlpha : 0);
+        canvas.restore();
     }
 
     // TODO move into SimpleWeekView
@@ -614,6 +626,7 @@ public class MonthWeekEventsView extends SimpleWeekView {
             float center = (left + right) / 2f;
             mMonthNumPaint.setTextAlign(Align.CENTER);
             float dateWidth = mMonthNumPaint.measureText(mDayNumbers[i]);
+            mTodayIndicator.protectText(mDayNumbers[i], mMonthNumPaint, center, y, left, right);
             canvas.drawText(mDayNumbers[i], center, y, mMonthNumPaint);
             mMonthNumPaint.setFakeBoldText(false);
 
@@ -623,10 +636,10 @@ public class MonthWeekEventsView extends SimpleWeekView {
                 String marker = LocalizedDay.marker(getContext(), date);
                 int dateColor = mMonthNumPaint.getColor();
                 LocalizedDay.drawMarker(canvas, mMonthNumPaint, marker, right, center,
-                        dateWidth, mSidePaddingMonthNumber, y, mTextSizeLunar);
+                        dateWidth, mSidePaddingMonthNumber, y, mTextSizeLunar, mTodayIndicator);
                 LocalizedDay.drawLabel(getContext(), canvas, mMonthNumPaint, date, label,
                         left, right, mSidePaddingMonthNumber, y + mTextSizeLunar + mLunarPaddingLunar,
-                        mTextSizeLunar, dateColor, mMonthBGColor);
+                        mTextSizeLunar, dateColor, mMonthBGColor, mTodayIndicator);
             }
             mMonthNumPaint.setTextAlign(Align.RIGHT);
         }
@@ -1539,7 +1552,7 @@ public class MonthWeekEventsView extends SimpleWeekView {
                 com.android.calendar.ItemAppearance.drawCenteredLine(canvas, mTextLines[i], getTextPaint(),
                         mBoundaries.getTextX(), mBoundaries.getTextRightEdge(span), mBoundaries.getTextY(),
                         getContext(), i == 0 ? com.android.calendar.ItemStateSymbols.forEvent(
-                                getContext(), mEvent, System.currentTimeMillis()) : null);
+                                getContext(), mEvent, System.currentTimeMillis()) : null, mTodayIndicator);
                 mBoundaries.moveLinesDown(1);
             }
         }
@@ -1591,7 +1604,8 @@ public class MonthWeekEventsView extends SimpleWeekView {
         protected void drawTimes(Canvas canvas, ViewDetailsPreferences.Preferences preferences) {
             CharSequence text = getFormattedTime(preferences);
             com.android.calendar.ItemAppearance.drawCenteredLine(canvas, text, getTimesPaint(),
-                    mBoundaries.getTextX(), mBoundaries.getTextRightEdge(1), mBoundaries.getTextY());
+                    mBoundaries.getTextX(), mBoundaries.getTextRightEdge(1), mBoundaries.getTextY(),
+                     null, null, mTodayIndicator);
             mBoundaries.moveAfterDrawingTimes();
         }
 
@@ -1628,6 +1642,7 @@ public class MonthWeekEventsView extends SimpleWeekView {
         paint.setTextAlign(Align.CENTER);
         canvas.save();
         canvas.clipRect(left, 0, right, mHeight);
+        mTodayIndicator.protectText(text, paint, (left + right) / 2f, y, left, right);
         canvas.drawText(text, (left + right) / 2f, y, paint);
         canvas.restore();
         paint.setTextAlign(oldAlign);

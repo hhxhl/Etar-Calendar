@@ -76,6 +76,12 @@ public final class ItemAppearance {
 
     public static void drawCenteredLine(Canvas canvas, CharSequence value, Paint paint,
             float left, float right, float baseline, Context context, String state) {
+        drawCenteredLine(canvas, value, paint, left, right, baseline, context, state, null);
+    }
+
+    public static void drawCenteredLine(Canvas canvas, CharSequence value, Paint paint,
+            float left, float right, float baseline, Context context, String state,
+            TodayIndicator indicator) {
         int width = (int) (right - left);
         if (width <= 0) return;
         TextPaint textPaint = new TextPaint(paint);
@@ -88,7 +94,9 @@ public final class ItemAppearance {
                 .setIncludePad(false).setMaxLines(1)
                 .setEllipsize(TextUtils.TruncateAt.END).build();
         canvas.save();
-        canvas.translate(left, baseline - layout.getLineBaseline(0));
+        float top = baseline - layout.getLineBaseline(0);
+        if (indicator != null) indicator.protectLayout(layout, left, top, width, layout.getHeight());
+        canvas.translate(left, top);
         canvas.clipRect(0, 0, width, layout.getHeight());
         layout.draw(canvas);
         canvas.restore();
