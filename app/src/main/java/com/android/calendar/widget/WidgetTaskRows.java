@@ -20,6 +20,9 @@ final class WidgetTaskRows {
     static final String TASK_COMPLETED = "etar_widget_task_completed";
     static final String TASK_COUNTDOWN = "etar_widget_task_countdown";
     static final String TASK_NO_DEADLINE = "etar_widget_task_no_deadline";
+    static final String TASK_DUE = "etar_widget_task_due";
+    static final String TASK_DUE_ALL_DAY = "etar_widget_task_due_all_day";
+    static final String TASK_RANGE = "etar_widget_task_range";
     private WidgetTaskRows() {}
 
     /** Shared grid query: the source cursor is closed before the merged snapshot is returned. */
@@ -50,13 +53,19 @@ final class WidgetTaskRows {
         int allDay = cursor.getColumnIndexOrThrow(Instances.ALL_DAY);
         int done = cursor.getColumnIndexOrThrow(TASK_COMPLETED);
         int noDeadline = cursor.getColumnIndexOrThrow(TASK_NO_DEADLINE);
+        int due = cursor.getColumnIndexOrThrow(TASK_DUE);
+        int dueAllDay = cursor.getColumnIndexOrThrow(TASK_DUE_ALL_DAY);
         long next = Long.MAX_VALUE;
         while (cursor.moveToNext()) {
-            if (cursor.getInt(allDay) != 0) continue;
             boolean task = cursor.getLong(id) < -1;
-            if (task && cursor.getInt(noDeadline) != 0) continue;
-            next = Math.min(next, com.android.calendar.ItemStateSymbols.nextTimedTransition(
-                    cursor.getLong(begin), cursor.getLong(end), task, cursor.getInt(done) != 0, now));
+            if (task) {
+                if (cursor.getInt(noDeadline) != 0 || cursor.getInt(dueAllDay) != 0) continue;
+                next = Math.min(next, ItemStateSymbols.nextTimedTransition(
+                        cursor.getLong(due), cursor.getLong(due), true, cursor.getInt(done) != 0, now));
+            } else if (cursor.getInt(allDay) == 0) {
+                next = Math.min(next, ItemStateSymbols.nextTimedTransition(
+                        cursor.getLong(begin), cursor.getLong(end), false, false, now));
+            }
         }
         cursor.moveToPosition(-1);
         return next;
@@ -85,10 +94,13 @@ final class WidgetTaskRows {
 
     static MatrixCursor merge(Context context, int widgetId, Cursor source, String[] projection,
             int firstDay, int lastDay, boolean allDayFirst, boolean includeOverdue) {
-        String[] columns = java.util.Arrays.copyOf(projection, projection.length + 3);
+        String[] columns = java.util.Arrays.copyOf(projection, projection.length + 6);
         columns[projection.length] = TASK_COMPLETED;
         columns[projection.length + 1] = TASK_COUNTDOWN;
         columns[projection.length + 2] = TASK_NO_DEADLINE;
+        columns[projection.length + 3] = TASK_DUE;
+        columns[projection.length + 4] = TASK_DUE_ALL_DAY;
+        columns[projection.length + 5] = TASK_RANGE;
         ArrayList<Object[]> rows = new ArrayList<>();
         if (source != null) {
             source.moveToPosition(-1);
@@ -114,6 +126,9 @@ final class WidgetTaskRows {
             row[projection.length] = task.taskCompleted ? 1 : 0;
             row[projection.length + 1] = task.taskCountdown ? 1 : 0;
             row[projection.length + 2] = task.taskNoDeadline ? 1 : 0;
+            row[projection.length + 3] = task.taskDue;
+            row[projection.length + 4] = task.taskDueAllDay ? 1 : 0;
+            row[projection.length + 5] = task.taskRange ? 1 : 0;
             for (int i = 0; i < projection.length; i++) {
                 String field = projection[i];
                 if (Instances.ALL_DAY.equals(field)) row[i] = task.allDay ? 1 : 0;
@@ -154,7 +169,7 @@ final class WidgetTaskRows {
                         ? (number(row, projection.length + 2) != 0
                             ? (number(row, projection.length) != 0 ? ItemStateSymbols.REMINDER_DONE : ItemStateSymbols.REMINDER_PENDING)
                             : ItemStateSymbols.reminder(number(row, projection.length) != 0,
-                                number(row, begin), wholeDay, zone, now))
+                                number(row, projection.length + 3), number(row, projection.length + 4) != 0, zone, now))
                         : ItemStateSymbols.event(number(row, begin), number(row, end), wholeDay, zone, now);
                 String label = row[title] == null || row[title].toString().isEmpty()
                         ? context.getString(R.string.no_title_label) : row[title].toString();

@@ -130,6 +130,8 @@ public final class DatedItemsRepository {
                     && !matches(task.url, keyword)) continue;
             LocalDate date = task.displayTime() == null ? null : Instant.ofEpochMilli(task.displayTime())
                     .atZone(task.displayAllDay() ? ZoneOffset.UTC : zone).toLocalDate();
+            // Search range matches can start before or end after the visible search window.
+            if (task.hasRange() && date != null && date.isAfter(last)) date = last;
             result.add(new Item<>(date, task));
         }
         return result;

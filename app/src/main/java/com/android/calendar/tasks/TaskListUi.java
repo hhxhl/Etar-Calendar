@@ -72,6 +72,16 @@ public final class TaskListUi {
         }
         String time = task.allDay ? context.getString(R.string.reminders_all_day)
                 : Utils.formatDateRange(context, task.due, task.due, DateUtils.FORMAT_SHOW_TIME);
+        if (task.hasRange()) {
+            int flags = DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_ABBREV_ALL;
+            String startLabel = com.android.calendar.ItemEditorUi.formatDateTime(context, task.start,
+                    flags | (task.startAllDay ? 0 : DateUtils.FORMAT_SHOW_TIME),
+                    task.startAllDay ? "UTC" : zone.getId());
+            String dueLabel = com.android.calendar.ItemEditorUi.formatDateTime(context, task.due,
+                    flags | (task.allDay ? 0 : DateUtils.FORMAT_SHOW_TIME),
+                    task.allDay ? "UTC" : zone.getId());
+            time = startLabel + " – " + dueLabel;
+        }
         boolean overdue = ItemStateSymbols.isReminderOverdue(task.done, task.due, task.allDay, zone, now);
         return overdue ? time + " · " + context.getString(R.string.reminders_overdue) : time;
     }

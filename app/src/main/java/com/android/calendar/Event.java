@@ -126,6 +126,8 @@ public class Event implements Cloneable {
     public long taskId; // zero for Android calendar events
     public boolean taskCompleted;
     public boolean taskNoDeadline;
+    public boolean taskRange, taskDueAllDay;
+    public long taskDue;
     public boolean taskCountdown;
     public int color;
     public CharSequence title;
@@ -808,6 +810,9 @@ public class Event implements Cloneable {
         e.taskId = taskId;
         e.taskCompleted = taskCompleted;
         e.taskNoDeadline = taskNoDeadline;
+        e.taskRange = taskRange;
+        e.taskDueAllDay = taskDueAllDay;
+        e.taskDue = taskDue;
         e.taskCountdown = taskCountdown;
         e.title = title;
         e.color = color;
@@ -834,6 +839,9 @@ public class Event implements Cloneable {
         dest.taskId = taskId;
         dest.taskCompleted = taskCompleted;
         dest.taskNoDeadline = taskNoDeadline;
+        dest.taskRange = taskRange;
+        dest.taskDueAllDay = taskDueAllDay;
+        dest.taskDue = taskDue;
         dest.taskCountdown = taskCountdown;
         dest.title = title;
         dest.color = color;

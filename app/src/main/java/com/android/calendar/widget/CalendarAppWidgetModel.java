@@ -74,6 +74,9 @@ class CalendarAppWidgetModel {
         int taskCompletedColumn = cursor.getColumnIndex(WidgetTaskRows.TASK_COMPLETED);
         int taskCountdownColumn = cursor.getColumnIndex(WidgetTaskRows.TASK_COUNTDOWN);
         int noDeadlineColumn = cursor.getColumnIndex(WidgetTaskRows.TASK_NO_DEADLINE);
+        int dueColumn = cursor.getColumnIndex(WidgetTaskRows.TASK_DUE);
+        int dueAllDayColumn = cursor.getColumnIndex(WidgetTaskRows.TASK_DUE_ALL_DAY);
+        int rangeColumn = cursor.getColumnIndex(WidgetTaskRows.TASK_RANGE);
         String tz = Utils.getTimeZone(mContext, null);
         while (cursor.moveToNext()) {
             final int rowId = cursor.getPosition();
@@ -83,6 +86,10 @@ class CalendarAppWidgetModel {
             final boolean allDay = cursor.getInt(CalendarAppWidgetService.INDEX_ALL_DAY) != 0;
             long start = cursor.getLong(CalendarAppWidgetService.INDEX_BEGIN);
             final long rawStart = start;
+            final boolean taskRange = eventId < -1 && rangeColumn >= 0 && cursor.getInt(rangeColumn) != 0;
+            final boolean hasDeadline = eventId < -1 && (noDeadlineColumn < 0 || cursor.getInt(noDeadlineColumn) == 0);
+            final long deadline = dueColumn >= 0 ? cursor.getLong(dueColumn) : rawStart;
+            final boolean deadlineAllDay = dueAllDayColumn >= 0 ? cursor.getInt(dueAllDayColumn) != 0 : allDay;
             long end = cursor.getLong(CalendarAppWidgetService.INDEX_END);
             final String title = cursor.getString(CalendarAppWidgetService.INDEX_TITLE);
             final String location =
@@ -112,25 +119,28 @@ class CalendarAppWidgetModel {
             if (end < mNow && !pendingTask) {
                 continue;
             }
-            boolean overdue = pendingTask && (noDeadlineColumn < 0 || cursor.getInt(noDeadlineColumn) == 0)
+            boolean overdue = pendingTask && hasDeadline
                     && com.android.calendar.ItemStateSymbols.isReminderOverdue(
-                    false, rawStart, allDay, java.time.ZoneId.of(tz), mNow);
+                    false, deadline, deadlineAllDay, java.time.ZoneId.of(tz), mNow);
             String displayTitle = title;
-            if (overdue && startDay < mTodayJulianDay && allDay) {
+            if (overdue && endDay < mTodayJulianDay && allDay) {
                 displayTitle = title + " · " + Utils.formatDateRange(mContext, start, start,
                         DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_ABBREV_ALL);
             }
             if (eventId < -1) {
                 String countdown = com.android.calendar.EventCountdown.reminderLabel(mContext,
                         taskCountdownColumn >= 0 && cursor.getInt(taskCountdownColumn) != 0,
-                        !pendingTask, rawStart, allDay);
+                        !pendingTask, hasDeadline ? deadline : null, deadlineAllDay);
                 if (!countdown.isEmpty()) displayTitle += " · " + countdown;
             }
 
             int i = mEventInfos.size();
             EventInfo info = populateEventInfo(eventId, allDay, start, end, startDay, endDay, displayTitle,
-                    location, color, selfStatus);
+                    location, color, selfStatus, taskRange);
             info.taskCompleted = eventId < -1 && !pendingTask;
+            info.taskHasDeadline = hasDeadline;
+            info.taskDeadline = deadline;
+            info.taskDeadlineAllDay = deadlineAllDay;
             mEventInfos.add(info);
             // populate the day buckets that this event falls into
             int from = Math.max(startDay, mTodayJulianDay);
@@ -176,7 +186,7 @@ class CalendarAppWidgetModel {
     }
 
     private EventInfo populateEventInfo(long eventId, boolean allDay, long start, long end,
-                                        int startDay, int endDay, String title, String location, int color, int selfStatus) {
+                                        int startDay, int endDay, String title, String location, int color, int selfStatus, boolean taskRange) {
         EventInfo eventInfo = new EventInfo();
 
         // Compute a human-readable string for the start time of the event
@@ -195,7 +205,7 @@ class CalendarAppWidgetModel {
             if (endDay > startDay || (eventId < -1 && startDay < mTodayJulianDay)) {
                 flags |= DateUtils.FORMAT_SHOW_DATE;
             }
-            whenString.append(Utils.formatDateRange(mContext, start, eventId < -1 ? start : end, flags));
+            whenString.append(Utils.formatDateRange(mContext, start, eventId < -1 && !taskRange ? start : end, flags));
 
             if (mShowTZ) {
                 whenString.append(" ").append(mHomeTZName);
@@ -301,7 +311,8 @@ class CalendarAppWidgetModel {
         long start;
         long end;
         boolean allDay;
-        boolean taskCompleted;
+        boolean taskCompleted, taskHasDeadline, taskDeadlineAllDay;
+        long taskDeadline;
         int color;
 
         public EventInfo() {

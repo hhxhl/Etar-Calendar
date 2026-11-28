@@ -128,22 +128,31 @@ public final class TaskCalendarUi {
             item.taskId = task.id;
             item.taskCompleted = task.done;
             item.taskNoDeadline = task.due == null;
+            item.taskRange = task.hasRange();
+            item.taskDue = task.due == null ? 0 : task.due;
+            item.taskDueAllDay = task.allDay;
             // Negative identity is reserved for tasks in the display model only.
             item.id = -task.id - 1;
             item.title = task.title;
-            item.allDay = task.displayAllDay();
+            item.allDay = task.hasRange() ? task.rangeAllDay() : task.displayAllDay();
             item.hasAlarm = task.alarm;
             item.isRepeating = task.rule != null;
             item.color = displayColor(context, task);
             item.taskCountdown = task.due != null && task.countdown && !task.done;
-            long displayTime = task.displayTime();
-            ZonedDateTime date = Instant.ofEpochMilli(displayTime).atZone(item.allDay ? ZoneOffset.UTC : zone);
-            item.startDay = item.endDay = (int) (date.toLocalDate().toEpochDay() + JULIAN_EPOCH);
-            item.startMillis = displayTime;
-            item.startTime = item.allDay ? 0 : date.getHour() * 60 + date.getMinute();
-            // A task is a point in time. Minimum drawing height is supplied by DayView.
-            item.endMillis = item.allDay ? displayTime + DateUtils.DAY_IN_MILLIS : displayTime + 60000;
-            item.endTime = item.allDay ? 1440 : Math.min(1440, item.startTime + 1);
+            ZoneId drawingZone = item.allDay ? ZoneOffset.UTC : zone;
+            item.startMillis = task.rangeStart(zone);
+            item.endMillis = Math.max(item.startMillis + 60000, task.rangeEnd(zone));
+            ZonedDateTime startDate = Instant.ofEpochMilli(item.startMillis).atZone(drawingZone);
+            ZonedDateTime endDate = Instant.ofEpochMilli(item.endMillis).atZone(drawingZone);
+            // Midnight is the exclusive end of the preceding day, as in CalendarProvider.
+            boolean midnightEnd = endDate.toLocalTime().equals(java.time.LocalTime.MIDNIGHT);
+            LocalDate lastDate = midnightEnd ? endDate.toLocalDate().minusDays(1) : endDate.toLocalDate();
+            item.startDay = (int) (startDate.toLocalDate().toEpochDay() + JULIAN_EPOCH);
+            item.endDay = (int) (lastDate.toEpochDay() + JULIAN_EPOCH);
+            item.startTime = item.allDay ? 0 : startDate.getHour() * 60 + startDate.getMinute();
+            item.endTime = item.allDay || midnightEnd ? 1440 : endDate.getHour() * 60 + endDate.getMinute();
+            if (item.startDay > lastDay || (item.endDay < firstDay && !includeOverdue)) continue;
+            if (item.endDay < firstDay && (task.done || task.due == null)) continue;
             events.add(item);
         }
         events.sort(Comparator.comparingInt((Event item) -> item.startDay)

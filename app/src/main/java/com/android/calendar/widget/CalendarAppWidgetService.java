@@ -317,10 +317,17 @@ public class CalendarAppWidgetService extends RemoteViewsService {
             // Make sure an update happens at midnight or earlier
             long minUpdateTime = getNextMidnightTimeMillis(timeZone);
             for (EventInfo event : model.mEventInfos) {
+                if (event.id < -1) {
+                    if (event.taskHasDeadline && !event.taskDeadlineAllDay)
+                        minUpdateTime = Math.min(minUpdateTime,
+                                com.android.calendar.ItemStateSymbols.nextTimedTransition(
+                                        event.taskDeadline, event.taskDeadline, true, event.taskCompleted, now));
+                } else if (!event.allDay) {
+                    minUpdateTime = Math.min(minUpdateTime,
+                            com.android.calendar.ItemStateSymbols.nextTimedTransition(
+                                    event.start, event.end, false, false, now));
+                }
                 if (event.allDay) continue;
-                minUpdateTime = Math.min(minUpdateTime,
-                        com.android.calendar.ItemStateSymbols.nextTimedTransition(
-                                event.start, event.end, event.id < -1, event.taskCompleted, now));
                 // Expired completed reminders and ordinary events also leave the agenda.
                 if ((event.id >= -1 || event.taskCompleted) && event.end >= now
                         && event.end < Long.MAX_VALUE)

@@ -143,6 +143,21 @@ public final class TaskStore extends SQLiteOpenHelper {
         public boolean displayAllDay() {
             return due != null ? allDay : start != null && startAllDay;
         }
+        public boolean hasRange() { return start != null && due != null; }
+        /** All-day endpoints are dates, with an inclusive deadline day. */
+        public boolean rangeAllDay() { return hasRange() && startAllDay && allDay; }
+        public long rangeStart(ZoneId calendarZone) {
+            if (!hasRange()) return displayTime();
+            if (rangeAllDay() || !startAllDay) return start;
+            return Instant.ofEpochMilli(start).atZone(ZoneOffset.UTC).toLocalDate()
+                    .atStartOfDay(calendarZone).toInstant().toEpochMilli();
+        }
+        public long rangeEnd(ZoneId calendarZone) {
+            if (!hasRange()) return displayTime() + (displayAllDay() ? 86400000L : 60000L);
+            if (!allDay) return due;
+            return Instant.ofEpochMilli(due).atZone(ZoneOffset.UTC).toLocalDate().plusDays(1)
+                    .atStartOfDay(rangeAllDay() ? ZoneOffset.UTC : calendarZone).toInstant().toEpochMilli();
+        }
         public int priority, color, listColor;
         public Integer repeatMinute;
     }
@@ -239,9 +254,17 @@ public final class TaskStore extends SQLiteOpenHelper {
     }
     public List<Task> datedTasks(long from,long until,long utcFrom,long utcUntil) {
         ArrayList<Task> result=new ArrayList<>();
-        String where=" AND (("+DISPLAY_ALL_DAY+"=0 AND "+DISPLAY_TIME+">=? AND "+DISPLAY_TIME+"<?) OR ("+DISPLAY_ALL_DAY+"=1 AND "+DISPLAY_TIME+">=? AND "+DISPLAY_TIME+"<?)) AND EXISTS(SELECT 1 FROM tasklists l WHERE l._id=t.list_id AND l.visible=1)";
+        // Query overlapping ranges as well as isolated display points.
+        String where=" AND ((t.dtstart IS NOT NULL AND t.due IS NOT NULL"
+                + " AND ((t.start_all_day=0 AND t.dtstart<?) OR (t.start_all_day=1 AND t.dtstart<?))"
+                + " AND ((t.is_allday=0 AND t.due>=?) OR (t.is_allday=1 AND t.due>=?)))"
+                + " OR ((t.dtstart IS NULL OR t.due IS NULL)"
+                + " AND (("+DISPLAY_ALL_DAY+"=0 AND "+DISPLAY_TIME+">=? AND "+DISPLAY_TIME+"<?)"
+                + " OR ("+DISPLAY_ALL_DAY+"=1 AND "+DISPLAY_TIME+">=? AND "+DISPLAY_TIME+"<?))))"
+                + " AND EXISTS(SELECT 1 FROM tasklists l WHERE l._id=t.list_id AND l.visible=1)";
         try(Cursor c=getReadableDatabase().rawQuery(SELECT+where+" ORDER BY "+DISPLAY_TIME+",t._id",
-                new String[]{Long.toString(from),Long.toString(until),Long.toString(utcFrom),Long.toString(utcUntil)})){
+                new String[]{Long.toString(until),Long.toString(utcUntil),Long.toString(from),Long.toString(utcFrom),
+                        Long.toString(from),Long.toString(until),Long.toString(utcFrom),Long.toString(utcUntil)})){
             while(c.moveToNext())result.add(read(c));
         }
         return result;
