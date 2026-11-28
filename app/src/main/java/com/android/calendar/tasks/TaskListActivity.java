@@ -48,7 +48,7 @@ import ws.xsoh.etar.R;
 public final class TaskListActivity extends AppCompatActivity {
     private TaskStore store;
     private long listId=0;
-    private boolean editorOnly, finishAfterPermission, waitingForPermissionSettings;
+    private boolean finishAfterPermission, waitingForPermissionSettings;
     private boolean restoredPermissionFlow;
     private Bundle restoredDraft;
     private java.util.function.Supplier<Bundle> captureDraft;
@@ -80,8 +80,6 @@ public final class TaskListActivity extends AppCompatActivity {
         DynamicThemeKt.applyTheme(this);
         super.onCreate(state);
         store=TaskStore.get(this);
-        editorOnly=getIntent().getBooleanExtra("new_task",false)||getIntent().hasExtra("task_id");
-
         listId=getIntent().getLongExtra("list_id",0);
         if(state!=null){
             listId=state.getLong("list_id");
@@ -91,31 +89,23 @@ public final class TaskListActivity extends AppCompatActivity {
             restoredDraft=state.getBundle("editor_draft");
             initialDraft=state.getBundle("initial_editor_draft");
         }
-        if(editorOnly){
-            if(finishAfterPermission||waitingForPermissionSettings)return;
-            long id=getIntent().getLongExtra("task_id",0);
-            TaskStore.Task task=id==0?newTask():store.find(id);
-            if(task==null){finish();return;}
-            if(id==0){
-                boolean reminder = getIntent().getBooleanExtra("new_reminder", false) || getIntent().hasExtra("date");
-                long date=getIntent().getLongExtra("date",System.currentTimeMillis());
-                if(reminder){
-                    task.allDay=!getIntent().getBooleanExtra("timed_task",false);
-                    String calendarZone=getIntent().getStringExtra("calendar_zone");
-                    ZoneId selectedZone=calendarZone==null?ZoneId.systemDefault():ZoneId.of(calendarZone);
-                    task.tz=selectedZone.getId();
-                    task.due=task.allDay?Instant.ofEpochMilli(date).atZone(selectedZone).toLocalDate().atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli():date;
-                    task.anchor=task.due;
-                    task.alarm=false;
-                }
-            }
-            edit(task);
-            return;
+        if (finishAfterPermission || waitingForPermissionSettings) return;
+        long id = getIntent().getLongExtra("task_id", 0);
+        TaskStore.Task task = id == 0 ? newReminder() : store.find(id);
+        if (task == null) { finish(); return; }
+        // An explicit date means a new reminder from a selected calendar cell.
+        // Otherwise open the same editor with all time switches off.
+        if (id == 0 && getIntent().hasExtra("date")) {
+            long date = getIntent().getLongExtra("date", System.currentTimeMillis());
+            task.allDay = !getIntent().getBooleanExtra("timed_task", false);
+            String calendarZone = getIntent().getStringExtra("calendar_zone");
+            ZoneId selectedZone = calendarZone == null ? ZoneId.systemDefault() : ZoneId.of(calendarZone);
+            task.tz = selectedZone.getId();
+            task.due = task.allDay ? Instant.ofEpochMilli(date).atZone(selectedZone).toLocalDate()
+                    .atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli() : date;
+            task.anchor = task.due;
         }
-        if (getIntent().getBooleanExtra("manage_lists", false)) {
-            startActivity(new Intent(this, com.android.calendar.settings.SettingsActivity.class));
-        }
-        finish();
+        edit(task);
     }
 
     @Override protected void onSaveInstanceState(Bundle state) {
@@ -137,7 +127,7 @@ public final class TaskListActivity extends AppCompatActivity {
         }
     }
 
-    private TaskStore.Task newTask(){TaskStore.Task t=new TaskStore.Task();t.listId=listId==0?1:listId;return t;}
+    private TaskStore.Task newReminder(){TaskStore.Task t=new TaskStore.Task();t.listId=listId==0?1:listId;return t;}
     private ArrayAdapter<String> adapter(List<String> labels){ArrayAdapter<String> a=new ArrayAdapter<>(this,android.R.layout.simple_spinner_item,labels);a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);return a;}
     private static void hide(View root, int... ids) {
         for (int id : ids) root.findViewById(id).setVisibility(View.GONE);
@@ -520,7 +510,7 @@ public final class TaskListActivity extends AppCompatActivity {
                 }
             }
             long saved = store.save(task, completed.isChecked());
-            finishAfterPermission = saved > 0 && editorOnly && task.alarm && !task.done;
+            finishAfterPermission = saved > 0 && task.alarm && !task.done;
             captureDraft = null;
             saveEditor = null;
             deleteEditor = null;
@@ -646,7 +636,7 @@ public final class TaskListActivity extends AppCompatActivity {
                 .setNegativeButton(android.R.string.cancel,null)
                 .setPositiveButton(R.string.tasks_settings,(d,w)->{
                     try{
-                        waitingForPermissionSettings=editorOnly;
+                        waitingForPermissionSettings=true;
                         startActivity(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,Uri.parse("package:"+getPackageName())));
                     }catch(android.content.ActivityNotFoundException ignored){waitingForPermissionSettings=false;}
                 }).create();
@@ -655,7 +645,8 @@ public final class TaskListActivity extends AppCompatActivity {
         }else finishEditorAfterPermission();
     }
     private void finishEditorAfterPermission(){
-        if(editorOnly){finishAfterPermission=false;finish();}
+        finishAfterPermission=false;
+        finish();
     }
     @Override public void onRequestPermissionsResult(int code,String[] permissions,int[] grants){
         super.onRequestPermissionsResult(code,permissions,grants);

@@ -62,12 +62,11 @@ public final class TaskCalendarUi {
 
     public static void createReminder(Context context, long listId) {
         context.startActivity(new Intent(context, TaskListActivity.class)
-                .putExtra("new_task", true).putExtra("list_id", listId));
+                .putExtra("list_id", listId));
     }
 
     public static void createReminder(Context context, long millis, boolean timed, long listId) {
         context.startActivity(new Intent(context, TaskListActivity.class)
-                .putExtra("new_task", true).putExtra("new_reminder", true)
                 .putExtra("date", millis).putExtra("timed_task", timed)
                 .putExtra("list_id", listId).putExtra("calendar_zone", Utils.getTimeZone(context, null)));
     }

@@ -197,9 +197,7 @@ object WidgetUtils {
     }
 
     fun getAddReminderIntent(context: Context): Intent =
-        Intent(context, com.android.calendar.tasks.TaskListActivity::class.java).apply {
-            putExtra("new_task", true)
-        }
+        Intent(context, com.android.calendar.tasks.TaskListActivity::class.java)
 
     @JvmStatic
     fun getMenuPendingIntent(context: Context, appWidgetId: Int): PendingIntent {
