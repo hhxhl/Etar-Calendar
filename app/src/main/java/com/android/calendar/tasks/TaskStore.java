@@ -106,7 +106,8 @@ public final class TaskStore extends SQLiteOpenHelper {
         public static final int ALARM_ABSOLUTE=0, ALARM_START=1, ALARM_DUE=2;
         public Long due, start, anchor, alarmAbsolute;
         public boolean allDay, done, alarm, countdown;
-        public boolean writable = true;
+        public boolean writable = true, local = true;
+        boolean hasRecurrenceDates, hasRecurrenceExceptions;
         public int alarmMode=ALARM_DUE, alarmOffset;
         public ZoneId zone() {
             try { return tz == null ? ZoneId.systemDefault() : ZoneId.of(tz); }
@@ -184,7 +185,7 @@ public final class TaskStore extends SQLiteOpenHelper {
     static final String ALARM_MIME = "vnd.android.cursor.item/alarm";
     // data0 = minutes before, data1 = DUE (1) or DTSTART (2), data2 = message,
     // data3 = action, data4 = absolute UTC trigger (Etar extension).
-    private static final String SELECT = "SELECT t._id,t.list_id,COALESCE(t.title,''),COALESCE(t.description,''),t.due,t.recurrence_anchor,t.is_allday,t.tz,t.status,t.priority,t.rrule,a.property_id,t.repeat_minute,t.task_color,COALESCE(t.url,''),t.show_countdown,l.list_color,t.dtstart,a.data0,a.data1,a.data4,l.account_type,l.list_access_level FROM tasks t JOIN tasklists l ON l._id=t.list_id LEFT JOIN properties a ON a.property_id=(SELECT MIN(p.property_id) FROM properties p WHERE p.task_id=t._id AND p.mimetype='vnd.android.cursor.item/alarm') WHERE t._deleted=0 AND t.original_instance_id IS NULL";
+    private static final String SELECT = "SELECT t._id,t.list_id,COALESCE(t.title,''),COALESCE(t.description,''),t.due,t.recurrence_anchor,t.is_allday,t.tz,t.status,t.priority,t.rrule,a.property_id,t.repeat_minute,t.task_color,COALESCE(t.url,''),t.show_countdown,l.list_color,t.dtstart,a.data0,a.data1,a.data4,l.account_type,l.list_access_level,t.rdate,t.exdate,EXISTS(SELECT 1 FROM tasks x WHERE x.original_instance_id=t._id OR (x.list_id=t.list_id AND x.original_instance_sync_id=t._sync_id)) FROM tasks t JOIN tasklists l ON l._id=t.list_id LEFT JOIN properties a ON a.property_id=(SELECT MIN(p.property_id) FROM properties p WHERE p.task_id=t._id AND p.mimetype='vnd.android.cursor.item/alarm') WHERE t._deleted=0 AND t.original_instance_id IS NULL";
     private static Task read(Cursor c) {
         Task t = new Task(); t.id=c.getLong(0); t.listId=c.getLong(1); t.title=c.getString(2); t.notes=c.getString(3);
         t.due=c.isNull(4)?null:c.getLong(4); t.anchor=c.isNull(5)?null:c.getLong(5); t.allDay=c.getInt(6)!=0;
@@ -195,7 +196,10 @@ public final class TaskStore extends SQLiteOpenHelper {
         t.alarmOffset=c.getInt(18);
         t.alarmAbsolute=c.isNull(20)?null:c.getLong(20);
         t.alarmMode=t.alarmAbsolute!=null?Task.ALARM_ABSOLUTE:c.getInt(19)==2?Task.ALARM_START:Task.ALARM_DUE;
-        t.writable="org.dmfs.account.LOCAL".equals(c.getString(21)) || c.getInt(22)>200;
+        t.local=TaskContract.LOCAL_ACCOUNT.equals(c.getString(21));
+        t.writable=t.local || c.getInt(22)>200;
+        t.hasRecurrenceDates = !android.text.TextUtils.isEmpty(c.getString(23)) || !android.text.TextUtils.isEmpty(c.getString(24));
+        t.hasRecurrenceExceptions = c.getInt(25) != 0;
         return t;
     }
     private static void writeAlarm(SQLiteDatabase db, Task t) {
@@ -278,6 +282,7 @@ public final class TaskStore extends SQLiteOpenHelper {
             if (target == null || !target.isWritable() || (t.id != 0 && (old == null || !old.writable))) return 0;
             // Moving a synced resource requires a remote delete plus a new upload, not an ID change.
             if (old != null && old.listId != t.listId && !findList(old.listId).isLocal()) return 0;
+            t.local = target.isLocal();
             t.alarm = t.alarm && t.alarmTime() != null;
             boolean completionChanged = completed != (old != null && old.done);
             resetNotification = old == null || !Objects.equals(old.due, t.due)
@@ -346,47 +351,18 @@ public final class TaskStore extends SQLiteOpenHelper {
         }
     }
 
-    /** Preset recurrence: preserve original day-of-month and wall-clock time. */
-    static Long nextDue(Task t) {
-        Long display = t.displayTime();
-        if(display==null || t.rule==null) return null;
-        ZoneId zone=t.displayAllDay()?ZoneOffset.UTC:t.zone();
-        ZonedDateTime current=Instant.ofEpochMilli(display).atZone(zone);
-        ZonedDateTime anchor=Instant.ofEpochMilli(t.anchor==null?display:t.anchor).atZone(zone);
-        LocalTime wallTime = t.displayAllDay() ? LocalTime.MIDNIGHT
-                : t.repeatMinute != null ? LocalTime.of(t.repeatMinute / 60, t.repeatMinute % 60)
-                : anchor.toLocalTime();
-        ZonedDateTime next;
-        switch(t.rule) {
-            case "FREQ=DAILY": next=current.toLocalDate().plusDays(1).atTime(wallTime).atZone(zone); break;
-            case "FREQ=WEEKLY": next=current.toLocalDate().plusWeeks(1).atTime(wallTime).atZone(zone); break;
-            case "FREQ=MONTHLY":
-                LocalDate month=current.toLocalDate().withDayOfMonth(1).plusMonths(1);
-                next=month.withDayOfMonth(Math.min(anchor.getDayOfMonth(),month.lengthOfMonth())).atTime(wallTime).atZone(zone); break;
-            case "FREQ=YEARLY":
-                LocalDate year=anchor.toLocalDate().plusYears((long)current.getYear()-anchor.getYear()+1);
-                next=year.atTime(wallTime).atZone(zone); break;
-            default: return null;
-        }
-        return next.toInstant().toEpochMilli();
-    }
-    private static Long shiftDays(Long value, boolean allDay, ZoneId zone, long days) {
-        return value == null ? null : Instant.ofEpochMilli(value)
-                .atZone(allDay ? ZoneOffset.UTC : zone).plusDays(days).toInstant().toEpochMilli();
-    }
+    static Long nextDue(Task t) { return TaskRecurrence.nextLocal(t); }
 
     private static void applyCompletion(ContentValues v, Task t, boolean complete) {
-        Long next = complete ? nextDue(t) : null;
+        TaskRecurrence.Advance next = complete ? TaskRecurrence.next(t) : null;
         if (next != null) {
-            ZoneId zone = t.displayAllDay() ? ZoneOffset.UTC : t.zone();
-            long days = java.time.temporal.ChronoUnit.DAYS.between(
-                    Instant.ofEpochMilli(t.displayTime()).atZone(zone).toLocalDate(),
-                    Instant.ofEpochMilli(next).atZone(zone).toLocalDate());
-            boolean hasDue = t.due != null, hasStart = t.start != null;
-            t.due = hasDue ? next : null;
-            t.start = !hasDue && hasStart ? next : shiftDays(t.start, t.allDay, t.zone(), days);
-            t.alarmAbsolute = !hasDue && !hasStart && t.alarmMode == Task.ALARM_ABSOLUTE
-                    ? next : shiftDays(t.alarmAbsolute, false, t.zone(), days);
+            boolean dateOnly = t.displayAllDay();
+            ZoneId zone = t.zone();
+            t.due = TaskRecurrence.shift(t.due, t.allDay, zone, next, dateOnly);
+            t.start = TaskRecurrence.shift(t.start, t.allDay, zone, next, dateOnly);
+            t.alarmAbsolute = TaskRecurrence.shift(t.alarmAbsolute, false, zone, next, dateOnly);
+            t.rule = next.rule;
+            v.put("rrule", t.rule);
             v.put("due", t.due);
             v.put("dtstart", t.start);
             v.put("alarm_at", t.alarmTime());
